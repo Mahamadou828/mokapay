@@ -5,8 +5,8 @@ import (
 	"os"
 	"time"
 
-	"template.app/core/logger"
-	"template.app/core/otel"
+	"mokapay.app/core/logger"
+	"mokapay.app/core/otel"
 )
 
 // Config represent the application config

@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"go.opentelemetry.io/otel/trace"
-	core "template.app/core/http"
-	"template.app/core/otel"
+	core "mokapay.app/core/http"
+	"mokapay.app/core/otel"
 )
 
 // Otel starts the otel tracing and stores the trace id in the context.

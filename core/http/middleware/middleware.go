@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	core "template.app/core/http"
+	core "mokapay.app/core/http"
 )
 
 // default set of middleware error code

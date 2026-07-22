@@ -7,7 +7,7 @@ A thin wrapper around [OpenTelemetry Go](https://opentelemetry.io/docs/languages
 Call `InitTracing` once at startup. It connects to a gRPC OTLP collector and registers the provider globally.
 
 ```go
-import "template.app/core/otel"
+import "mokapay.app/core/otel"
 
 tp, teardown, err := otel.InitTracing(otel.Config{
     ServiceName: "my-service",

@@ -1,6 +1,6 @@
 package main
 
-import "template.app/app/services/gateway/cmd"
+import "mokapay.app/app/services/gateway/cmd"
 
 func main() {
 	cmd.Execute()

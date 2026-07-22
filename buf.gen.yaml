@@ -10,4 +10,4 @@ managed:
   enabled: true
   override:
     - file_option: go_package_prefix
-      value: template.app/proto/codebase
+      value: mokapay.app/proto/codebase

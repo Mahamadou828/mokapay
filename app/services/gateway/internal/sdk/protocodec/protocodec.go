@@ -7,8 +7,8 @@ import (
 
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
-	errs "template.app/app/services/gateway/internal/sdk/errs"
-	corehttp "template.app/core/http"
+	errs "mokapay.app/app/services/gateway/internal/sdk/errs"
+	corehttp "mokapay.app/core/http"
 )
 
 var marshaler = protojson.MarshalOptions{UseProtoNames: true, EmitUnpopulated: true}

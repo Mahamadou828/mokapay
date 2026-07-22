@@ -7,8 +7,8 @@ import (
 	"context"
 	"net/http"
 
-	coreweb "template.app/core/http"
-	"template.app/core/logger"
+	coreweb "mokapay.app/core/http"
+	"mokapay.app/core/logger"
 )
 
 // Config carries the settings the API layer needs to wire its handlers

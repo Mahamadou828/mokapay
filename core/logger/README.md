@@ -5,7 +5,7 @@ A structured logging package built on top of Go's `log/slog`, emitting JSON to a
 ## Creating a logger
 
 ```go
-import "template.app/core/logger"
+import "mokapay.app/core/logger"
 
 log := logger.New(os.Stdout, logger.LevelInfo, "my-service", nil)
 ```

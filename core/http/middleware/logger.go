@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	core "template.app/core/http"
+	core "mokapay.app/core/http"
 )
 
 // Logger writes information about the request to the logs.

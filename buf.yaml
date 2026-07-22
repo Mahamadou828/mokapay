@@ -2,7 +2,7 @@
 version: v2
 modules:
   - path: proto
-    name: buf.build/template/api
+    name: buf.build/mokapay/api
 lint:
   use:
     - STANDARD

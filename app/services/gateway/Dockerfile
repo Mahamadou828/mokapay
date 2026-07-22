@@ -14,7 +14,7 @@ COPY core/ ./core/
 COPY proto/ ./proto/
 COPY app/services/gateway/ ./app/services/gateway/
 
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags "-X template.app/app/services/gateway/internal.build=${BUILD_REF}" -o /gateway ./app/services/gateway
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags "-X mokapay.app/app/services/gateway/internal.build=${BUILD_REF}" -o /gateway ./app/services/gateway
 
 FROM alpine:3.19 AS build-release-stage
 ARG BUILD_DATE

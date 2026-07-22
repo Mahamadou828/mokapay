@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"path"
 
-	core "template.app/core/http"
-	"template.app/core/otel"
+	core "mokapay.app/core/http"
+	"mokapay.app/core/otel"
 )
 
 func Errors(log core.Logger) core.MidFunc {

@@ -54,6 +54,10 @@ stop:
 docs:
 	mkdir ./docs/$$(date +%Y%m%d_%H%M)_$(n)
 
+# update submodule dependencies
+submodule-update:
+	git submodule update
+
 # ==============================================================================
 # Building containers
 # Image builds live in each app's Makefile as `image`; this fans out.

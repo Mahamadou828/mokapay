@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-`template` is a monorepo template for Go microservices with an optional React web frontend. Tasks run through Make: a root `Makefile` for project-global commands, one `Makefile` per app for service-scoped commands (delegated from the root as `make <service>/<target>`). Services communicate via gRPC using Protobuf contracts defined in `proto/`.
+`mokapay` is a Go microservices monorepo with an optional React web frontend. Tasks run through Make: a root `Makefile` for project-global commands, one `Makefile` per app for service-scoped commands (delegated from the root as `make <service>/<target>`). Services communicate via gRPC using Protobuf contracts defined in `proto/`.
 
 ## Repository Structure
 
@@ -86,11 +86,11 @@ make proto                  # buf generate → regenerates proto/codebase/
 
 ## Go Module Naming
 
-The repo is a **single Go module**: `template.app` (root `go.mod`, no `go.work`,
+The repo is a **single Go module**: `mokapay.app` (root `go.mod`, no `go.work`,
 no `replace` directives). Import paths are directory paths:
-- `template.app/core/<pkg>` — the shared core library
-- `template.app/proto/codebase/...` — generated protobuf code
-- `template.app/app/services/<service>/...` — service code (`internal/` keeps
+- `mokapay.app/core/<pkg>` — the shared core library
+- `mokapay.app/proto/codebase/...` — generated protobuf code
+- `mokapay.app/app/services/<service>/...` — service code (`internal/` keeps
   services isolated from each other)
 
 ## Go Service Architecture
@@ -115,7 +115,7 @@ When `Migrate()` is called it applies SQL in this sequence:
 
 ## Core Library (`core/`)
 
-Shared infrastructure packages, imported as `template.app/core/<pkg>`:
+Shared infrastructure packages, imported as `mokapay.app/core/<pkg>`:
 
 | Package | Purpose |
 |---------|---------|

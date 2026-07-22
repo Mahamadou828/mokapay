@@ -1,4 +1,4 @@
-module template.app
+module mokapay.app
 
 go 1.26.3
 

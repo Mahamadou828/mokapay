@@ -4,7 +4,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"template.app/app/services/gateway/internal"
+	"mokapay.app/app/services/gateway/internal"
 )
 
 var runCmd = &cobra.Command{

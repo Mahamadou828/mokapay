@@ -8,11 +8,11 @@ import (
 	"syscall"
 	"time"
 
-	"template.app/app/services/gateway/internal/api"
-	"template.app/core/config"
-	coreweb "template.app/core/http"
-	"template.app/core/http/middleware"
-	"template.app/core/logger"
+	"mokapay.app/app/services/gateway/internal/api"
+	"mokapay.app/core/config"
+	coreweb "mokapay.app/core/http"
+	"mokapay.app/core/http/middleware"
+	"mokapay.app/core/logger"
 )
 
 /*

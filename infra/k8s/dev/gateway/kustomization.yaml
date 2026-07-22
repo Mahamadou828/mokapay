@@ -9,6 +9,6 @@ patches:
   - path: ./dev-gateway-patch-service.yaml
 images:
   - name: gateway-image
-    newName: localhost/template/gateway
+    newName: localhost/mokapay/gateway
     newTag: 0.0.1
 ---

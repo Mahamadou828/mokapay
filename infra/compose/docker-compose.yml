@@ -1,11 +1,11 @@
 # Pin the project name: without it compose derives it from this file's
 # directory ("compose"), which would produce generic "compose-*" containers.
-name: template
+name: mokapay
 
 networks:
-  template.infrastructure:
+  mokapay.infrastructure:
     driver: bridge
-  template.app:
+  mokapay.app:
     driver: bridge
 
 volumes:
@@ -16,21 +16,21 @@ services:
   postgres:
     image: postgres:17-alpine
     networks:
-      - template.infrastructure
+      - mokapay.infrastructure
     ports:
       # Host 5433 → container 5432 (5432 is often taken on the host).
       - "5433:5432"
     # Local-development-only credentials; production runs in k8s, not compose.
     environment:
-      POSTGRES_USER: template
-      POSTGRES_PASSWORD: template
-      POSTGRES_DB: template
+      POSTGRES_USER: mokapay
+      POSTGRES_PASSWORD: mokapay
+      POSTGRES_DB: mokapay
     volumes:
       - postgres_data:/var/lib/postgresql/data
       # Init scripts run once on first cluster init; creates per-service databases.
       - ./postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U template"]
+      test: ["CMD-SHELL", "pg_isready -U mokapay"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -38,13 +38,13 @@ services:
   mongodb:
     image: mongo:8
     networks:
-      - template.infrastructure
+      - mokapay.infrastructure
     ports:
       - "27017:27017"
     # Local-development-only credentials; production runs in k8s, not compose.
     environment:
-      MONGO_INITDB_ROOT_USERNAME: template
-      MONGO_INITDB_ROOT_PASSWORD: template
+      MONGO_INITDB_ROOT_USERNAME: mokapay
+      MONGO_INITDB_ROOT_PASSWORD: mokapay
     volumes:
       - mongo_data:/data/db
     healthcheck:
@@ -56,7 +56,7 @@ services:
   redis:
     image: redis:7-alpine
     networks:
-      - template.infrastructure
+      - mokapay.infrastructure
     ports:
       - "6379:6379"
     healthcheck:
@@ -72,7 +72,7 @@ services:
       args:
         BUILD_REF: develop
     networks:
-      - template.app
+      - mokapay.app
     ports:
       # Host 8085 → container 8080 (8080 is often taken on the host).
       - "8085:8080"

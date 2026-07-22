@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"runtime/debug"
 
-	core "template.app/core/http"
+	core "mokapay.app/core/http"
 )
 
 // Panics recovers from panics and converts the panic to an error so it is

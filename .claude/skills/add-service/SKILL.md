@@ -31,7 +31,7 @@ Settle with the user before scaffolding: does the service have persistence
 - `proto/<name>/v1/<aggregate>_service.proto` + `shared_message.proto`,
   package `<name>.v1` (see api-design skill for RPC/message rules).
 - Run `make proto` — generated code lands in `proto/codebase/<name>/v1/`,
-  imported as `template.app/proto/codebase/<name>/v1`.
+  imported as `mokapay.app/proto/codebase/<name>/v1`.
 
 ## 2. Service tree
 
@@ -78,8 +78,8 @@ app/services/<name>/
    - add the image to `kind-load-images` and `<name>/restart-dev` to
      `kind-restart`.
 3. **Compose** (`infra/compose/docker-compose.yml`) — service entry modeled on
-   `gateway`'s: build context `../..`, its Dockerfile, `template.app` network
-   (plus `template.infrastructure` if it talks to postgres/mongo/redis
+   `gateway`'s: build context `../..`, its Dockerfile, `mokapay.app` network
+   (plus `mokapay.infrastructure` if it talks to postgres/mongo/redis
    directly), `env_file`, ports, `depends_on` with `condition:
    service_healthy` on the stores it uses. DB-backed services append
    `command: ["--migrate"]`.
@@ -87,7 +87,7 @@ app/services/<name>/
    Postgres services only: `CREATE DATABASE <name>;`.
 5. **k8s** — copy `infra/k8s/base/gateway/` → `base/<name>/` and
    `dev/gateway/` → `dev/<name>/`; rename metadata/labels/image (image name
-   `<name>-image`, dev override `localhost/template/<name>`), set container
+   `<name>-image`, dev override `localhost/mokapay/<name>`), set container
    ports and probes (gRPC services: TCP or exec probes instead of HTTP).
    Add a host port mapping in `dev/kind-config.yaml` if it must be reachable
    from the host.
