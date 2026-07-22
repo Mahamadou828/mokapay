@@ -1,0 +1,67 @@
+# See https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
+
+# environment files — only .env.example is safe to commit
+.env
+.env.*
+!.env.example
+
+# local working docs (see .claude/rules/docs.md)
+/docs/
+
+
+# compiled output
+dist
+tmp/
+out-tsc
+
+# dependencies
+node_modules
+
+# IDEs and editors
+/.idea
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# IDE - VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# misc
+/.sass-cache
+/connect.lock
+/coverage
+/libpeerconnection.log
+npm-debug.log
+yarn-error.log
+testem.log
+/typings
+
+# Go build artifacts
+bin/
+*.exe
+*.test
+
+# System Files
+.DS_Store
+Thumbs.db
+
+# IntelliJ HTTP client private env (secrets / per-dev overrides) — commit the .example instead
+http-client.private.env.json
+
+
+.claude/worktrees
+.claude/settings.local.json
+vite.config.*.timestamp*
+vitest.config.*.timestamp*
+test-output
+
+tmp/
+*.excalidraw
+

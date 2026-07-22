@@ -1,0 +1,28 @@
+# Dependencies & build output (reinstalled/rebuilt inside the image)
+**/node_modules
+**/dist
+**/out-tsc
+**/bin
+
+# Local env files — never bake into images (config comes via env_file at runtime)
+**/.env
+**/.env.*
+!**/.env.example
+
+# VCS, editors, tooling
+.git
+.github
+.idea
+.vscode
+.claude
+
+# Docs & scratch
+**/*.md
+docs
+tmp
+*.excalidraw
+
+# Test / coverage output
+**/test-output
+**/coverage
+*.log

@@ -1,0 +1,5 @@
+### Readiness probe
+GET {{host}}/v1/readiness
+
+### Liveness probe
+GET {{host}}/v1/liveness

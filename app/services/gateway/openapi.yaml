@@ -1,0 +1,35 @@
+openapi: 3.0.3
+info:
+  title: Gateway API
+  version: "1.0.0"
+  description: >
+    REST gateway over the project's gRPC services. Each endpoint proxies to a
+    gRPC RPC; request/response bodies are proto3-JSON (snake_case field names,
+    enums as their string names). List filters are passed as query parameters;
+    create/update bodies mirror the corresponding gRPC request message.
+
+servers:
+  - url: http://localhost:8080
+    description: Local gateway
+
+tags:
+  - name: Health
+
+paths:
+  /v1/readiness:
+    get:
+      tags: [Health]
+      summary: Readiness probe
+      operationId: readiness
+      responses:
+        "200":
+          description: Service ready
+
+  /v1/liveness:
+    get:
+      tags: [Health]
+      summary: Liveness probe
+      operationId: liveness
+      responses:
+        "200":
+          description: Service alive

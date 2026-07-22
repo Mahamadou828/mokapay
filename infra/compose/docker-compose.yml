@@ -1,0 +1,85 @@
+# Pin the project name: without it compose derives it from this file's
+# directory ("compose"), which would produce generic "compose-*" containers.
+name: template
+
+networks:
+  template.infrastructure:
+    driver: bridge
+  template.app:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  mongo_data:
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    networks:
+      - template.infrastructure
+    ports:
+      # Host 5433 → container 5432 (5432 is often taken on the host).
+      - "5433:5432"
+    # Local-development-only credentials; production runs in k8s, not compose.
+    environment:
+      POSTGRES_USER: template
+      POSTGRES_PASSWORD: template
+      POSTGRES_DB: template
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Init scripts run once on first cluster init; creates per-service databases.
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U template"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  mongodb:
+    image: mongo:8
+    networks:
+      - template.infrastructure
+    ports:
+      - "27017:27017"
+    # Local-development-only credentials; production runs in k8s, not compose.
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: template
+      MONGO_INITDB_ROOT_PASSWORD: template
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    networks:
+      - template.infrastructure
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  gateway:
+    build:
+      context: ../..
+      dockerfile: app/services/gateway/Dockerfile
+      args:
+        BUILD_REF: develop
+    networks:
+      - template.app
+    ports:
+      # Host 8085 → container 8080 (8080 is often taken on the host).
+      - "8085:8080"
+    env_file:
+      - ../../app/services/gateway/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy

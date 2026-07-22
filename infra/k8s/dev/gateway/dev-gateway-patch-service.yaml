@@ -1,0 +1,18 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway-service
+  namespace: service-system
+
+spec:
+  type: ClusterIP
+
+  ports:
+    - name: gateway
+      port: 8080
+      targetPort: gateway
+    - name: gateway-debug
+      port: 3010
+      targetPort: gateway-debug
+---
