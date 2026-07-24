@@ -82,6 +82,60 @@ func (s Store) GetAccountByPhone(ctx context.Context, phoneNumber string) (auth.
 	return viewAccountToDomain(row)
 }
 
+// UpdateAccount writes the non-nil fields of the payload; nil leaves the
+// stored value untouched.
+func (s Store) UpdateAccount(ctx context.Context, up auth.UpdateAccount) (auth.Account, error) {
+	row, err := s.sqlc.UpdateAccount(ctx, sqlc.UpdateAccountParams{
+		ID:                up.ID.String(),
+		FirstName:         toNullString(up.FirstName),
+		LastName:          toNullString(up.LastName),
+		Email:             toNullString(up.Email),
+		PreferredLanguage: toNullLanguagePtr(up.PreferredLanguage),
+		Role:              toNullRole(up.Role),
+		Status:            toNullStatus(up.Status),
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return auth.Account{}, auth.ErrAccountNotFound
+		}
+		return auth.Account{}, fmt.Errorf("updating account %s: %w", up.ID, err)
+	}
+
+	return accountToDomain(row)
+}
+
+// ListAccounts returns live accounts matching the filter, newest first.
+func (s Store) ListAccounts(ctx context.Context, f auth.AccountFilter) ([]auth.Account, error) {
+	rows, err := s.sqlc.ListAccounts(ctx, sqlc.ListAccountsParams{
+		Role:        toNullRole(f.Role),
+		Status:      toNullStatus(f.Status),
+		PhoneNumber: toNullString(f.PhoneNumber),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("listing accounts: %w", err)
+	}
+
+	out := make([]auth.Account, 0, len(rows))
+	for _, row := range rows {
+		a, err := viewAccountToDomain(row)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, a)
+	}
+
+	return out, nil
+}
+
+// DeleteAccount soft-deletes the account; deleting an already-deleted or
+// unknown id is a no-op.
+func (s Store) DeleteAccount(ctx context.Context, id string) error {
+	if err := s.sqlc.DeleteAccount(ctx, id); err != nil {
+		return fmt.Errorf("deleting account %s: %w", id, err)
+	}
+	return nil
+}
+
 // SetLastLogin stamps a successful login on the account.
 func (s Store) SetLastLogin(ctx context.Context, id string, at time.Time) (auth.Account, error) {
 	row, err := s.sqlc.UpdateAccount(ctx, sqlc.UpdateAccountParams{
@@ -189,4 +243,25 @@ func toNullLanguage(l auth.Language) sqlc.NullAccountLanguage {
 		return sqlc.NullAccountLanguage{}
 	}
 	return sqlc.NullAccountLanguage{AccountLanguage: sqlc.AccountLanguage(l), Valid: true}
+}
+
+func toNullLanguagePtr(l *auth.Language) sqlc.NullAccountLanguage {
+	if l == nil {
+		return sqlc.NullAccountLanguage{}
+	}
+	return toNullLanguage(*l)
+}
+
+func toNullRole(r *auth.AccountRole) sqlc.NullAccountRole {
+	if r == nil {
+		return sqlc.NullAccountRole{}
+	}
+	return sqlc.NullAccountRole{AccountRole: sqlc.AccountRole(*r), Valid: true}
+}
+
+func toNullStatus(st *auth.AccountStatus) sqlc.NullAccountStatus {
+	if st == nil {
+		return sqlc.NullAccountStatus{}
+	}
+	return sqlc.NullAccountStatus{AccountStatus: sqlc.AccountStatus(*st), Valid: true}
 }

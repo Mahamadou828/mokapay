@@ -221,6 +221,52 @@ func TestStoreAccountLifecycle(t *testing.T) {
 	if _, err := store.GetAccountByPhone(ctx, testPhone()); !errors.Is(err, auth.ErrAccountNotFound) {
 		t.Fatalf("unknown phone must be ErrAccountNotFound, got %v", err)
 	}
+
+	// Partial update: only the set fields change, the rest stays.
+	updated, err := store.UpdateAccount(ctx, auth.UpdateAccount{
+		ID:        added.ID,
+		FirstName: new("Updated"),
+		Status:    new(auth.AccountStatusSuspended),
+	})
+	if err != nil {
+		t.Fatalf("UpdateAccount: %v", err)
+	}
+	if updated.FirstName != "Updated" || updated.Status != auth.AccountStatusSuspended {
+		t.Fatalf("update not applied: %q/%s", updated.FirstName, updated.Status)
+	}
+	if updated.LastName != "User" || updated.Email == nil || *updated.Email != email {
+		t.Fatalf("unset fields must be preserved: %q/%v", updated.LastName, updated.Email)
+	}
+
+	// List with filters: phone pins the row; a non-matching status excludes it.
+	listed, err := store.ListAccounts(ctx, auth.AccountFilter{PhoneNumber: &phone})
+	if err != nil {
+		t.Fatalf("ListAccounts: %v", err)
+	}
+	if len(listed) != 1 || listed[0].ID != added.ID {
+		t.Fatalf("ListAccounts by phone = %d rows, want the one account", len(listed))
+	}
+	miss, err := store.ListAccounts(ctx, auth.AccountFilter{
+		PhoneNumber: &phone,
+		Status:      new(auth.AccountStatusBanned),
+	})
+	if err != nil {
+		t.Fatalf("ListAccounts filtered: %v", err)
+	}
+	if len(miss) != 0 {
+		t.Fatalf("status filter must exclude the row, got %d", len(miss))
+	}
+
+	// Delete: soft delete makes every lookup miss and re-delete is a no-op.
+	if err := store.DeleteAccount(ctx, added.ID.String()); err != nil {
+		t.Fatalf("DeleteAccount: %v", err)
+	}
+	if _, err := store.GetAccount(ctx, added.ID.String()); !errors.Is(err, auth.ErrAccountNotFound) {
+		t.Fatalf("deleted account must be ErrAccountNotFound, got %v", err)
+	}
+	if err := store.DeleteAccount(ctx, added.ID.String()); err != nil {
+		t.Fatalf("second DeleteAccount must be a no-op, got %v", err)
+	}
 }
 
 func getenv(key, fallback string) string {

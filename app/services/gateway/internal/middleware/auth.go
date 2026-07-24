@@ -26,12 +26,12 @@ func Auth(v AuthValidator) core.MidFunc {
 				return core.NewHTTPError(errs.PermissionDenied, errors.New("authorization require"))
 			}
 
-			token, ok := strings.CutPrefix(token, "Bearer")
+			token, ok := strings.CutPrefix(token, "Bearer ")
 			if !ok {
 				return core.NewHTTPError(errs.PermissionDenied, errors.New("invalid token"))
 			}
 
-			cl, err := v.ValidateToken(token)
+			cl, err := v.ValidateToken(strings.TrimSpace(token))
 			if err != nil {
 				return core.NewHTTPError(errs.PermissionDenied, err)
 			}

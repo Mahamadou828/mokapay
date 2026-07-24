@@ -208,6 +208,22 @@ func (c *Cognito) Logout(ctx context.Context, sub string) error {
 	return nil
 }
 
+// AdminDelete removes the user from the pool. An already-deleted user is
+// treated as success — callers use this to compensate a failed sign-up.
+func (c *Cognito) AdminDelete(ctx context.Context, username string) error {
+	if _, err := c.client.AdminDeleteUser(ctx, &cip.AdminDeleteUserInput{
+		UserPoolId: aws.String(c.poolID),
+		Username:   aws.String(username),
+	}); err != nil {
+		var notFound *types.UserNotFoundException
+		if errors.As(err, &notFound) {
+			return nil
+		}
+		return mapErr(err)
+	}
+	return nil
+}
+
 // ValidateToken - validate the given token in place.
 func (c *Cognito) ValidateToken(token string) (jwt.RegisteredClaims, error) {
 	issuer := fmt.Sprintf("https://cognito-idp.%s.amazonaws.com/%s", c.region, c.poolID)

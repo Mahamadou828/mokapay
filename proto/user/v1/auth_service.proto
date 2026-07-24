@@ -5,19 +5,15 @@ package user.v1;
 import "google/protobuf/empty.proto";
 import "user/v1/shared_message.proto";
 
-// Note: currently there is no otp provider configured. As such login will be
-// a 1 step process with phone number and password
-
-// In 1.1 we will implement either passwordless login or otp.
-
-// Phone + password + SMS-OTP second factor. Login is two steps: Login checks
-// the password and triggers a LOGIN OTP (the only way a LOGIN OTP is ever
-// created); VerifyLogin trades the code for tokens.
+// Phone + password + SMS-OTP second factor, backed by AWS Cognito (it owns
+// credentials and sessions; this service owns accounts and OTP codes).
+// Login is a single call: the client obtains a LOGIN OTP via SendOtp, then
+// sends phone + password + code together. Token validation happens at the
+// gateway, locally against the Cognito JWKS — there is no validation RPC.
 service AuthService {
   rpc SendOtp(SendOtpRequest) returns (SendOtpResponse);
   rpc Register(RegisterRequest) returns (AuthResponse);
   rpc Login(LoginRequest) returns (AuthResponse);
-//  rpc VerifyLogin(VerifyLoginRequest) returns (AuthResponse);
   rpc RefreshToken(RefreshTokenRequest) returns (AuthResponse);
   rpc Logout(LogoutRequest) returns (google.protobuf.Empty);
   rpc ChangePassword(ChangePasswordRequest) returns (google.protobuf.Empty);
@@ -46,38 +42,29 @@ message RegisterRequest {
 message LoginRequest {
   string phone_number = 1;
   string password = 2;
+  string code = 3; // LOGIN OTP obtained via SendOtp
 }
 
-// Step 1 succeeded: an OTP is on its way. No tokens yet.
-message LoginResponse {
-  int64 otp_expires_in_seconds = 1;
-}
-
-message VerifyLoginRequest {
-  string phone_number = 1;
-  string code = 2;
-}
-
+// Cognito derives the refresh SECRET_HASH from the user's sub; the client
+// reads it from its access token's `sub` claim.
 message RefreshTokenRequest {
   string refresh_token = 1;
+  string sub = 2;
 }
 
-message LogoutRequest {
-  string refresh_token = 1;
-}
-
-message ResetPasswordRequest {
-  string phone_number = 1;
-}
+// Caller identity comes from the gateway metadata; Cognito global sign-out
+// revokes every refresh token of the account.
+message LogoutRequest {}
 
 message ChangePasswordRequest {
-  string code = 1;
+  string code = 1; // RESET OTP obtained via SendOtp
   string new_password = 2;
   string phone_number = 3;
 }
 
+// Tokens only — the profile is fetched via UserService.Me.
 message AuthResponse {
-  string access_token = 2;
-  string refresh_token = 3;
-  int64 access_expires_in = 4;  // seconds
+  string access_token = 1;
+  string refresh_token = 2;
+  int64 access_expires_in = 3; // seconds
 }

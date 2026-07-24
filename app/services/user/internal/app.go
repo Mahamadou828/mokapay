@@ -11,9 +11,16 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
+	accountapi "mokapay.app/app/services/user/internal/api/account"
+	adminapi "mokapay.app/app/services/user/internal/api/admin"
+	authapi "mokapay.app/app/services/user/internal/api/auth"
+	"mokapay.app/app/services/user/internal/business/auth/usecase"
+	"mokapay.app/app/services/user/internal/integration/sms"
+	"mokapay.app/core/aws"
 	"mokapay.app/core/db"
 	coreweb "mokapay.app/core/http"
 	"mokapay.app/core/logger"
+	userv1 "mokapay.app/proto/codebase/user/v1"
 )
 
 const serviceName = "user"
@@ -56,14 +63,32 @@ func Run() error {
 	defer pg.Close()
 
 	// -------------------------------------------------------------------------
+	// Init integrations: Cognito owns credentials & sessions, SMS is the
+	// logging mock until a provider is picked.
+	cognito, err := aws.NewCognito(ctx, cfg.Cognito.ClientID, cfg.Cognito.ClientSecret, cfg.Cognito.PoolID, cfg.Cognito.Region)
+	if err != nil {
+		log.Error(ctx, "startup", "failed to init cognito client", "error", err)
+		return err
+	}
+	sender := sms.NewLog(log)
+
+	// -------------------------------------------------------------------------
+	// Init usecases
+	authUC, err := usecase.New(log, pg, sender, cognito, cfg.Auth.OtpPepper)
+	if err != nil {
+		log.Error(ctx, "startup", "failed to init auth usecase", "error", err)
+		return err
+	}
+	accountUC := usecase.NewAccount(log, pg, cognito)
+
+	// -------------------------------------------------------------------------
 	// Init gRPC server & register services
 	srv := grpc.NewServer()
 	reflection.Register(srv)
 
-	// TODO(implementation): register the service handlers here, e.g.
-	//   userv1.RegisterAuthServiceServer(srv, authapi.New(log, pg, cfg.Auth))
-	//   userv1.RegisterUserServiceServer(srv, accountapi.New(log, pg))
-	//   userv1.RegisterAdminServiceServer(srv, adminapi.New(log, pg))
+	userv1.RegisterAuthServiceServer(srv, authapi.NewHandler(log, authUC))
+	userv1.RegisterUserServiceServer(srv, accountapi.NewUserHandler(log, accountUC))
+	userv1.RegisterAdminServiceServer(srv, adminapi.NewHandler(log, accountUC))
 
 	lis, err := net.Listen("tcp", cfg.GRPC.Port)
 	if err != nil {

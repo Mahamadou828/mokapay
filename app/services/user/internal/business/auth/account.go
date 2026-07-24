@@ -17,6 +17,11 @@ var ErrPhoneNumberTaken = errors.New("phone number already registered")
 // bound to the Cognito user (the partial unique index on accounts.cognito_sub).
 var ErrCognitoSubTaken = errors.New("cognito user already bound to an account")
 
+// ErrAccountSuspended / ErrAccountBanned block authentication (login, token
+// refresh) for moderated accounts.
+var ErrAccountSuspended = errors.New("account suspended")
+var ErrAccountBanned = errors.New("account banned")
+
 // AccountRole values mirror the stored account_role enum.
 type AccountRole string
 
@@ -57,6 +62,26 @@ type NewAccount struct {
 	LastName          string
 	PreferredLanguage Language // zero value = store default (fr)
 	Email             *string
+}
+
+// UpdateAccount is the account update payload; nil fields are left unchanged.
+// Role and Status are moderation fields — the api layer only sets them on the
+// admin path (authorization is its job).
+type UpdateAccount struct {
+	ID                uuid.UUID
+	FirstName         *string
+	LastName          *string
+	Email             *string
+	PreferredLanguage *Language
+	Role              *AccountRole
+	Status            *AccountStatus
+}
+
+// AccountFilter narrows account listings; nil fields mean "not filtering".
+type AccountFilter struct {
+	Role        *AccountRole
+	Status      *AccountStatus
+	PhoneNumber *string
 }
 
 // Account is the read entity. Credentials live in Cognito, never here.

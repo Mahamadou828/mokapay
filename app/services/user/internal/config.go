@@ -24,17 +24,20 @@ type Config struct {
 		Port string
 	}
 	Auth struct {
-		JWTSecret       string
-		AccessTokenTTL  time.Duration
-		RefreshTokenTTL time.Duration
+		OtpPepper       string // HMAC key for OTP code hashes
 		OtpTTL          time.Duration
 		OtpMaxAttempts  int
 		OtpSendCooldown time.Duration
 		OtpHourlyLimit  int
 	}
+	Cognito struct {
+		ClientID     string
+		ClientSecret string
+		PoolID       string
+		Region       string
+	}
 	Seed struct {
-		OpsPhone    string
-		OpsPassword string
+		OpsPhone string
 	}
 }
 
@@ -58,16 +61,18 @@ func newConfig() Config {
 	cfg.Redis.Host = config.GetEnv("REDIS_HOST", "localhost")
 	cfg.Redis.Port = config.GetEnv("REDIS_PORT", "6379")
 
-	cfg.Auth.JWTSecret = config.GetEnv("JWT_SECRET", "dev-secret-change-me")
-	cfg.Auth.AccessTokenTTL = config.GetEnvAsTimeDuration("ACCESS_TOKEN_TTL", 15*time.Minute)
-	cfg.Auth.RefreshTokenTTL = config.GetEnvAsTimeDuration("REFRESH_TOKEN_TTL", 720*time.Hour)
+	cfg.Auth.OtpPepper = config.GetEnv("OTP_PEPPER", "dev-pepper-change-me")
 	cfg.Auth.OtpTTL = config.GetEnvAsTimeDuration("OTP_TTL", 10*time.Minute)
 	cfg.Auth.OtpMaxAttempts = config.GetEnvAsInt("OTP_MAX_ATTEMPTS", 3)
 	cfg.Auth.OtpSendCooldown = config.GetEnvAsTimeDuration("OTP_SEND_COOLDOWN", time.Minute)
 	cfg.Auth.OtpHourlyLimit = config.GetEnvAsInt("OTP_HOURLY_LIMIT", 5)
 
+	cfg.Cognito.ClientID = config.GetEnv("COGNITO_CLIENT_ID", "")
+	cfg.Cognito.ClientSecret = config.GetEnv("COGNITO_CLIENT_SECRET", "")
+	cfg.Cognito.PoolID = config.GetEnv("COGNITO_POOL_ID", "")
+	cfg.Cognito.Region = config.GetEnv("COGNITO_REGION", "eu-west-1")
+
 	cfg.Seed.OpsPhone = config.GetEnv("SEED_OPS_PHONE", "")
-	cfg.Seed.OpsPassword = config.GetEnv("SEED_OPS_PASSWORD", "")
 
 	return cfg
 }
