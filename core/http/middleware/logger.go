@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	errs "mokapay.app/core/error"
 	core "mokapay.app/core/http"
 )
 
@@ -27,11 +28,11 @@ func Logger(log core.Logger) core.MidFunc {
 			var statusCode int
 
 			if err := checkIsError(res); err != nil {
-				statusCode = errInternal.HTTPStatus()
+				statusCode = errInternal.Status()
 
-				var appError *core.Error
+				var appError *errs.Error
 				if errors.As(err, &appError) {
-					statusCode = appError.Code.HTTPStatus()
+					statusCode = appError.Code.Status()
 				}
 			}
 

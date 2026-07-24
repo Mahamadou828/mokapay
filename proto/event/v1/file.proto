@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package event.v1;
+
+// Cross-service domain events. An event message is the payload of the
+// delivery envelope {id, type, occurred_at, producer, payload=protojson};
+// the type string doubles as the routing key when a broker replaces the
+// v1 River delivery (see docs/20260724_1631_platform-messaging-infra).
+
+// FileUploaded — type "file.document.uploaded". Published by the file
+// service once an upload is verified in object storage. v1 consumer: the
+// payment service (proof-gated transfer transitions, deposit proofs).
+message FileUploaded {
+  string file_id = 1;
+  string purpose = 2; // file.v1.FilePurpose value as its DB string ("sender_proof", ...)
+  string related_type = 3; // empty when the file is unattached
+  string related_id = 4;
+  string owner_id = 5;
+  string sha256 = 6;
+  string content_type = 7;
+  int64 size_bytes = 8;
+}

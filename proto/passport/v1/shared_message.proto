@@ -1,0 +1,36 @@
+syntax = "proto3";
+import "google/protobuf/timestamp.proto";
+
+package passport.v1;
+
+enum PassportType {
+  PASSPORT_TYPE_UNSPECIFIED = 0;
+  PASSPORT_TYPE_USER = 1;
+  PASSPORT_TYPE_SYSTEM = 2;
+}
+
+message Claim {
+  string issuer = 1;
+  string subject = 2;
+  repeated string claim_strings = 3;
+  google.protobuf.Timestamp expires_at = 4;
+  google.protobuf.Timestamp not_before = 5;
+  google.protobuf.Timestamp issued_at = 6;
+  string id = 7;
+}
+
+message User {
+  string id = 1;
+  string phone_number = 2;  // E.164
+  string first_name = 3;
+  string last_name = 4;
+  optional string email = 5;
+  string preferred_language = 6;
+  string role = 7;
+}
+
+message Passport {
+  Claim claim = 1;
+  User user = 2;
+  PassportType type = 3;
+}

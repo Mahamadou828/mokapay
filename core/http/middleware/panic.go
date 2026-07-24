@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"runtime/debug"
 
+	errs "mokapay.app/core/error"
 	core "mokapay.app/core/http"
 )
 
@@ -19,7 +20,7 @@ func Panics(log core.Logger) core.MidFunc {
 			defer func() {
 				if rec := recover(); rec != nil {
 					trace := debug.Stack()
-					err := core.Errorf(errInternalOnlyLog, "PANIC [%v] TRACE[%s]", rec, string(trace))
+					err := errs.Errorf(errInternalOnlyLog, "PANIC [%v] TRACE[%s]", rec, string(trace))
 					log(ctx, "", err)
 				}
 			}()

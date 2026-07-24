@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"io/fs"
 
-	_ "github.com/lib/pq"
+	// pgx in database/sql-compatibility mode: repos and sqlc stay on
+	// database/sql; pgx-native consumers (River) share the same DSN.
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 type PostgresConfig struct {
@@ -37,7 +39,7 @@ func (d *Postgres) Open() error {
 		d.config.Database,
 	)
 
-	db, err := sql.Open("postgres", conn)
+	db, err := sql.Open("pgx", conn)
 	if err != nil {
 		return err
 	}

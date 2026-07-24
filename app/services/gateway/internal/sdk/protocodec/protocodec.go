@@ -7,8 +7,8 @@ import (
 
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
-	errs "mokapay.app/app/services/gateway/internal/sdk/errs"
-	corehttp "mokapay.app/core/http"
+	"mokapay.app/app/services/gateway/internal/sdk/errs"
+	coreerrs "mokapay.app/core/error"
 )
 
 var marshaler = protojson.MarshalOptions{UseProtoNames: true, EmitUnpopulated: true}
@@ -17,14 +17,14 @@ var marshaler = protojson.MarshalOptions{UseProtoNames: true, EmitUnpopulated: t
 type Proto struct {
 	Message proto.Message
 	// Status is the HTTP status code sent with the response; 0 means 200.
-	Status int
+	ReqStatus int
 }
 
-// HTTPStatus implements the http package httpStatus interface so the
+// Status implements the http package httpStatus interface so the
 // server writes a valid status code for successful proto responses.
-func (p Proto) HTTPStatus() int {
-	if p.Status != 0 {
-		return p.Status
+func (p Proto) Status() int {
+	if p.ReqStatus != 0 {
+		return p.ReqStatus
 	}
 	return http.StatusOK
 }
@@ -39,7 +39,7 @@ func (p Proto) Decode(data []byte) error {
 func (p Proto) Encode() ([]byte, string, error) {
 	b, err := marshaler.Marshal(p.Message)
 	if err != nil {
-		return nil, "application/json", corehttp.NewHTTPError(errs.FailedToMarshal, err)
+		return nil, "application/json", coreerrs.New(errs.FailedToMarshal, err)
 	}
 
 	return b, "application/json", nil

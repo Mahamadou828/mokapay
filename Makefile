@@ -14,7 +14,7 @@ TEMPO               := grafana/tempo:2.10.0
 LOKI                := grafana/loki:3.7.0
 PROMTAIL            := grafana/promtail:3.6.0
 
-GO_SERVICES := gateway user
+GO_SERVICES := gateway user file
 
 .PHONY: docs proto build check-all lint-all test-all tidy start stop
 
@@ -30,6 +30,9 @@ gateway/%:
 
 user/%:
 	$(MAKE) -C app/services/user $(@F)
+
+file/%:
+	$(MAKE) -C app/services/file $(@F)
 
 # Fan-outs over the Go services
 check-all: $(addsuffix /check,$(GO_SERVICES))
@@ -64,7 +67,7 @@ submodule-update:
 # ==============================================================================
 # Building containers
 # Image builds live in each app's Makefile as `image`; this fans out.
-build: gateway/image user/image
+build: gateway/image user/image file/image
 
 # ==============================================================================
 # Starting kind cluster
@@ -94,6 +97,7 @@ kind-status:
 kind-load-images:
 	kind load docker-image $(GATEWAY_IMAGE) --name $(KIND_CLUSTER)
 	kind load docker-image $(USER_IMAGE) --name $(KIND_CLUSTER)
+	kind load docker-image $(FILE_IMAGE) --name $(KIND_CLUSTER)
 
 kind-apply:
 	kustomize build infra/k8s/dev/gateway | kubectl apply -f -
@@ -105,7 +109,7 @@ kind-clean:
 	kustomize build infra/k8s/dev/gateway | kubectl delete -f -
 	kustomize build infra/k8s/dev/user | kubectl delete -f -
 
-kind-restart: gateway/restart-dev user/restart-dev
+kind-restart: gateway/restart-dev user/restart-dev file/restart-dev
 
 kind-update: build kind-load-images kind-restart
 

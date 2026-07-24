@@ -1,0 +1,20 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    schema:
+      - "internal/db/scripts"
+      - "internal/db/migrations"
+      - "internal/db/view"
+      - "internal/db/procedure"
+    queries: "internal/db/query"
+    gen:
+      go:
+        package: "sqlc"
+        out: "internal/sqlc"
+        sql_package: "database/sql"
+        emit_pointers_for_null_types: false
+        overrides:
+          # IDs are plain strings at the repo edge; toDomain() parses them
+          # into uuid.UUID (see .claude/rules/go-coding-style.md).
+          - db_type: "uuid"
+            go_type: "string"

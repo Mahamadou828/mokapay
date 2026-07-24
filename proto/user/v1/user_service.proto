@@ -5,13 +5,21 @@ package user.v1;
 import "user/v1/shared_message.proto";
 
 // Self-service: the caller is always the identity forwarded by the gateway
-// in gRPC metadata — no account id in any request.
+// in gRPC metadata — no account id in any request. GetAccountBySub is the
+// one exception: it is the gateway-internal lookup that rehydrates the
+// passport's user data right after token validation (never exposed as a
+// REST route).
 service UserService {
   rpc Me(MeRequest) returns (Account);
   rpc UpdateAccount(UpdateAccountRequest) returns (Account);
+  rpc GetAccountBySub(GetAccountBySubRequest) returns (Account);
 }
 
 message MeRequest {}
+
+message GetAccountBySubRequest {
+  string sub = 1; // Cognito sub from the validated access token
+}
 
 message UpdateAccountRequest {
   optional string first_name = 1;

@@ -8,3 +8,4 @@
 --   docker compose down -v && docker compose up -d
 
 CREATE DATABASE users;
+CREATE DATABASE files;

@@ -41,6 +41,12 @@ func (a Account) Me(ctx context.Context, sub string) (auth.Account, error) {
 	return a.repo.GetAccountBySub(ctx, sub)
 }
 
+// GetAccountBySub resolves an account from a Cognito sub — the gateway's
+// passport-rehydration lookup right after token validation.
+func (a Account) GetAccountBySub(ctx context.Context, sub string) (auth.Account, error) {
+	return a.repo.GetAccountBySub(ctx, sub)
+}
+
 // UpdateOwnAccount applies a profile update to the caller's own account.
 // The payload's ID is overwritten with the account resolved from the sub.
 func (a Account) UpdateOwnAccount(ctx context.Context, sub string, up auth.UpdateAccount) (auth.Account, error) {

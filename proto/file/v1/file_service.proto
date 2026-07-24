@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package file.v1;
+
+import "file/v1/shared_message.proto";
+
+// Generic file storage: presign + confirm upload flow. The client PUTs the
+// bytes straight to object storage with a short-lived presigned URL — they
+// never transit the gateway or gRPC. Reads are 1-hour presigned GETs.
+service FileService {
+  // Validates and registers the upload, returns the URL to PUT the bytes to.
+  rpc CreateUpload(CreateUploadRequest) returns (CreateUploadResponse);
+  // Verifies the object landed (existence + size), hashes it, marks the
+  // file stored and announces file.document.uploaded to consumers.
+  rpc ConfirmUpload(ConfirmUploadRequest) returns (File);
+  rpc GetFile(GetFileRequest) returns (GetFileResponse);
+  rpc ListFiles(ListFilesRequest) returns (ListFilesResponse);
+  // OPS tier: flag a file as rejected (bad proof); kept for audit.
+  rpc RejectFile(RejectFileRequest) returns (File);
+}
+
+message CreateUploadRequest {
+  FilePurpose purpose = 1;
+  optional string related_type = 2;
+  optional string related_id = 3;
+  string file_name = 4;
+  string content_type = 5;
+  int64 size_bytes = 6; // enforced against the stored object at confirm
+}
+
+message CreateUploadResponse {
+  File file = 1;
+  string upload_url = 2; // HTTP PUT target; Content-Type must match
+  int64 upload_url_expires_in = 3; // seconds
+}
+
+message ConfirmUploadRequest {
+  string id = 1;
+}
+
+message GetFileRequest {
+  string id = 1;
+}
+
+message GetFileResponse {
+  File file = 1;
+  // Present only for stored files.
+  optional string download_url = 2;
+  optional int64 download_url_expires_in = 3; // seconds
+}
+
+message ListFilesRequest {
+  string related_type = 1;
+  string related_id = 2;
+  // Optional: narrow to one purpose.
+  optional FilePurpose purpose = 3;
+}
+
+message ListFilesResponse {
+  repeated File files = 1;
+}
+
+message RejectFileRequest {
+  string id = 1;
+}

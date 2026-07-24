@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/lib/pq"
+	"github.com/jackc/pgx/v5/pgconn"
 	"mokapay.app/app/services/user/internal/business/auth"
 	"mokapay.app/app/services/user/internal/sqlc"
 )
@@ -217,12 +217,12 @@ func viewAccountToDomain(a sqlc.UsersExtAccount) (auth.Account, error) {
 // uniqueViolationErr translates a Postgres unique_violation (23505) into the
 // matching domain conflict, keyed on the violated index; nil for anything else.
 func uniqueViolationErr(err error) error {
-	var pqErr *pq.Error
-	if !errors.As(err, &pqErr) || pqErr.Code != "23505" {
+	var pgErr *pgconn.PgError
+	if !errors.As(err, &pgErr) || pgErr.Code != "23505" {
 		return nil
 	}
 
-	switch pqErr.Constraint {
+	switch pgErr.ConstraintName {
 	case "accounts_phone_number_uq":
 		return auth.ErrPhoneNumberTaken
 	case "accounts_cognito_sub_uq":

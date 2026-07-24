@@ -19,8 +19,9 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	UserService_Me_FullMethodName            = "/user.v1.UserService/Me"
-	UserService_UpdateAccount_FullMethodName = "/user.v1.UserService/UpdateAccount"
+	UserService_Me_FullMethodName              = "/user.v1.UserService/Me"
+	UserService_UpdateAccount_FullMethodName   = "/user.v1.UserService/UpdateAccount"
+	UserService_GetAccountBySub_FullMethodName = "/user.v1.UserService/GetAccountBySub"
 )
 
 // UserServiceClient is the client API for UserService service.
@@ -28,10 +29,14 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
 // Self-service: the caller is always the identity forwarded by the gateway
-// in gRPC metadata — no account id in any request.
+// in gRPC metadata — no account id in any request. GetAccountBySub is the
+// one exception: it is the gateway-internal lookup that rehydrates the
+// passport's user data right after token validation (never exposed as a
+// REST route).
 type UserServiceClient interface {
 	Me(ctx context.Context, in *MeRequest, opts ...grpc.CallOption) (*Account, error)
 	UpdateAccount(ctx context.Context, in *UpdateAccountRequest, opts ...grpc.CallOption) (*Account, error)
+	GetAccountBySub(ctx context.Context, in *GetAccountBySubRequest, opts ...grpc.CallOption) (*Account, error)
 }
 
 type userServiceClient struct {
@@ -62,15 +67,29 @@ func (c *userServiceClient) UpdateAccount(ctx context.Context, in *UpdateAccount
 	return out, nil
 }
 
+func (c *userServiceClient) GetAccountBySub(ctx context.Context, in *GetAccountBySubRequest, opts ...grpc.CallOption) (*Account, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Account)
+	err := c.cc.Invoke(ctx, UserService_GetAccountBySub_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // UserServiceServer is the server API for UserService service.
 // All implementations must embed UnimplementedUserServiceServer
 // for forward compatibility.
 //
 // Self-service: the caller is always the identity forwarded by the gateway
-// in gRPC metadata — no account id in any request.
+// in gRPC metadata — no account id in any request. GetAccountBySub is the
+// one exception: it is the gateway-internal lookup that rehydrates the
+// passport's user data right after token validation (never exposed as a
+// REST route).
 type UserServiceServer interface {
 	Me(context.Context, *MeRequest) (*Account, error)
 	UpdateAccount(context.Context, *UpdateAccountRequest) (*Account, error)
+	GetAccountBySub(context.Context, *GetAccountBySubRequest) (*Account, error)
 	mustEmbedUnimplementedUserServiceServer()
 }
 
@@ -86,6 +105,9 @@ func (UnimplementedUserServiceServer) Me(context.Context, *MeRequest) (*Account,
 }
 func (UnimplementedUserServiceServer) UpdateAccount(context.Context, *UpdateAccountRequest) (*Account, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateAccount not implemented")
+}
+func (UnimplementedUserServiceServer) GetAccountBySub(context.Context, *GetAccountBySubRequest) (*Account, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetAccountBySub not implemented")
 }
 func (UnimplementedUserServiceServer) mustEmbedUnimplementedUserServiceServer() {}
 func (UnimplementedUserServiceServer) testEmbeddedByValue()                     {}
@@ -144,6 +166,24 @@ func _UserService_UpdateAccount_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _UserService_GetAccountBySub_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAccountBySubRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).GetAccountBySub(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_GetAccountBySub_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).GetAccountBySub(ctx, req.(*GetAccountBySubRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // UserService_ServiceDesc is the grpc.ServiceDesc for UserService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -158,6 +198,10 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateAccount",
 			Handler:    _UserService_UpdateAccount_Handler,
+		},
+		{
+			MethodName: "GetAccountBySub",
+			Handler:    _UserService_GetAccountBySub_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

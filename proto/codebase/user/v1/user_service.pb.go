@@ -57,6 +57,50 @@ func (*MeRequest) Descriptor() ([]byte, []int) {
 	return file_user_v1_user_service_proto_rawDescGZIP(), []int{0}
 }
 
+type GetAccountBySubRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Sub           string                 `protobuf:"bytes,1,opt,name=sub,proto3" json:"sub,omitempty"` // Cognito sub from the validated access token
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetAccountBySubRequest) Reset() {
+	*x = GetAccountBySubRequest{}
+	mi := &file_user_v1_user_service_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAccountBySubRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAccountBySubRequest) ProtoMessage() {}
+
+func (x *GetAccountBySubRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_user_v1_user_service_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAccountBySubRequest.ProtoReflect.Descriptor instead.
+func (*GetAccountBySubRequest) Descriptor() ([]byte, []int) {
+	return file_user_v1_user_service_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *GetAccountBySubRequest) GetSub() string {
+	if x != nil {
+		return x.Sub
+	}
+	return ""
+}
+
 type UpdateAccountRequest struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	FirstName         *string                `protobuf:"bytes,1,opt,name=first_name,json=firstName,proto3,oneof" json:"first_name,omitempty"`
@@ -69,7 +113,7 @@ type UpdateAccountRequest struct {
 
 func (x *UpdateAccountRequest) Reset() {
 	*x = UpdateAccountRequest{}
-	mi := &file_user_v1_user_service_proto_msgTypes[1]
+	mi := &file_user_v1_user_service_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -81,7 +125,7 @@ func (x *UpdateAccountRequest) String() string {
 func (*UpdateAccountRequest) ProtoMessage() {}
 
 func (x *UpdateAccountRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_user_v1_user_service_proto_msgTypes[1]
+	mi := &file_user_v1_user_service_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -94,7 +138,7 @@ func (x *UpdateAccountRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateAccountRequest.ProtoReflect.Descriptor instead.
 func (*UpdateAccountRequest) Descriptor() ([]byte, []int) {
-	return file_user_v1_user_service_proto_rawDescGZIP(), []int{1}
+	return file_user_v1_user_service_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *UpdateAccountRequest) GetFirstName() string {
@@ -130,7 +174,9 @@ var File_user_v1_user_service_proto protoreflect.FileDescriptor
 const file_user_v1_user_service_proto_rawDesc = "" +
 	"\n" +
 	"\x1auser/v1/user_service.proto\x12\auser.v1\x1a\x1cuser/v1/shared_message.proto\"\v\n" +
-	"\tMeRequest\"\xfc\x01\n" +
+	"\tMeRequest\"*\n" +
+	"\x16GetAccountBySubRequest\x12\x10\n" +
+	"\x03sub\x18\x01 \x01(\tR\x03sub\"\xfc\x01\n" +
 	"\x14UpdateAccountRequest\x12\"\n" +
 	"\n" +
 	"first_name\x18\x01 \x01(\tH\x00R\tfirstName\x88\x01\x01\x12 \n" +
@@ -141,10 +187,11 @@ const file_user_v1_user_service_proto_rawDesc = "" +
 	"\n" +
 	"_last_nameB\b\n" +
 	"\x06_emailB\x15\n" +
-	"\x13_preferred_language2{\n" +
+	"\x13_preferred_language2\xc1\x01\n" +
 	"\vUserService\x12*\n" +
 	"\x02Me\x12\x12.user.v1.MeRequest\x1a\x10.user.v1.Account\x12@\n" +
-	"\rUpdateAccount\x12\x1d.user.v1.UpdateAccountRequest\x1a\x10.user.v1.AccountB\x87\x01\n" +
+	"\rUpdateAccount\x12\x1d.user.v1.UpdateAccountRequest\x1a\x10.user.v1.Account\x12D\n" +
+	"\x0fGetAccountBySub\x12\x1f.user.v1.GetAccountBySubRequest\x1a\x10.user.v1.AccountB\x87\x01\n" +
 	"\vcom.user.v1B\x10UserServiceProtoP\x01Z)mokapay.app/proto/codebase/user/v1;userv1\xa2\x02\x03UXX\xaa\x02\aUser.V1\xca\x02\aUser\\V1\xe2\x02\x13User\\V1\\GPBMetadata\xea\x02\bUser::V1b\x06proto3"
 
 var (
@@ -159,21 +206,24 @@ func file_user_v1_user_service_proto_rawDescGZIP() []byte {
 	return file_user_v1_user_service_proto_rawDescData
 }
 
-var file_user_v1_user_service_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_user_v1_user_service_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_user_v1_user_service_proto_goTypes = []any{
-	(*MeRequest)(nil),            // 0: user.v1.MeRequest
-	(*UpdateAccountRequest)(nil), // 1: user.v1.UpdateAccountRequest
-	(Language)(0),                // 2: user.v1.Language
-	(*Account)(nil),              // 3: user.v1.Account
+	(*MeRequest)(nil),              // 0: user.v1.MeRequest
+	(*GetAccountBySubRequest)(nil), // 1: user.v1.GetAccountBySubRequest
+	(*UpdateAccountRequest)(nil),   // 2: user.v1.UpdateAccountRequest
+	(Language)(0),                  // 3: user.v1.Language
+	(*Account)(nil),                // 4: user.v1.Account
 }
 var file_user_v1_user_service_proto_depIdxs = []int32{
-	2, // 0: user.v1.UpdateAccountRequest.preferred_language:type_name -> user.v1.Language
+	3, // 0: user.v1.UpdateAccountRequest.preferred_language:type_name -> user.v1.Language
 	0, // 1: user.v1.UserService.Me:input_type -> user.v1.MeRequest
-	1, // 2: user.v1.UserService.UpdateAccount:input_type -> user.v1.UpdateAccountRequest
-	3, // 3: user.v1.UserService.Me:output_type -> user.v1.Account
-	3, // 4: user.v1.UserService.UpdateAccount:output_type -> user.v1.Account
-	3, // [3:5] is the sub-list for method output_type
-	1, // [1:3] is the sub-list for method input_type
+	2, // 2: user.v1.UserService.UpdateAccount:input_type -> user.v1.UpdateAccountRequest
+	1, // 3: user.v1.UserService.GetAccountBySub:input_type -> user.v1.GetAccountBySubRequest
+	4, // 4: user.v1.UserService.Me:output_type -> user.v1.Account
+	4, // 5: user.v1.UserService.UpdateAccount:output_type -> user.v1.Account
+	4, // 6: user.v1.UserService.GetAccountBySub:output_type -> user.v1.Account
+	4, // [4:7] is the sub-list for method output_type
+	1, // [1:4] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
 	1, // [1:1] is the sub-list for extension extendee
 	0, // [0:1] is the sub-list for field type_name
@@ -185,14 +235,14 @@ func file_user_v1_user_service_proto_init() {
 		return
 	}
 	file_user_v1_shared_message_proto_init()
-	file_user_v1_user_service_proto_msgTypes[1].OneofWrappers = []any{}
+	file_user_v1_user_service_proto_msgTypes[2].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_user_v1_user_service_proto_rawDesc), len(file_user_v1_user_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

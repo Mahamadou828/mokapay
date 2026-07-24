@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"path"
 
+	errs "mokapay.app/core/error"
 	core "mokapay.app/core/http"
 	"mokapay.app/core/otel"
 )
@@ -24,9 +25,9 @@ func Errors(log core.Logger) core.MidFunc {
 			span.RecordError(err)
 			defer span.End()
 
-			var appErr *core.Error
+			var appErr *errs.Error
 			if !errors.As(err, &appErr) {
-				appErr = core.Errorf(errInternal, "Internal Server Error")
+				appErr = errs.Errorf(errInternal, "Internal Server Error")
 			}
 
 			log(ctx, "handled error during request",
@@ -36,7 +37,7 @@ func Errors(log core.Logger) core.MidFunc {
 			)
 
 			if appErr.Code == errInternalOnlyLog {
-				appErr = core.Errorf(errInternal, "Internal Server Error")
+				appErr = errs.Errorf(errInternal, "Internal Server Error")
 			}
 
 			// Send the error to the web package so the error can be

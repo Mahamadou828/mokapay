@@ -70,9 +70,9 @@ func (ec errorCode) Equal(ec2 errorCode) bool {
 	return ec.value == ec2.value
 }
 
-// HTTPStatus implements the web package httpStatus interface so the
+// Status implements the web package httpStatus interface so the
 // web framework can use the correct http status.
-func (ec errorCode) HTTPStatus() int {
+func (ec errorCode) Status() int {
 	return httpStatus[ec]
 }
 

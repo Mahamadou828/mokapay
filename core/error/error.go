@@ -1,14 +1,18 @@
-package http
+package errs
 
 import (
 	"encoding/json"
 	"fmt"
 	"runtime"
+
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type ErrCode interface {
 	String() string
-	HTTPStatus() int
+	Status() int
 	MarshalText() ([]byte, error)
 }
 
@@ -20,8 +24,8 @@ type Error struct {
 	FileName string
 }
 
-// NewHTTPError constructs an error based on an app error.
-func NewHTTPError(code ErrCode, err error) *Error {
+// New constructs an error based on an app error.
+func New(code ErrCode, err error) *Error {
 	pc, filename, line, _ := runtime.Caller(1)
 
 	return &Error{
@@ -49,12 +53,24 @@ func (e *Error) Error() string {
 	return e.Message
 }
 
-// HTTPStatus return the HTTPStatus of this error.
-func (e *Error) HTTPStatus() int {
-	return e.Code.HTTPStatus()
+// Status return the HTTPStatus of this error.
+func (e *Error) Status() int {
+	return e.Code.Status()
 }
 
 func (e *Error) Encode() ([]byte, string, error) {
 	data, err := json.Marshal(e)
 	return data, "application/json", err
+}
+
+func (e *Error) GRPCStatus() *status.Status {
+	s := status.New(codes.Code(e.Code.Status()), e.Error())
+	ds, err := s.WithDetails(&errdetails.ResourceInfo{
+		ResourceType: e.FuncName,
+		ResourceName: e.FileName,
+	})
+	if err != nil {
+		return s // WithDetails failed; degrade to bare status
+	}
+	return ds
 }

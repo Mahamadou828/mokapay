@@ -36,8 +36,8 @@ func (ec ErrCode) Equal(ec2 ErrCode) bool {
 	return ec.value == ec2.value
 }
 
-// HTTPStatus implements the web package httpStatus interface so the
+// Status implements the web package httpStatus interface so the
 // web framework can use the correct http status.
-func (ec ErrCode) HTTPStatus() int {
+func (ec ErrCode) Status() int {
 	return httpStatus[ec]
 }

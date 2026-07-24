@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package file.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// Values mirror the files DB enums (file_purpose, file_status) —
+// conversion is a plain cast.
+
+enum FilePurpose {
+  FILE_PURPOSE_UNSPECIFIED = 0;
+  FILE_PURPOSE_SENDER_PROOF = 1;
+  FILE_PURPOSE_AGENT_PROOF = 2;
+  FILE_PURPOSE_RECIPIENT_PROOF = 3;
+  FILE_PURPOSE_DEPOSIT_PROOF = 4;
+  FILE_PURPOSE_KYC = 5;
+  FILE_PURPOSE_OTHER = 6;
+}
+
+enum FileStatus {
+  FILE_STATUS_UNSPECIFIED = 0;
+  FILE_STATUS_PENDING = 1; // presigned URL issued, bytes not confirmed
+  FILE_STATUS_STORED = 2;  // object verified in storage
+  FILE_STATUS_REJECTED = 3;
+}
+
+// File metadata. The bytes live in object storage and are only reachable
+// through presigned URLs — no storage key or bucket crosses the wire.
+message File {
+  string id = 1;
+  string owner_id = 2; // uploading account
+  FilePurpose purpose = 3;
+  // Loose reference to the entity the file belongs to, owned by another
+  // service ("transfer", "ledger_request", ...). May be absent for OTHER.
+  optional string related_type = 4;
+  optional string related_id = 5;
+  string file_name = 6; // original client name, display only
+  string content_type = 7;
+  int64 size_bytes = 8;
+  optional string sha256 = 9; // set once stored
+  FileStatus status = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+}
