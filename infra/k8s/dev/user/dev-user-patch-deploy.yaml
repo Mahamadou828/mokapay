@@ -1,0 +1,26 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user
+  namespace: service-system
+
+spec:
+  replicas: 1
+
+  strategy:
+    type: Recreate
+
+  # No hostNetwork (unlike the gateway): the user service is only reached
+  # in-cluster through user-service:50051.
+  template:
+    spec:
+      containers:
+        - name: user
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "100Mi"
+            limits:
+              cpu: "250m"
+              memory: "100Mi"

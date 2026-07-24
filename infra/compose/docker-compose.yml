@@ -65,6 +65,31 @@ services:
       timeout: 5s
       retries: 5
 
+  user:
+    build:
+      context: ../..
+      dockerfile: app/services/user/Dockerfile
+      args:
+        BUILD_REF: develop
+    command: ["--migrate"]
+    networks:
+      - mokapay.app
+      - mokapay.infrastructure
+    env_file:
+      - ../../app/services/user/.env
+    # The .env targets host-side local dev; inside compose the stores live on
+    # the infrastructure network under their service names.
+    environment:
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
   gateway:
     build:
       context: ../..

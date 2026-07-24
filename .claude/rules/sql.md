@@ -5,10 +5,10 @@ with migrations applied through `core/db` (`ExecFolderWithTX`).
 
 ## Directory structure
 
-Every service keeps all database files under `<service>/db/`:
+Every service keeps all database files under `<service>/internal/db/`:
 
 ```
-db/
+internal/db/
   migrations/   # versioned schema migrations (sql-migrate)
   view/         # one file per view
   procedure/    # one file per stored procedure

@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package user.v1;
+
+import "google/protobuf/empty.proto";
+import "user/v1/shared_message.proto";
+
+// OPS/ADMIN tier (spec 3.1 pick-a-user-to-promote, 3.10 moderation).
+// Handlers re-check the caller's role from gateway-forwarded metadata.
+service AdminService {
+  rpc GetAccount(GetAccountRequest) returns (Account);
+  rpc ListAccounts(ListAccountsRequest) returns (ListAccountsResponse);
+  // Moderation + role changes. Setting status to SUSPENDED/BANNED revokes
+  // the account's refresh tokens.
+  rpc UpdateAccount(AdminServiceUpdateAccountRequest) returns (Account);
+  rpc DeleteAccount(DeleteAccountRequest) returns (google.protobuf.Empty);
+}
+
+message GetAccountRequest {
+  string id = 1;
+}
+
+message ListAccountsRequest {
+  optional AccountRole role = 1;
+  optional AccountStatus status = 2;
+  optional string phone_number = 3;
+}
+
+message ListAccountsResponse {
+  repeated Account accounts = 1;
+}
+
+message AdminServiceUpdateAccountRequest {
+  string id = 1;
+  optional string first_name = 2;
+  optional string last_name = 3;
+  optional string email = 4;
+  optional Language preferred_language = 5;
+  optional AccountRole role = 6;
+  optional AccountStatus status = 7;
+}
+
+message DeleteAccountRequest {
+  string id = 1;
+}

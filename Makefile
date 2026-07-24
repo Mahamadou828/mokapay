@@ -14,7 +14,7 @@ TEMPO               := grafana/tempo:2.10.0
 LOKI                := grafana/loki:3.7.0
 PROMTAIL            := grafana/promtail:3.6.0
 
-GO_SERVICES := gateway
+GO_SERVICES := gateway user
 
 .PHONY: docs proto build check-all lint-all test-all tidy start stop
 
@@ -27,6 +27,9 @@ GO_SERVICES := gateway
 # check-all would only really run the first service.
 gateway/%:
 	$(MAKE) -C app/services/gateway $(@F)
+
+user/%:
+	$(MAKE) -C app/services/user $(@F)
 
 # Fan-outs over the Go services
 check-all: $(addsuffix /check,$(GO_SERVICES))
@@ -61,7 +64,7 @@ submodule-update:
 # ==============================================================================
 # Building containers
 # Image builds live in each app's Makefile as `image`; this fans out.
-build: gateway/image
+build: gateway/image user/image
 
 # ==============================================================================
 # Starting kind cluster
@@ -90,15 +93,19 @@ kind-status:
 # Managing kind cluster
 kind-load-images:
 	kind load docker-image $(GATEWAY_IMAGE) --name $(KIND_CLUSTER)
+	kind load docker-image $(USER_IMAGE) --name $(KIND_CLUSTER)
 
 kind-apply:
 	kustomize build infra/k8s/dev/gateway | kubectl apply -f -
+	kustomize build infra/k8s/dev/user | kubectl apply -f -
 	kubectl wait pods --namespace=$(NAMESPACE) --selector app=$(GATEWAY_APP) --timeout=120s --for=condition=Ready
+	kubectl wait pods --namespace=$(NAMESPACE) --selector app=$(USER_APP) --timeout=120s --for=condition=Ready
 
 kind-clean:
 	kustomize build infra/k8s/dev/gateway | kubectl delete -f -
+	kustomize build infra/k8s/dev/user | kubectl delete -f -
 
-kind-restart: gateway/restart-dev
+kind-restart: gateway/restart-dev user/restart-dev
 
 kind-update: build kind-load-images kind-restart
 

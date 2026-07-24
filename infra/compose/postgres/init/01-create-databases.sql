@@ -6,3 +6,5 @@
 -- To (re)create these on an existing volume, either recreate the DB manually
 -- (createdb -U "$POSTGRES_USER" example) or reset the volume:
 --   docker compose down -v && docker compose up -d
+
+CREATE DATABASE users;

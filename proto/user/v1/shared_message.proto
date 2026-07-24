@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package user.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// Values mirror the users DB enums (account_role, account_status,
+// account_language, otp_purpose) — conversion is a plain cast.
+
+enum AccountRole {
+  ACCOUNT_ROLE_UNSPECIFIED = 0;
+  ACCOUNT_ROLE_USER = 1;
+  ACCOUNT_ROLE_PENDING_AGENT = 2;
+  ACCOUNT_ROLE_AGENT = 3;
+  ACCOUNT_ROLE_OPS = 4;
+  ACCOUNT_ROLE_ADMIN = 5;
+}
+
+enum AccountStatus {
+  ACCOUNT_STATUS_UNSPECIFIED = 0;
+  ACCOUNT_STATUS_PENDING = 1;
+  ACCOUNT_STATUS_ACTIVE = 2;
+  ACCOUNT_STATUS_SUSPENDED = 3;
+  ACCOUNT_STATUS_BANNED = 4;
+}
+
+enum Language {
+  LANGUAGE_UNSPECIFIED = 0;
+  LANGUAGE_FR = 1;
+  LANGUAGE_EN = 2;
+}
+
+enum OtpPurpose {
+  OTP_PURPOSE_UNSPECIFIED = 0;
+  OTP_PURPOSE_REGISTER = 1;
+  OTP_PURPOSE_LOGIN = 2;
+  OTP_PURPOSE_RESET = 3;
+}
+
+// The single identity row for every human in the system.
+// No password field anywhere — hashes never cross the wire.
+message Account {
+  string id = 1;
+  string phone_number = 2;  // E.164
+  string first_name = 3;
+  string last_name = 4;
+  optional string email = 5;
+  Language preferred_language = 6;
+  AccountRole role = 7;
+  AccountStatus status = 8;
+  optional google.protobuf.Timestamp last_login_at = 9;  // absent if never logged in
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+}

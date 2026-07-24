@@ -1,0 +1,83 @@
+syntax = "proto3";
+
+package user.v1;
+
+import "google/protobuf/empty.proto";
+import "user/v1/shared_message.proto";
+
+// Note: currently there is no otp provider configured. As such login will be
+// a 1 step process with phone number and password
+
+// In 1.1 we will implement either passwordless login or otp.
+
+// Phone + password + SMS-OTP second factor. Login is two steps: Login checks
+// the password and triggers a LOGIN OTP (the only way a LOGIN OTP is ever
+// created); VerifyLogin trades the code for tokens.
+service AuthService {
+  rpc SendOtp(SendOtpRequest) returns (SendOtpResponse);
+  rpc Register(RegisterRequest) returns (AuthResponse);
+  rpc Login(LoginRequest) returns (AuthResponse);
+//  rpc VerifyLogin(VerifyLoginRequest) returns (AuthResponse);
+  rpc RefreshToken(RefreshTokenRequest) returns (AuthResponse);
+  rpc Logout(LogoutRequest) returns (google.protobuf.Empty);
+  rpc ChangePassword(ChangePasswordRequest) returns (google.protobuf.Empty);
+}
+
+message SendOtpRequest {
+  string phone_number = 1;
+  OtpPurpose purpose = 2;
+}
+
+// Never carries the code — delivery is SMS only.
+message SendOtpResponse {
+  int64 expires_in_seconds = 1;
+}
+
+message RegisterRequest {
+  string phone_number = 1;
+  string code = 2;
+  string password = 3;
+  string first_name = 4;
+  string last_name = 5;
+  Language preferred_language = 6;
+  optional string email = 7;
+}
+
+message LoginRequest {
+  string phone_number = 1;
+  string password = 2;
+}
+
+// Step 1 succeeded: an OTP is on its way. No tokens yet.
+message LoginResponse {
+  int64 otp_expires_in_seconds = 1;
+}
+
+message VerifyLoginRequest {
+  string phone_number = 1;
+  string code = 2;
+}
+
+message RefreshTokenRequest {
+  string refresh_token = 1;
+}
+
+message LogoutRequest {
+  string refresh_token = 1;
+}
+
+message ResetPasswordRequest {
+  string phone_number = 1;
+}
+
+message ChangePasswordRequest {
+  string code = 1;
+  string new_password = 2;
+  string phone_number = 3;
+}
+
+message AuthResponse {
+  string access_token = 2;
+  string refresh_token = 3;
+  int64 access_expires_in = 4;  // seconds
+}

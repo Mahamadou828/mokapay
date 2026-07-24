@@ -44,7 +44,7 @@ app/services/<name>/
     config.go           # Config struct + newLogger() (copy gateway's shape)
     api/<domain>/       # transport handlers + mapper/ (proto ↔ business)
     business/<domain>/  # business types; usecase/; repo/
-  db/                   # Postgres only: scripts/ migrations/ view/ procedure/ query/ + db.go (//go:embed)
+  internal/db/          # Postgres only: scripts/ migrations/ view/ procedure/ query/ + db.go (//go:embed)
   Makefile              # copy gateway's; change SERVICE, IMAGE, APP vars
   Dockerfile            # copy gateway's; change service paths and binary name
   .env + .env.example   # config read through core/config.GetEnv*

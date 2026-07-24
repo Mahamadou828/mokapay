@@ -104,14 +104,14 @@ indexes, `seed` inserts starter docs, `reset` drops the database):
 - **`internal/api/<domain>/`** — transport layer: receives requests, validates, calls the usecase; proto↔business mapping lives in `internal/api/<domain>/mapper/` (free functions). The gateway's routes live in `internal/api/api.go` (`api.Register`).
 - **`internal/business/<domain>/`** — business types at the package root (read entity, `NewX`/`UpdateX`/`XFilter`, enums); logic in `internal/business/<domain>/usecase/` (`usecase.UseCase`); persistence in `internal/business/<domain>/repo/` (`repo.Store` — owns its Mongo/SQL models, takes and returns business types). Flow: api → usecase → repo.
 - **`internal/sdk/`** — service-specific foundation packages (gateway: `errs`, `protocodec`); `internal/integration/` — third-party vendor clients. An sdk package used by a second service moves to `/core`.
-- **`db/db.go`** (Postgres services) — embeds four SQL directories via `//go:embed`: `scripts/`, `migrations/`, `view/`, `procedure/`.
+- **`internal/db/db.go`** (Postgres services) — embeds four SQL directories via `//go:embed`: `scripts/`, `migrations/`, `view/`, `procedure/`.
 
 ### DB Migration Order (Postgres services)
 
 When `Migrate()` is called it applies SQL in this sequence:
-1. `db/scripts/` — init scripts (one transaction)
-2. `db/migrations/` — versioned migrations via `sql-migrate`
-3. `db/view/` and `db/procedure/` — views and stored procedures (one transaction)
+1. `internal/db/scripts/` — init scripts (one transaction)
+2. `internal/db/migrations/` — versioned migrations via `sql-migrate`
+3. `internal/db/view/` and `internal/db/procedure/` — views and stored procedures (one transaction)
 
 ## Core Library (`core/`)
 

@@ -36,14 +36,14 @@ Before writing SQL, settle these with the user or from the feature context:
 
 For a new entity `goal` in service `example`:
 
-1. **Migration** — `db/migrations/<next-number>_create_goals.sql` with
+1. **Migration** — `internal/db/migrations/<next-number>_create_goals.sql` with
    `-- +migrate Up` / `-- +migrate Down`, enum types first, then the table
    (id UUID default `gen_random_uuid()`, business columns, audit columns last).
-2. **View** — `db/view/goals.sql` in `<service>_ext`, explicit column list,
+2. **View** — `internal/db/view/goals.sql` in `<service>_ext`, explicit column list,
    `WHERE deleted_at IS NULL`, no `deleted_at` in the SELECT.
-3. **Procedures** — `db/procedure/add_goal.sql`, `update_goal.sql`,
+3. **Procedures** — `internal/db/procedure/add_goal.sql`, `update_goal.sql`,
    `delete_goal.sql` per the rules (COALESCE updates, soft delete).
-4. **sqlc queries** — `db/query/goals.sql`: reads against the view, writes
+4. **sqlc queries** — `internal/db/query/goals.sql`: reads against the view, writes
    through the procedures, optional list filters via `sqlc.narg()` in a single
    query.
 5. **Generate** — run `sqlc generate` (or the project's wrapper target) and fix
