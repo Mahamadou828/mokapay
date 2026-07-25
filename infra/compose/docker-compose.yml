@@ -174,9 +174,13 @@ services:
     environment:
       DB_HOST: postgres
       DB_PORT: "5432"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
       USER_GRPC_PORT: user:50051
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       user:
         condition: service_started
@@ -194,14 +198,17 @@ services:
       - "8085:8080"
     env_file:
       - ../../app/services/gateway/.env
-    # Inside compose the user service lives on the app network under its
-    # service name.
+    # Inside compose the downstream services live on the app network under
+    # their service names.
     environment:
       USER_GRPC_PORT: user:50051
+      PAYMENT_GRPC_PORT: payment:50053
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
       user:
+        condition: service_started
+      payment:
         condition: service_started

@@ -9,7 +9,11 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"mokapay.app/app/services/payment/internal/business/agentprofile"
+	"mokapay.app/app/services/payment/internal/business/agentwallet"
+	"mokapay.app/app/services/payment/internal/business/beneficiary"
 	"mokapay.app/app/services/payment/internal/business/ledger"
+	"mokapay.app/app/services/payment/internal/business/matching"
+	"mokapay.app/app/services/payment/internal/business/transfer"
 )
 
 // Map converts a business error to a gRPC status error. Errors that are
@@ -28,24 +32,35 @@ func Map(err error) error {
 
 	switch {
 	case errors.Is(err, agentprofile.ErrProfileNotFound),
-		errors.Is(err, ledger.ErrRequestNotFound):
+		errors.Is(err, ledger.ErrRequestNotFound),
+		errors.Is(err, transfer.ErrTransferNotFound),
+		errors.Is(err, beneficiary.ErrBeneficiaryNotFound),
+		errors.Is(err, agentwallet.ErrWalletNotFound),
+		errors.Is(err, matching.ErrOfferGone):
 		return status.Error(codes.NotFound, err.Error())
 
 	case errors.Is(err, agentprofile.ErrProfileExists),
-		errors.Is(err, ledger.ErrReferenceInUse):
+		errors.Is(err, ledger.ErrReferenceInUse),
+		errors.Is(err, agentwallet.ErrWalletExists):
 		return status.Error(codes.AlreadyExists, err.Error())
 
 	case errors.Is(err, agentprofile.ErrProfileHasFunds),
 		errors.Is(err, agentprofile.ErrInvalidTransition),
 		errors.Is(err, ledger.ErrNotFeasible),
 		errors.Is(err, ledger.ErrLedgerStatusClose),
-		errors.Is(err, ledger.ErrInvalidStatusMove):
+		errors.Is(err, ledger.ErrInvalidStatusMove),
+		errors.Is(err, transfer.ErrInvalidStatusMove),
+		errors.Is(err, matching.ErrInsufficientAvailable):
 		return status.Error(codes.FailedPrecondition, err.Error())
 
-	case errors.Is(err, ledger.ErrInvalidType):
+	case errors.Is(err, ledger.ErrInvalidType),
+		errors.Is(err, transfer.ErrCorridorNotAllowed),
+		errors.Is(err, transfer.ErrInvalidAmount),
+		errors.Is(err, transfer.ErrRecipientRequired):
 		return status.Error(codes.InvalidArgument, err.Error())
 
-	case errors.Is(err, ledger.ErrNotAllowed):
+	case errors.Is(err, ledger.ErrNotAllowed),
+		errors.Is(err, transfer.ErrNotAllowed):
 		return status.Error(codes.PermissionDenied, err.Error())
 	}
 

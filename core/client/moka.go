@@ -32,11 +32,14 @@ type User struct {
 }
 
 // Payment bundles the payment-service clients: the agent-profile
-// lifecycle (Admin) and the ledger workflow (Ledger).
+// lifecycle (Admin), the ledger workflow (Ledger), the client transfer
+// surface (Transfer) and the agent surface (Agent).
 type Payment struct {
-	conn   *grpc.ClientConn
-	Admin  paymentv1.AdminServiceClient
-	Ledger paymentv1.LedgerServiceClient
+	conn     *grpc.ClientConn
+	Admin    paymentv1.AdminServiceClient
+	Ledger   paymentv1.LedgerServiceClient
+	Transfer paymentv1.TransferServiceClient
+	Agent    paymentv1.AgentServiceClient
 }
 
 type MokaClient struct {
@@ -83,9 +86,11 @@ func NewMokaClient(config Config, requiredConnection map[Connection]bool) (*Moka
 			return nil, err
 		}
 		p = &Payment{
-			conn:   conn,
-			Admin:  paymentv1.NewAdminServiceClient(conn),
-			Ledger: paymentv1.NewLedgerServiceClient(conn),
+			conn:     conn,
+			Admin:    paymentv1.NewAdminServiceClient(conn),
+			Ledger:   paymentv1.NewLedgerServiceClient(conn),
+			Transfer: paymentv1.NewTransferServiceClient(conn),
+			Agent:    paymentv1.NewAgentServiceClient(conn),
 		}
 	}
 

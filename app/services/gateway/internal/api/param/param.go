@@ -4,6 +4,7 @@ package param
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 )
 
 // Enum reads an optional enum query parameter, looking it up in the generated
@@ -19,4 +20,17 @@ func Enum[E ~int32](r *http.Request, name string, values map[string]int32) (*E, 
 		return nil, fmt.Errorf("invalid %s: %q", name, s)
 	}
 	return new(E(v)), nil
+}
+
+// Int32 reads an optional int32 query parameter; 0 when absent.
+func Int32(r *http.Request, name string) (int32, error) {
+	s := r.URL.Query().Get(name)
+	if s == "" {
+		return 0, nil
+	}
+	v, err := strconv.ParseInt(s, 10, 32)
+	if err != nil {
+		return 0, fmt.Errorf("invalid %s: %q", name, s)
+	}
+	return int32(v), nil
 }

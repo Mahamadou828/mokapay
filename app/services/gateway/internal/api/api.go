@@ -8,6 +8,7 @@ import (
 	"errors"
 	"net/http"
 
+	paymentapi "mokapay.app/app/services/gateway/internal/api/payment"
 	userapi "mokapay.app/app/services/gateway/internal/api/user"
 	"mokapay.app/app/services/gateway/internal/middleware"
 	"mokapay.app/core/client"
@@ -41,6 +42,7 @@ func Register(cfg Config, log *logger.Logger, s *coreweb.Server) (Close, error) 
 	// middleware: public (anonymous), authed (valid token), ops (+role).
 	v1 := s.NewGroup("/v1")
 	authed := v1.NewGroup("", cfg.Auth)
+	agent := v1.NewGroup("", cfg.Auth, middleware.RequireRoles("agent", "pending_agent"))
 	ops := v1.NewGroup("", cfg.Auth, middleware.RequireRoles("ops", "admin"))
 
 	// -------------------------------------------------------------------------
@@ -56,6 +58,10 @@ func Register(cfg Config, log *logger.Logger, s *coreweb.Server) (Close, error) 
 	// -------------------------------------------------------------------------
 	// user service surface (auth flows, self-service, account moderation)
 	userapi.NewHandler(log, cfg.Moka).Routes(v1, authed, ops)
+
+	// -------------------------------------------------------------------------
+	// payment service surface (transfer flow, agent inbox/wallets, ops)
+	paymentapi.NewHandler(log, cfg.Moka).Routes(authed, agent, ops)
 
 	return func(ctx context.Context) {}, nil
 }

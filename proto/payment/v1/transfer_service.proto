@@ -1,0 +1,107 @@
+syntax = "proto3";
+
+package payment.v1;
+
+import "google/protobuf/empty.proto";
+import "payment/v1/shared_message.proto";
+
+// The client-facing transfer surface. Passport policy: everything is
+// owner-scoped from the passport identity, except UpdateTransferStatus
+// (system-only — the file worker's proof path; a proof upload must never
+// be able to reach done or move money) and the reads ops also gets.
+service TransferService {
+  // The v1 operator catalogue for a corridor; rejects cdf→usd.
+  rpc GetAvailableOperators(GetAvailableOperatorsRequest) returns (GetAvailableOperatorsResponse);
+  // Stateless: computed from the cached rate, nothing persisted. The
+  // rate locks at CreateTransfer.
+  rpc GetQuote(GetQuoteRequest) returns (Quote);
+  rpc CreateTransfer(CreateTransferRequest) returns (Transfer);
+  rpc GetTransfer(GetTransferRequest) returns (Transfer);          // owner, assigned agent, or ops
+  rpc ListTransfers(ListTransfersRequest) returns (ListTransfersResponse);  // mine (client side)
+  rpc ListTransferEvents(ListTransferEventsRequest) returns (ListTransferEventsResponse);
+  // pending_client_confirmation → done; releases the agent's hold.
+  rpc ConfirmReceipt(ConfirmReceiptRequest) returns (Transfer);
+  // Owner cancel, pre-accept only (no hold yet).
+  rpc CancelTransfer(CancelTransferRequest) returns (Transfer);
+  rpc ListBeneficiaries(ListBeneficiariesRequest) returns (ListBeneficiariesResponse);
+  rpc DeleteBeneficiary(DeleteBeneficiaryRequest) returns (google.protobuf.Empty);
+  // SYSTEM-ONLY: the file worker reports proofs; forward-only between
+  // the proof-gated pendings, can never reach done.
+  rpc UpdateTransferStatus(UpdateTransferStatusRequest) returns (Transfer);
+}
+
+message GetAvailableOperatorsRequest {
+  Currency from_currency = 1;
+  Currency to_currency = 2;
+}
+
+message GetAvailableOperatorsResponse {
+  repeated Operator operators = 1;
+}
+
+message GetQuoteRequest {
+  Currency from_currency = 1;
+  int64 from_amount = 2;  // minor units, source-denominated
+  Currency to_currency = 3;
+}
+
+message CreateTransferRequest {
+  Currency from_currency = 1;
+  Operator from_operator = 2;
+  int64 from_amount = 3;
+  Currency to_currency = 4;
+  // Either a saved beneficiary or inline recipient details (which also
+  // save/refresh the beneficiary).
+  optional string beneficiary_id = 5;
+  optional string recipient_name = 6;
+  optional string recipient_phone = 7;
+  optional Operator recipient_operator = 8;
+  optional string recipient_city = 9;
+  optional string note = 10;
+}
+
+message GetTransferRequest {
+  string id = 1;
+}
+
+message ListTransfersRequest {
+  optional TransferStatus status = 1;
+  int32 limit = 2;  // 0 = server default
+}
+
+message ListTransfersResponse {
+  repeated Transfer transfers = 1;
+}
+
+message ListTransferEventsRequest {
+  string transfer_id = 1;
+}
+
+message ListTransferEventsResponse {
+  repeated TransferEvent events = 1;
+}
+
+message ConfirmReceiptRequest {
+  string id = 1;
+}
+
+message CancelTransferRequest {
+  string id = 1;
+  optional string reason = 2;
+}
+
+message ListBeneficiariesRequest {}
+
+message ListBeneficiariesResponse {
+  repeated Beneficiary beneficiaries = 1;
+}
+
+message DeleteBeneficiaryRequest {
+  string id = 1;
+}
+
+message UpdateTransferStatusRequest {
+  string id = 1;
+  TransferStatus status = 2;      // pending_agent_transfer or pending_client_confirmation only
+  string proof_file_id = 3;       // the uploaded proof driving the move
+}

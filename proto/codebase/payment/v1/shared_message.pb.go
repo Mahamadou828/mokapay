@@ -351,6 +351,235 @@ func (LedgerReferenceType) EnumDescriptor() ([]byte, []int) {
 	return file_payment_v1_shared_message_proto_rawDescGZIP(), []int{5}
 }
 
+type Currency int32
+
+const (
+	Currency_CURRENCY_UNSPECIFIED Currency = 0
+	Currency_CURRENCY_USD         Currency = 1
+	Currency_CURRENCY_CDF         Currency = 2
+)
+
+// Enum value maps for Currency.
+var (
+	Currency_name = map[int32]string{
+		0: "CURRENCY_UNSPECIFIED",
+		1: "CURRENCY_USD",
+		2: "CURRENCY_CDF",
+	}
+	Currency_value = map[string]int32{
+		"CURRENCY_UNSPECIFIED": 0,
+		"CURRENCY_USD":         1,
+		"CURRENCY_CDF":         2,
+	}
+)
+
+func (x Currency) Enum() *Currency {
+	p := new(Currency)
+	*p = x
+	return p
+}
+
+func (x Currency) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (Currency) Descriptor() protoreflect.EnumDescriptor {
+	return file_payment_v1_shared_message_proto_enumTypes[6].Descriptor()
+}
+
+func (Currency) Type() protoreflect.EnumType {
+	return &file_payment_v1_shared_message_proto_enumTypes[6]
+}
+
+func (x Currency) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use Currency.Descriptor instead.
+func (Currency) EnumDescriptor() ([]byte, []int) {
+	return file_payment_v1_shared_message_proto_rawDescGZIP(), []int{6}
+}
+
+type Operator int32
+
+const (
+	Operator_OPERATOR_UNSPECIFIED  Operator = 0
+	Operator_OPERATOR_ORANGE_MONEY Operator = 1
+	Operator_OPERATOR_M_PESA       Operator = 2
+	Operator_OPERATOR_AIRTEL_MONEY Operator = 3
+)
+
+// Enum value maps for Operator.
+var (
+	Operator_name = map[int32]string{
+		0: "OPERATOR_UNSPECIFIED",
+		1: "OPERATOR_ORANGE_MONEY",
+		2: "OPERATOR_M_PESA",
+		3: "OPERATOR_AIRTEL_MONEY",
+	}
+	Operator_value = map[string]int32{
+		"OPERATOR_UNSPECIFIED":  0,
+		"OPERATOR_ORANGE_MONEY": 1,
+		"OPERATOR_M_PESA":       2,
+		"OPERATOR_AIRTEL_MONEY": 3,
+	}
+)
+
+func (x Operator) Enum() *Operator {
+	p := new(Operator)
+	*p = x
+	return p
+}
+
+func (x Operator) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (Operator) Descriptor() protoreflect.EnumDescriptor {
+	return file_payment_v1_shared_message_proto_enumTypes[7].Descriptor()
+}
+
+func (Operator) Type() protoreflect.EnumType {
+	return &file_payment_v1_shared_message_proto_enumTypes[7]
+}
+
+func (x Operator) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use Operator.Descriptor instead.
+func (Operator) EnumDescriptor() ([]byte, []int) {
+	return file_payment_v1_shared_message_proto_rawDescGZIP(), []int{7}
+}
+
+type TransferStatus int32
+
+const (
+	TransferStatus_TRANSFER_STATUS_UNSPECIFIED                 TransferStatus = 0
+	TransferStatus_TRANSFER_STATUS_PENDING_MATCH               TransferStatus = 1
+	TransferStatus_TRANSFER_STATUS_PENDING_AGENT_APPROVAL      TransferStatus = 2
+	TransferStatus_TRANSFER_STATUS_PENDING_CLIENT_TRANSFER     TransferStatus = 3
+	TransferStatus_TRANSFER_STATUS_PENDING_AGENT_TRANSFER      TransferStatus = 4
+	TransferStatus_TRANSFER_STATUS_PENDING_CLIENT_CONFIRMATION TransferStatus = 5
+	TransferStatus_TRANSFER_STATUS_DONE                        TransferStatus = 6
+	TransferStatus_TRANSFER_STATUS_CANCELLED                   TransferStatus = 7
+	TransferStatus_TRANSFER_STATUS_EXPIRED                     TransferStatus = 8
+	TransferStatus_TRANSFER_STATUS_DISPUTED                    TransferStatus = 9 // reserved, unreachable v1
+)
+
+// Enum value maps for TransferStatus.
+var (
+	TransferStatus_name = map[int32]string{
+		0: "TRANSFER_STATUS_UNSPECIFIED",
+		1: "TRANSFER_STATUS_PENDING_MATCH",
+		2: "TRANSFER_STATUS_PENDING_AGENT_APPROVAL",
+		3: "TRANSFER_STATUS_PENDING_CLIENT_TRANSFER",
+		4: "TRANSFER_STATUS_PENDING_AGENT_TRANSFER",
+		5: "TRANSFER_STATUS_PENDING_CLIENT_CONFIRMATION",
+		6: "TRANSFER_STATUS_DONE",
+		7: "TRANSFER_STATUS_CANCELLED",
+		8: "TRANSFER_STATUS_EXPIRED",
+		9: "TRANSFER_STATUS_DISPUTED",
+	}
+	TransferStatus_value = map[string]int32{
+		"TRANSFER_STATUS_UNSPECIFIED":                 0,
+		"TRANSFER_STATUS_PENDING_MATCH":               1,
+		"TRANSFER_STATUS_PENDING_AGENT_APPROVAL":      2,
+		"TRANSFER_STATUS_PENDING_CLIENT_TRANSFER":     3,
+		"TRANSFER_STATUS_PENDING_AGENT_TRANSFER":      4,
+		"TRANSFER_STATUS_PENDING_CLIENT_CONFIRMATION": 5,
+		"TRANSFER_STATUS_DONE":                        6,
+		"TRANSFER_STATUS_CANCELLED":                   7,
+		"TRANSFER_STATUS_EXPIRED":                     8,
+		"TRANSFER_STATUS_DISPUTED":                    9,
+	}
+)
+
+func (x TransferStatus) Enum() *TransferStatus {
+	p := new(TransferStatus)
+	*p = x
+	return p
+}
+
+func (x TransferStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (TransferStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_payment_v1_shared_message_proto_enumTypes[8].Descriptor()
+}
+
+func (TransferStatus) Type() protoreflect.EnumType {
+	return &file_payment_v1_shared_message_proto_enumTypes[8]
+}
+
+func (x TransferStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use TransferStatus.Descriptor instead.
+func (TransferStatus) EnumDescriptor() ([]byte, []int) {
+	return file_payment_v1_shared_message_proto_rawDescGZIP(), []int{8}
+}
+
+type OfferStatus int32
+
+const (
+	OfferStatus_OFFER_STATUS_UNSPECIFIED OfferStatus = 0
+	OfferStatus_OFFER_STATUS_OFFERED     OfferStatus = 1
+	OfferStatus_OFFER_STATUS_ACCEPTED    OfferStatus = 2
+	OfferStatus_OFFER_STATUS_DECLINED    OfferStatus = 3
+	OfferStatus_OFFER_STATUS_VOIDED      OfferStatus = 4 // a sibling offer won the race
+	OfferStatus_OFFER_STATUS_EXPIRED     OfferStatus = 5
+)
+
+// Enum value maps for OfferStatus.
+var (
+	OfferStatus_name = map[int32]string{
+		0: "OFFER_STATUS_UNSPECIFIED",
+		1: "OFFER_STATUS_OFFERED",
+		2: "OFFER_STATUS_ACCEPTED",
+		3: "OFFER_STATUS_DECLINED",
+		4: "OFFER_STATUS_VOIDED",
+		5: "OFFER_STATUS_EXPIRED",
+	}
+	OfferStatus_value = map[string]int32{
+		"OFFER_STATUS_UNSPECIFIED": 0,
+		"OFFER_STATUS_OFFERED":     1,
+		"OFFER_STATUS_ACCEPTED":    2,
+		"OFFER_STATUS_DECLINED":    3,
+		"OFFER_STATUS_VOIDED":      4,
+		"OFFER_STATUS_EXPIRED":     5,
+	}
+)
+
+func (x OfferStatus) Enum() *OfferStatus {
+	p := new(OfferStatus)
+	*p = x
+	return p
+}
+
+func (x OfferStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (OfferStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_payment_v1_shared_message_proto_enumTypes[9].Descriptor()
+}
+
+func (OfferStatus) Type() protoreflect.EnumType {
+	return &file_payment_v1_shared_message_proto_enumTypes[9]
+}
+
+func (x OfferStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use OfferStatus.Descriptor instead.
+func (OfferStatus) EnumDescriptor() ([]byte, []int) {
+	return file_payment_v1_shared_message_proto_rawDescGZIP(), []int{9}
+}
+
 // The agent's money account. balance moves only through the ledger;
 // available = balance − held is derived, never stored.
 type AgentProfile struct {
@@ -720,6 +949,921 @@ func (x *LedgerLine) GetCreatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+// Where the client sends the money after a match: the matched agent's
+// wallet on the transfer's {from_operator, from_currency} pair.
+type AgentPaymentDetails struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Operator      Operator               `protobuf:"varint,1,opt,name=operator,proto3,enum=payment.v1.Operator" json:"operator,omitempty"`
+	Msisdn        string                 `protobuf:"bytes,2,opt,name=msisdn,proto3" json:"msisdn,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AgentPaymentDetails) Reset() {
+	*x = AgentPaymentDetails{}
+	mi := &file_payment_v1_shared_message_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AgentPaymentDetails) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AgentPaymentDetails) ProtoMessage() {}
+
+func (x *AgentPaymentDetails) ProtoReflect() protoreflect.Message {
+	mi := &file_payment_v1_shared_message_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AgentPaymentDetails.ProtoReflect.Descriptor instead.
+func (*AgentPaymentDetails) Descriptor() ([]byte, []int) {
+	return file_payment_v1_shared_message_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *AgentPaymentDetails) GetOperator() Operator {
+	if x != nil {
+		return x.Operator
+	}
+	return Operator_OPERATOR_UNSPECIFIED
+}
+
+func (x *AgentPaymentDetails) GetMsisdn() string {
+	if x != nil {
+		return x.Msisdn
+	}
+	return ""
+}
+
+// The transfer. Every money field was stamped at create (rate locked
+// once) and never changes; amounts are minor units (usd = cents,
+// cdf = whole francs), decimals travel as strings.
+type Transfer struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Reference         string                 `protobuf:"bytes,2,opt,name=reference,proto3" json:"reference,omitempty"` // MKP-YYYY-NNNNNN
+	ClientId          string                 `protobuf:"bytes,3,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
+	BeneficiaryId     *string                `protobuf:"bytes,4,opt,name=beneficiary_id,json=beneficiaryId,proto3,oneof" json:"beneficiary_id,omitempty"`
+	RecipientName     string                 `protobuf:"bytes,5,opt,name=recipient_name,json=recipientName,proto3" json:"recipient_name,omitempty"`
+	RecipientPhone    string                 `protobuf:"bytes,6,opt,name=recipient_phone,json=recipientPhone,proto3" json:"recipient_phone,omitempty"`
+	RecipientOperator Operator               `protobuf:"varint,7,opt,name=recipient_operator,json=recipientOperator,proto3,enum=payment.v1.Operator" json:"recipient_operator,omitempty"`
+	RecipientCity     *string                `protobuf:"bytes,8,opt,name=recipient_city,json=recipientCity,proto3,oneof" json:"recipient_city,omitempty"`
+	FromCurrency      Currency               `protobuf:"varint,9,opt,name=from_currency,json=fromCurrency,proto3,enum=payment.v1.Currency" json:"from_currency,omitempty"`
+	FromOperator      Operator               `protobuf:"varint,10,opt,name=from_operator,json=fromOperator,proto3,enum=payment.v1.Operator" json:"from_operator,omitempty"`
+	FromAmount        int64                  `protobuf:"varint,11,opt,name=from_amount,json=fromAmount,proto3" json:"from_amount,omitempty"`
+	ToCurrency        Currency               `protobuf:"varint,12,opt,name=to_currency,json=toCurrency,proto3,enum=payment.v1.Currency" json:"to_currency,omitempty"`
+	ToAmount          int64                  `protobuf:"varint,13,opt,name=to_amount,json=toAmount,proto3" json:"to_amount,omitempty"`
+	FeePct            string                 `protobuf:"bytes,14,opt,name=fee_pct,json=feePct,proto3" json:"fee_pct,omitempty"`                    // e.g. "2.00"
+	FeeAmount         int64                  `protobuf:"varint,15,opt,name=fee_amount,json=feeAmount,proto3" json:"fee_amount,omitempty"`          // from_currency minor units
+	MarginAmount      int64                  `protobuf:"varint,16,opt,name=margin_amount,json=marginAmount,proto3" json:"margin_amount,omitempty"` // to_currency; 0 on same-currency
+	TotalAmount       int64                  `protobuf:"varint,17,opt,name=total_amount,json=totalAmount,proto3" json:"total_amount,omitempty"`    // from_amount + fee_amount
+	Rate              *string                `protobuf:"bytes,18,opt,name=rate,proto3,oneof" json:"rate,omitempty"`                                // absent = same-currency corridor
+	HoldAmount        int64                  `protobuf:"varint,19,opt,name=hold_amount,json=holdAmount,proto3" json:"hold_amount,omitempty"`       // USD minor units, reserved at accept
+	Note              *string                `protobuf:"bytes,20,opt,name=note,proto3,oneof" json:"note,omitempty"`
+	Status            TransferStatus         `protobuf:"varint,21,opt,name=status,proto3,enum=payment.v1.TransferStatus" json:"status,omitempty"`
+	AgentProfileId    *string                `protobuf:"bytes,22,opt,name=agent_profile_id,json=agentProfileId,proto3,oneof" json:"agent_profile_id,omitempty"`
+	MatchRound        int32                  `protobuf:"varint,23,opt,name=match_round,json=matchRound,proto3" json:"match_round,omitempty"`
+	ProofClientFileId *string                `protobuf:"bytes,24,opt,name=proof_client_file_id,json=proofClientFileId,proto3,oneof" json:"proof_client_file_id,omitempty"`
+	ProofAgentFileId  *string                `protobuf:"bytes,25,opt,name=proof_agent_file_id,json=proofAgentFileId,proto3,oneof" json:"proof_agent_file_id,omitempty"`
+	// Populated only for the transfer's owner once matched.
+	AgentPaymentDetails *AgentPaymentDetails   `protobuf:"bytes,26,opt,name=agent_payment_details,json=agentPaymentDetails,proto3,oneof" json:"agent_payment_details,omitempty"`
+	CreatedAt           *timestamppb.Timestamp `protobuf:"bytes,27,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt           *timestamppb.Timestamp `protobuf:"bytes,28,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *Transfer) Reset() {
+	*x = Transfer{}
+	mi := &file_payment_v1_shared_message_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Transfer) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Transfer) ProtoMessage() {}
+
+func (x *Transfer) ProtoReflect() protoreflect.Message {
+	mi := &file_payment_v1_shared_message_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Transfer.ProtoReflect.Descriptor instead.
+func (*Transfer) Descriptor() ([]byte, []int) {
+	return file_payment_v1_shared_message_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *Transfer) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Transfer) GetReference() string {
+	if x != nil {
+		return x.Reference
+	}
+	return ""
+}
+
+func (x *Transfer) GetClientId() string {
+	if x != nil {
+		return x.ClientId
+	}
+	return ""
+}
+
+func (x *Transfer) GetBeneficiaryId() string {
+	if x != nil && x.BeneficiaryId != nil {
+		return *x.BeneficiaryId
+	}
+	return ""
+}
+
+func (x *Transfer) GetRecipientName() string {
+	if x != nil {
+		return x.RecipientName
+	}
+	return ""
+}
+
+func (x *Transfer) GetRecipientPhone() string {
+	if x != nil {
+		return x.RecipientPhone
+	}
+	return ""
+}
+
+func (x *Transfer) GetRecipientOperator() Operator {
+	if x != nil {
+		return x.RecipientOperator
+	}
+	return Operator_OPERATOR_UNSPECIFIED
+}
+
+func (x *Transfer) GetRecipientCity() string {
+	if x != nil && x.RecipientCity != nil {
+		return *x.RecipientCity
+	}
+	return ""
+}
+
+func (x *Transfer) GetFromCurrency() Currency {
+	if x != nil {
+		return x.FromCurrency
+	}
+	return Currency_CURRENCY_UNSPECIFIED
+}
+
+func (x *Transfer) GetFromOperator() Operator {
+	if x != nil {
+		return x.FromOperator
+	}
+	return Operator_OPERATOR_UNSPECIFIED
+}
+
+func (x *Transfer) GetFromAmount() int64 {
+	if x != nil {
+		return x.FromAmount
+	}
+	return 0
+}
+
+func (x *Transfer) GetToCurrency() Currency {
+	if x != nil {
+		return x.ToCurrency
+	}
+	return Currency_CURRENCY_UNSPECIFIED
+}
+
+func (x *Transfer) GetToAmount() int64 {
+	if x != nil {
+		return x.ToAmount
+	}
+	return 0
+}
+
+func (x *Transfer) GetFeePct() string {
+	if x != nil {
+		return x.FeePct
+	}
+	return ""
+}
+
+func (x *Transfer) GetFeeAmount() int64 {
+	if x != nil {
+		return x.FeeAmount
+	}
+	return 0
+}
+
+func (x *Transfer) GetMarginAmount() int64 {
+	if x != nil {
+		return x.MarginAmount
+	}
+	return 0
+}
+
+func (x *Transfer) GetTotalAmount() int64 {
+	if x != nil {
+		return x.TotalAmount
+	}
+	return 0
+}
+
+func (x *Transfer) GetRate() string {
+	if x != nil && x.Rate != nil {
+		return *x.Rate
+	}
+	return ""
+}
+
+func (x *Transfer) GetHoldAmount() int64 {
+	if x != nil {
+		return x.HoldAmount
+	}
+	return 0
+}
+
+func (x *Transfer) GetNote() string {
+	if x != nil && x.Note != nil {
+		return *x.Note
+	}
+	return ""
+}
+
+func (x *Transfer) GetStatus() TransferStatus {
+	if x != nil {
+		return x.Status
+	}
+	return TransferStatus_TRANSFER_STATUS_UNSPECIFIED
+}
+
+func (x *Transfer) GetAgentProfileId() string {
+	if x != nil && x.AgentProfileId != nil {
+		return *x.AgentProfileId
+	}
+	return ""
+}
+
+func (x *Transfer) GetMatchRound() int32 {
+	if x != nil {
+		return x.MatchRound
+	}
+	return 0
+}
+
+func (x *Transfer) GetProofClientFileId() string {
+	if x != nil && x.ProofClientFileId != nil {
+		return *x.ProofClientFileId
+	}
+	return ""
+}
+
+func (x *Transfer) GetProofAgentFileId() string {
+	if x != nil && x.ProofAgentFileId != nil {
+		return *x.ProofAgentFileId
+	}
+	return ""
+}
+
+func (x *Transfer) GetAgentPaymentDetails() *AgentPaymentDetails {
+	if x != nil {
+		return x.AgentPaymentDetails
+	}
+	return nil
+}
+
+func (x *Transfer) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *Transfer) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+// One immutable timeline row (C13). from_status absent = the birth row;
+// actor absent = system/timer.
+type TransferEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	TransferId    string                 `protobuf:"bytes,2,opt,name=transfer_id,json=transferId,proto3" json:"transfer_id,omitempty"`
+	ActorId       *string                `protobuf:"bytes,3,opt,name=actor_id,json=actorId,proto3,oneof" json:"actor_id,omitempty"`
+	FromStatus    *TransferStatus        `protobuf:"varint,4,opt,name=from_status,json=fromStatus,proto3,enum=payment.v1.TransferStatus,oneof" json:"from_status,omitempty"`
+	ToStatus      TransferStatus         `protobuf:"varint,5,opt,name=to_status,json=toStatus,proto3,enum=payment.v1.TransferStatus" json:"to_status,omitempty"`
+	Reason        *string                `protobuf:"bytes,6,opt,name=reason,proto3,oneof" json:"reason,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TransferEvent) Reset() {
+	*x = TransferEvent{}
+	mi := &file_payment_v1_shared_message_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TransferEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TransferEvent) ProtoMessage() {}
+
+func (x *TransferEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_payment_v1_shared_message_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TransferEvent.ProtoReflect.Descriptor instead.
+func (*TransferEvent) Descriptor() ([]byte, []int) {
+	return file_payment_v1_shared_message_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *TransferEvent) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *TransferEvent) GetTransferId() string {
+	if x != nil {
+		return x.TransferId
+	}
+	return ""
+}
+
+func (x *TransferEvent) GetActorId() string {
+	if x != nil && x.ActorId != nil {
+		return *x.ActorId
+	}
+	return ""
+}
+
+func (x *TransferEvent) GetFromStatus() TransferStatus {
+	if x != nil && x.FromStatus != nil {
+		return *x.FromStatus
+	}
+	return TransferStatus_TRANSFER_STATUS_UNSPECIFIED
+}
+
+func (x *TransferEvent) GetToStatus() TransferStatus {
+	if x != nil {
+		return x.ToStatus
+	}
+	return TransferStatus_TRANSFER_STATUS_UNSPECIFIED
+}
+
+func (x *TransferEvent) GetReason() string {
+	if x != nil && x.Reason != nil {
+		return *x.Reason
+	}
+	return ""
+}
+
+func (x *TransferEvent) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+// The agent-inbox offer: the slot plus the money summary the agent
+// decides on.
+type Offer struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	TransferId        string                 `protobuf:"bytes,2,opt,name=transfer_id,json=transferId,proto3" json:"transfer_id,omitempty"`
+	AgentProfileId    string                 `protobuf:"bytes,3,opt,name=agent_profile_id,json=agentProfileId,proto3" json:"agent_profile_id,omitempty"`
+	MatchRound        int32                  `protobuf:"varint,4,opt,name=match_round,json=matchRound,proto3" json:"match_round,omitempty"`
+	Score             int32                  `protobuf:"varint,5,opt,name=score,proto3" json:"score,omitempty"`
+	Status            OfferStatus            `protobuf:"varint,6,opt,name=status,proto3,enum=payment.v1.OfferStatus" json:"status,omitempty"`
+	ExpiresAt         *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	DecidedAt         *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=decided_at,json=decidedAt,proto3,oneof" json:"decided_at,omitempty"`
+	CreatedAt         *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	TransferReference string                 `protobuf:"bytes,10,opt,name=transfer_reference,json=transferReference,proto3" json:"transfer_reference,omitempty"`
+	FromCurrency      Currency               `protobuf:"varint,11,opt,name=from_currency,json=fromCurrency,proto3,enum=payment.v1.Currency" json:"from_currency,omitempty"`
+	FromOperator      Operator               `protobuf:"varint,12,opt,name=from_operator,json=fromOperator,proto3,enum=payment.v1.Operator" json:"from_operator,omitempty"`
+	FromAmount        int64                  `protobuf:"varint,13,opt,name=from_amount,json=fromAmount,proto3" json:"from_amount,omitempty"`
+	ToCurrency        Currency               `protobuf:"varint,14,opt,name=to_currency,json=toCurrency,proto3,enum=payment.v1.Currency" json:"to_currency,omitempty"`
+	RecipientOperator Operator               `protobuf:"varint,15,opt,name=recipient_operator,json=recipientOperator,proto3,enum=payment.v1.Operator" json:"recipient_operator,omitempty"`
+	RecipientCity     *string                `protobuf:"bytes,16,opt,name=recipient_city,json=recipientCity,proto3,oneof" json:"recipient_city,omitempty"`
+	ToAmount          int64                  `protobuf:"varint,17,opt,name=to_amount,json=toAmount,proto3" json:"to_amount,omitempty"`
+	TotalAmount       int64                  `protobuf:"varint,18,opt,name=total_amount,json=totalAmount,proto3" json:"total_amount,omitempty"`
+	HoldAmount        int64                  `protobuf:"varint,19,opt,name=hold_amount,json=holdAmount,proto3" json:"hold_amount,omitempty"` // what accepting reserves, USD minor units
+	Note              *string                `protobuf:"bytes,20,opt,name=note,proto3,oneof" json:"note,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *Offer) Reset() {
+	*x = Offer{}
+	mi := &file_payment_v1_shared_message_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Offer) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Offer) ProtoMessage() {}
+
+func (x *Offer) ProtoReflect() protoreflect.Message {
+	mi := &file_payment_v1_shared_message_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Offer.ProtoReflect.Descriptor instead.
+func (*Offer) Descriptor() ([]byte, []int) {
+	return file_payment_v1_shared_message_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *Offer) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Offer) GetTransferId() string {
+	if x != nil {
+		return x.TransferId
+	}
+	return ""
+}
+
+func (x *Offer) GetAgentProfileId() string {
+	if x != nil {
+		return x.AgentProfileId
+	}
+	return ""
+}
+
+func (x *Offer) GetMatchRound() int32 {
+	if x != nil {
+		return x.MatchRound
+	}
+	return 0
+}
+
+func (x *Offer) GetScore() int32 {
+	if x != nil {
+		return x.Score
+	}
+	return 0
+}
+
+func (x *Offer) GetStatus() OfferStatus {
+	if x != nil {
+		return x.Status
+	}
+	return OfferStatus_OFFER_STATUS_UNSPECIFIED
+}
+
+func (x *Offer) GetExpiresAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return nil
+}
+
+func (x *Offer) GetDecidedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.DecidedAt
+	}
+	return nil
+}
+
+func (x *Offer) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *Offer) GetTransferReference() string {
+	if x != nil {
+		return x.TransferReference
+	}
+	return ""
+}
+
+func (x *Offer) GetFromCurrency() Currency {
+	if x != nil {
+		return x.FromCurrency
+	}
+	return Currency_CURRENCY_UNSPECIFIED
+}
+
+func (x *Offer) GetFromOperator() Operator {
+	if x != nil {
+		return x.FromOperator
+	}
+	return Operator_OPERATOR_UNSPECIFIED
+}
+
+func (x *Offer) GetFromAmount() int64 {
+	if x != nil {
+		return x.FromAmount
+	}
+	return 0
+}
+
+func (x *Offer) GetToCurrency() Currency {
+	if x != nil {
+		return x.ToCurrency
+	}
+	return Currency_CURRENCY_UNSPECIFIED
+}
+
+func (x *Offer) GetRecipientOperator() Operator {
+	if x != nil {
+		return x.RecipientOperator
+	}
+	return Operator_OPERATOR_UNSPECIFIED
+}
+
+func (x *Offer) GetRecipientCity() string {
+	if x != nil && x.RecipientCity != nil {
+		return *x.RecipientCity
+	}
+	return ""
+}
+
+func (x *Offer) GetToAmount() int64 {
+	if x != nil {
+		return x.ToAmount
+	}
+	return 0
+}
+
+func (x *Offer) GetTotalAmount() int64 {
+	if x != nil {
+		return x.TotalAmount
+	}
+	return 0
+}
+
+func (x *Offer) GetHoldAmount() int64 {
+	if x != nil {
+		return x.HoldAmount
+	}
+	return 0
+}
+
+func (x *Offer) GetNote() string {
+	if x != nil && x.Note != nil {
+		return *x.Note
+	}
+	return ""
+}
+
+// A saved recipient (D7).
+type Beneficiary struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ClientId      string                 `protobuf:"bytes,2,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
+	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	Phone         string                 `protobuf:"bytes,4,opt,name=phone,proto3" json:"phone,omitempty"`
+	Operator      Operator               `protobuf:"varint,5,opt,name=operator,proto3,enum=payment.v1.Operator" json:"operator,omitempty"`
+	City          *string                `protobuf:"bytes,6,opt,name=city,proto3,oneof" json:"city,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Beneficiary) Reset() {
+	*x = Beneficiary{}
+	mi := &file_payment_v1_shared_message_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Beneficiary) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Beneficiary) ProtoMessage() {}
+
+func (x *Beneficiary) ProtoReflect() protoreflect.Message {
+	mi := &file_payment_v1_shared_message_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Beneficiary.ProtoReflect.Descriptor instead.
+func (*Beneficiary) Descriptor() ([]byte, []int) {
+	return file_payment_v1_shared_message_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *Beneficiary) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Beneficiary) GetClientId() string {
+	if x != nil {
+		return x.ClientId
+	}
+	return ""
+}
+
+func (x *Beneficiary) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *Beneficiary) GetPhone() string {
+	if x != nil {
+		return x.Phone
+	}
+	return ""
+}
+
+func (x *Beneficiary) GetOperator() Operator {
+	if x != nil {
+		return x.Operator
+	}
+	return Operator_OPERATOR_UNSPECIFIED
+}
+
+func (x *Beneficiary) GetCity() string {
+	if x != nil && x.City != nil {
+		return *x.City
+	}
+	return ""
+}
+
+func (x *Beneficiary) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *Beneficiary) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+// An agent's declared {operator, currency} channel; msisdn is what the
+// client pays to.
+type AgentWallet struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	AgentProfileId string                 `protobuf:"bytes,2,opt,name=agent_profile_id,json=agentProfileId,proto3" json:"agent_profile_id,omitempty"`
+	Operator       Operator               `protobuf:"varint,3,opt,name=operator,proto3,enum=payment.v1.Operator" json:"operator,omitempty"`
+	Currency       Currency               `protobuf:"varint,4,opt,name=currency,proto3,enum=payment.v1.Currency" json:"currency,omitempty"`
+	Msisdn         string                 `protobuf:"bytes,5,opt,name=msisdn,proto3" json:"msisdn,omitempty"`
+	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt      *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *AgentWallet) Reset() {
+	*x = AgentWallet{}
+	mi := &file_payment_v1_shared_message_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AgentWallet) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AgentWallet) ProtoMessage() {}
+
+func (x *AgentWallet) ProtoReflect() protoreflect.Message {
+	mi := &file_payment_v1_shared_message_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AgentWallet.ProtoReflect.Descriptor instead.
+func (*AgentWallet) Descriptor() ([]byte, []int) {
+	return file_payment_v1_shared_message_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *AgentWallet) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *AgentWallet) GetAgentProfileId() string {
+	if x != nil {
+		return x.AgentProfileId
+	}
+	return ""
+}
+
+func (x *AgentWallet) GetOperator() Operator {
+	if x != nil {
+		return x.Operator
+	}
+	return Operator_OPERATOR_UNSPECIFIED
+}
+
+func (x *AgentWallet) GetCurrency() Currency {
+	if x != nil {
+		return x.Currency
+	}
+	return Currency_CURRENCY_UNSPECIFIED
+}
+
+func (x *AgentWallet) GetMsisdn() string {
+	if x != nil {
+		return x.Msisdn
+	}
+	return ""
+}
+
+func (x *AgentWallet) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *AgentWallet) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+// A stateless quote: nothing persisted — the rate locks at
+// CreateTransfer, and the cache TTL bounds the drift in between.
+type Quote struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	FromCurrency  Currency               `protobuf:"varint,1,opt,name=from_currency,json=fromCurrency,proto3,enum=payment.v1.Currency" json:"from_currency,omitempty"`
+	FromAmount    int64                  `protobuf:"varint,2,opt,name=from_amount,json=fromAmount,proto3" json:"from_amount,omitempty"`
+	ToCurrency    Currency               `protobuf:"varint,3,opt,name=to_currency,json=toCurrency,proto3,enum=payment.v1.Currency" json:"to_currency,omitempty"`
+	ToAmount      int64                  `protobuf:"varint,4,opt,name=to_amount,json=toAmount,proto3" json:"to_amount,omitempty"`
+	FeePct        string                 `protobuf:"bytes,5,opt,name=fee_pct,json=feePct,proto3" json:"fee_pct,omitempty"`
+	FeeAmount     int64                  `protobuf:"varint,6,opt,name=fee_amount,json=feeAmount,proto3" json:"fee_amount,omitempty"`
+	MarginAmount  int64                  `protobuf:"varint,7,opt,name=margin_amount,json=marginAmount,proto3" json:"margin_amount,omitempty"`
+	TotalAmount   int64                  `protobuf:"varint,8,opt,name=total_amount,json=totalAmount,proto3" json:"total_amount,omitempty"`
+	Rate          *string                `protobuf:"bytes,9,opt,name=rate,proto3,oneof" json:"rate,omitempty"` // absent = same-currency corridor
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Quote) Reset() {
+	*x = Quote{}
+	mi := &file_payment_v1_shared_message_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Quote) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Quote) ProtoMessage() {}
+
+func (x *Quote) ProtoReflect() protoreflect.Message {
+	mi := &file_payment_v1_shared_message_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Quote.ProtoReflect.Descriptor instead.
+func (*Quote) Descriptor() ([]byte, []int) {
+	return file_payment_v1_shared_message_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *Quote) GetFromCurrency() Currency {
+	if x != nil {
+		return x.FromCurrency
+	}
+	return Currency_CURRENCY_UNSPECIFIED
+}
+
+func (x *Quote) GetFromAmount() int64 {
+	if x != nil {
+		return x.FromAmount
+	}
+	return 0
+}
+
+func (x *Quote) GetToCurrency() Currency {
+	if x != nil {
+		return x.ToCurrency
+	}
+	return Currency_CURRENCY_UNSPECIFIED
+}
+
+func (x *Quote) GetToAmount() int64 {
+	if x != nil {
+		return x.ToAmount
+	}
+	return 0
+}
+
+func (x *Quote) GetFeePct() string {
+	if x != nil {
+		return x.FeePct
+	}
+	return ""
+}
+
+func (x *Quote) GetFeeAmount() int64 {
+	if x != nil {
+		return x.FeeAmount
+	}
+	return 0
+}
+
+func (x *Quote) GetMarginAmount() int64 {
+	if x != nil {
+		return x.MarginAmount
+	}
+	return 0
+}
+
+func (x *Quote) GetTotalAmount() int64 {
+	if x != nil {
+		return x.TotalAmount
+	}
+	return 0
+}
+
+func (x *Quote) GetRate() string {
+	if x != nil && x.Rate != nil {
+		return *x.Rate
+	}
+	return ""
+}
+
 var File_payment_v1_shared_message_proto protoreflect.FileDescriptor
 
 const file_payment_v1_shared_message_proto_rawDesc = "" +
@@ -778,7 +1922,139 @@ const file_payment_v1_shared_message_proto_rawDesc = "" +
 	"\x06amount\x18\x04 \x01(\x03R\x06amount\x12#\n" +
 	"\rbalance_after\x18\x05 \x01(\x03R\fbalanceAfter\x129\n" +
 	"\n" +
-	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt*\xa1\x01\n" +
+	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"_\n" +
+	"\x13AgentPaymentDetails\x120\n" +
+	"\boperator\x18\x01 \x01(\x0e2\x14.payment.v1.OperatorR\boperator\x12\x16\n" +
+	"\x06msisdn\x18\x02 \x01(\tR\x06msisdn\"\xd6\n" +
+	"\n" +
+	"\bTransfer\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1c\n" +
+	"\treference\x18\x02 \x01(\tR\treference\x12\x1b\n" +
+	"\tclient_id\x18\x03 \x01(\tR\bclientId\x12*\n" +
+	"\x0ebeneficiary_id\x18\x04 \x01(\tH\x00R\rbeneficiaryId\x88\x01\x01\x12%\n" +
+	"\x0erecipient_name\x18\x05 \x01(\tR\rrecipientName\x12'\n" +
+	"\x0frecipient_phone\x18\x06 \x01(\tR\x0erecipientPhone\x12C\n" +
+	"\x12recipient_operator\x18\a \x01(\x0e2\x14.payment.v1.OperatorR\x11recipientOperator\x12*\n" +
+	"\x0erecipient_city\x18\b \x01(\tH\x01R\rrecipientCity\x88\x01\x01\x129\n" +
+	"\rfrom_currency\x18\t \x01(\x0e2\x14.payment.v1.CurrencyR\ffromCurrency\x129\n" +
+	"\rfrom_operator\x18\n" +
+	" \x01(\x0e2\x14.payment.v1.OperatorR\ffromOperator\x12\x1f\n" +
+	"\vfrom_amount\x18\v \x01(\x03R\n" +
+	"fromAmount\x125\n" +
+	"\vto_currency\x18\f \x01(\x0e2\x14.payment.v1.CurrencyR\n" +
+	"toCurrency\x12\x1b\n" +
+	"\tto_amount\x18\r \x01(\x03R\btoAmount\x12\x17\n" +
+	"\afee_pct\x18\x0e \x01(\tR\x06feePct\x12\x1d\n" +
+	"\n" +
+	"fee_amount\x18\x0f \x01(\x03R\tfeeAmount\x12#\n" +
+	"\rmargin_amount\x18\x10 \x01(\x03R\fmarginAmount\x12!\n" +
+	"\ftotal_amount\x18\x11 \x01(\x03R\vtotalAmount\x12\x17\n" +
+	"\x04rate\x18\x12 \x01(\tH\x02R\x04rate\x88\x01\x01\x12\x1f\n" +
+	"\vhold_amount\x18\x13 \x01(\x03R\n" +
+	"holdAmount\x12\x17\n" +
+	"\x04note\x18\x14 \x01(\tH\x03R\x04note\x88\x01\x01\x122\n" +
+	"\x06status\x18\x15 \x01(\x0e2\x1a.payment.v1.TransferStatusR\x06status\x12-\n" +
+	"\x10agent_profile_id\x18\x16 \x01(\tH\x04R\x0eagentProfileId\x88\x01\x01\x12\x1f\n" +
+	"\vmatch_round\x18\x17 \x01(\x05R\n" +
+	"matchRound\x124\n" +
+	"\x14proof_client_file_id\x18\x18 \x01(\tH\x05R\x11proofClientFileId\x88\x01\x01\x122\n" +
+	"\x13proof_agent_file_id\x18\x19 \x01(\tH\x06R\x10proofAgentFileId\x88\x01\x01\x12X\n" +
+	"\x15agent_payment_details\x18\x1a \x01(\v2\x1f.payment.v1.AgentPaymentDetailsH\aR\x13agentPaymentDetails\x88\x01\x01\x129\n" +
+	"\n" +
+	"created_at\x18\x1b \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\x1c \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x11\n" +
+	"\x0f_beneficiary_idB\x11\n" +
+	"\x0f_recipient_cityB\a\n" +
+	"\x05_rateB\a\n" +
+	"\x05_noteB\x13\n" +
+	"\x11_agent_profile_idB\x17\n" +
+	"\x15_proof_client_file_idB\x16\n" +
+	"\x14_proof_agent_file_idB\x18\n" +
+	"\x16_agent_payment_details\"\xdb\x02\n" +
+	"\rTransferEvent\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
+	"\vtransfer_id\x18\x02 \x01(\tR\n" +
+	"transferId\x12\x1e\n" +
+	"\bactor_id\x18\x03 \x01(\tH\x00R\aactorId\x88\x01\x01\x12@\n" +
+	"\vfrom_status\x18\x04 \x01(\x0e2\x1a.payment.v1.TransferStatusH\x01R\n" +
+	"fromStatus\x88\x01\x01\x127\n" +
+	"\tto_status\x18\x05 \x01(\x0e2\x1a.payment.v1.TransferStatusR\btoStatus\x12\x1b\n" +
+	"\x06reason\x18\x06 \x01(\tH\x02R\x06reason\x88\x01\x01\x129\n" +
+	"\n" +
+	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAtB\v\n" +
+	"\t_actor_idB\x0e\n" +
+	"\f_from_statusB\t\n" +
+	"\a_reason\"\x93\a\n" +
+	"\x05Offer\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
+	"\vtransfer_id\x18\x02 \x01(\tR\n" +
+	"transferId\x12(\n" +
+	"\x10agent_profile_id\x18\x03 \x01(\tR\x0eagentProfileId\x12\x1f\n" +
+	"\vmatch_round\x18\x04 \x01(\x05R\n" +
+	"matchRound\x12\x14\n" +
+	"\x05score\x18\x05 \x01(\x05R\x05score\x12/\n" +
+	"\x06status\x18\x06 \x01(\x0e2\x17.payment.v1.OfferStatusR\x06status\x129\n" +
+	"\n" +
+	"expires_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\x12>\n" +
+	"\n" +
+	"decided_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampH\x00R\tdecidedAt\x88\x01\x01\x129\n" +
+	"\n" +
+	"created_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12-\n" +
+	"\x12transfer_reference\x18\n" +
+	" \x01(\tR\x11transferReference\x129\n" +
+	"\rfrom_currency\x18\v \x01(\x0e2\x14.payment.v1.CurrencyR\ffromCurrency\x129\n" +
+	"\rfrom_operator\x18\f \x01(\x0e2\x14.payment.v1.OperatorR\ffromOperator\x12\x1f\n" +
+	"\vfrom_amount\x18\r \x01(\x03R\n" +
+	"fromAmount\x125\n" +
+	"\vto_currency\x18\x0e \x01(\x0e2\x14.payment.v1.CurrencyR\n" +
+	"toCurrency\x12C\n" +
+	"\x12recipient_operator\x18\x0f \x01(\x0e2\x14.payment.v1.OperatorR\x11recipientOperator\x12*\n" +
+	"\x0erecipient_city\x18\x10 \x01(\tH\x01R\rrecipientCity\x88\x01\x01\x12\x1b\n" +
+	"\tto_amount\x18\x11 \x01(\x03R\btoAmount\x12!\n" +
+	"\ftotal_amount\x18\x12 \x01(\x03R\vtotalAmount\x12\x1f\n" +
+	"\vhold_amount\x18\x13 \x01(\x03R\n" +
+	"holdAmount\x12\x17\n" +
+	"\x04note\x18\x14 \x01(\tH\x02R\x04note\x88\x01\x01B\r\n" +
+	"\v_decided_atB\x11\n" +
+	"\x0f_recipient_cityB\a\n" +
+	"\x05_note\"\xae\x02\n" +
+	"\vBeneficiary\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
+	"\tclient_id\x18\x02 \x01(\tR\bclientId\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x12\x14\n" +
+	"\x05phone\x18\x04 \x01(\tR\x05phone\x120\n" +
+	"\boperator\x18\x05 \x01(\x0e2\x14.payment.v1.OperatorR\boperator\x12\x17\n" +
+	"\x04city\x18\x06 \x01(\tH\x00R\x04city\x88\x01\x01\x129\n" +
+	"\n" +
+	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\a\n" +
+	"\x05_city\"\xb9\x02\n" +
+	"\vAgentWallet\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12(\n" +
+	"\x10agent_profile_id\x18\x02 \x01(\tR\x0eagentProfileId\x120\n" +
+	"\boperator\x18\x03 \x01(\x0e2\x14.payment.v1.OperatorR\boperator\x120\n" +
+	"\bcurrency\x18\x04 \x01(\x0e2\x14.payment.v1.CurrencyR\bcurrency\x12\x16\n" +
+	"\x06msisdn\x18\x05 \x01(\tR\x06msisdn\x129\n" +
+	"\n" +
+	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xd9\x02\n" +
+	"\x05Quote\x129\n" +
+	"\rfrom_currency\x18\x01 \x01(\x0e2\x14.payment.v1.CurrencyR\ffromCurrency\x12\x1f\n" +
+	"\vfrom_amount\x18\x02 \x01(\x03R\n" +
+	"fromAmount\x125\n" +
+	"\vto_currency\x18\x03 \x01(\x0e2\x14.payment.v1.CurrencyR\n" +
+	"toCurrency\x12\x1b\n" +
+	"\tto_amount\x18\x04 \x01(\x03R\btoAmount\x12\x17\n" +
+	"\afee_pct\x18\x05 \x01(\tR\x06feePct\x12\x1d\n" +
+	"\n" +
+	"fee_amount\x18\x06 \x01(\x03R\tfeeAmount\x12#\n" +
+	"\rmargin_amount\x18\a \x01(\x03R\fmarginAmount\x12!\n" +
+	"\ftotal_amount\x18\b \x01(\x03R\vtotalAmount\x12\x17\n" +
+	"\x04rate\x18\t \x01(\tH\x00R\x04rate\x88\x01\x01B\a\n" +
+	"\x05_rate*\xa1\x01\n" +
 	"\x12AgentProfileStatus\x12$\n" +
 	" AGENT_PROFILE_STATUS_UNSPECIFIED\x10\x00\x12 \n" +
 	"\x1cAGENT_PROFILE_STATUS_PENDING\x10\x01\x12\x1f\n" +
@@ -813,7 +2089,34 @@ const file_payment_v1_shared_message_proto_rawDesc = "" +
 	"\x13LedgerReferenceType\x12%\n" +
 	"!LEDGER_REFERENCE_TYPE_UNSPECIFIED\x10\x00\x12$\n" +
 	" LEDGER_REFERENCE_TYPE_ENROLLMENT\x10\x01\x12\"\n" +
-	"\x1eLEDGER_REFERENCE_TYPE_TRANSFER\x10\x02B\x9e\x01\n" +
+	"\x1eLEDGER_REFERENCE_TYPE_TRANSFER\x10\x02*H\n" +
+	"\bCurrency\x12\x18\n" +
+	"\x14CURRENCY_UNSPECIFIED\x10\x00\x12\x10\n" +
+	"\fCURRENCY_USD\x10\x01\x12\x10\n" +
+	"\fCURRENCY_CDF\x10\x02*o\n" +
+	"\bOperator\x12\x18\n" +
+	"\x14OPERATOR_UNSPECIFIED\x10\x00\x12\x19\n" +
+	"\x15OPERATOR_ORANGE_MONEY\x10\x01\x12\x13\n" +
+	"\x0fOPERATOR_M_PESA\x10\x02\x12\x19\n" +
+	"\x15OPERATOR_AIRTEL_MONEY\x10\x03*\xfe\x02\n" +
+	"\x0eTransferStatus\x12\x1f\n" +
+	"\x1bTRANSFER_STATUS_UNSPECIFIED\x10\x00\x12!\n" +
+	"\x1dTRANSFER_STATUS_PENDING_MATCH\x10\x01\x12*\n" +
+	"&TRANSFER_STATUS_PENDING_AGENT_APPROVAL\x10\x02\x12+\n" +
+	"'TRANSFER_STATUS_PENDING_CLIENT_TRANSFER\x10\x03\x12*\n" +
+	"&TRANSFER_STATUS_PENDING_AGENT_TRANSFER\x10\x04\x12/\n" +
+	"+TRANSFER_STATUS_PENDING_CLIENT_CONFIRMATION\x10\x05\x12\x18\n" +
+	"\x14TRANSFER_STATUS_DONE\x10\x06\x12\x1d\n" +
+	"\x19TRANSFER_STATUS_CANCELLED\x10\a\x12\x1b\n" +
+	"\x17TRANSFER_STATUS_EXPIRED\x10\b\x12\x1c\n" +
+	"\x18TRANSFER_STATUS_DISPUTED\x10\t*\xae\x01\n" +
+	"\vOfferStatus\x12\x1c\n" +
+	"\x18OFFER_STATUS_UNSPECIFIED\x10\x00\x12\x18\n" +
+	"\x14OFFER_STATUS_OFFERED\x10\x01\x12\x19\n" +
+	"\x15OFFER_STATUS_ACCEPTED\x10\x02\x12\x19\n" +
+	"\x15OFFER_STATUS_DECLINED\x10\x03\x12\x17\n" +
+	"\x13OFFER_STATUS_VOIDED\x10\x04\x12\x18\n" +
+	"\x14OFFER_STATUS_EXPIRED\x10\x05B\x9e\x01\n" +
 	"\x0ecom.payment.v1B\x12SharedMessageProtoP\x01Z/mokapay.app/proto/codebase/payment/v1;paymentv1\xa2\x02\x03PXX\xaa\x02\n" +
 	"Payment.V1\xca\x02\n" +
 	"Payment\\V1\xe2\x02\x16Payment\\V1\\GPBMetadata\xea\x02\vPayment::V1b\x06proto3"
@@ -830,8 +2133,8 @@ func file_payment_v1_shared_message_proto_rawDescGZIP() []byte {
 	return file_payment_v1_shared_message_proto_rawDescData
 }
 
-var file_payment_v1_shared_message_proto_enumTypes = make([]protoimpl.EnumInfo, 6)
-var file_payment_v1_shared_message_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_payment_v1_shared_message_proto_enumTypes = make([]protoimpl.EnumInfo, 10)
+var file_payment_v1_shared_message_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_payment_v1_shared_message_proto_goTypes = []any{
 	(AgentProfileStatus)(0),       // 0: payment.v1.AgentProfileStatus
 	(AgentLevel)(0),               // 1: payment.v1.AgentLevel
@@ -839,29 +2142,69 @@ var file_payment_v1_shared_message_proto_goTypes = []any{
 	(LedgerRequestStatus)(0),      // 3: payment.v1.LedgerRequestStatus
 	(LedgerDirection)(0),          // 4: payment.v1.LedgerDirection
 	(LedgerReferenceType)(0),      // 5: payment.v1.LedgerReferenceType
-	(*AgentProfile)(nil),          // 6: payment.v1.AgentProfile
-	(*LedgerRequest)(nil),         // 7: payment.v1.LedgerRequest
-	(*LedgerLine)(nil),            // 8: payment.v1.LedgerLine
-	(*timestamppb.Timestamp)(nil), // 9: google.protobuf.Timestamp
+	(Currency)(0),                 // 6: payment.v1.Currency
+	(Operator)(0),                 // 7: payment.v1.Operator
+	(TransferStatus)(0),           // 8: payment.v1.TransferStatus
+	(OfferStatus)(0),              // 9: payment.v1.OfferStatus
+	(*AgentProfile)(nil),          // 10: payment.v1.AgentProfile
+	(*LedgerRequest)(nil),         // 11: payment.v1.LedgerRequest
+	(*LedgerLine)(nil),            // 12: payment.v1.LedgerLine
+	(*AgentPaymentDetails)(nil),   // 13: payment.v1.AgentPaymentDetails
+	(*Transfer)(nil),              // 14: payment.v1.Transfer
+	(*TransferEvent)(nil),         // 15: payment.v1.TransferEvent
+	(*Offer)(nil),                 // 16: payment.v1.Offer
+	(*Beneficiary)(nil),           // 17: payment.v1.Beneficiary
+	(*AgentWallet)(nil),           // 18: payment.v1.AgentWallet
+	(*Quote)(nil),                 // 19: payment.v1.Quote
+	(*timestamppb.Timestamp)(nil), // 20: google.protobuf.Timestamp
 }
 var file_payment_v1_shared_message_proto_depIdxs = []int32{
 	0,  // 0: payment.v1.AgentProfile.status:type_name -> payment.v1.AgentProfileStatus
 	1,  // 1: payment.v1.AgentProfile.level:type_name -> payment.v1.AgentLevel
-	9,  // 2: payment.v1.AgentProfile.created_at:type_name -> google.protobuf.Timestamp
-	9,  // 3: payment.v1.AgentProfile.updated_at:type_name -> google.protobuf.Timestamp
+	20, // 2: payment.v1.AgentProfile.created_at:type_name -> google.protobuf.Timestamp
+	20, // 3: payment.v1.AgentProfile.updated_at:type_name -> google.protobuf.Timestamp
 	2,  // 4: payment.v1.LedgerRequest.type:type_name -> payment.v1.LedgerRequestType
 	4,  // 5: payment.v1.LedgerRequest.direction:type_name -> payment.v1.LedgerDirection
 	3,  // 6: payment.v1.LedgerRequest.status:type_name -> payment.v1.LedgerRequestStatus
 	5,  // 7: payment.v1.LedgerRequest.reference_entity_type:type_name -> payment.v1.LedgerReferenceType
-	9,  // 8: payment.v1.LedgerRequest.decided_at:type_name -> google.protobuf.Timestamp
-	9,  // 9: payment.v1.LedgerRequest.created_at:type_name -> google.protobuf.Timestamp
-	9,  // 10: payment.v1.LedgerRequest.updated_at:type_name -> google.protobuf.Timestamp
-	9,  // 11: payment.v1.LedgerLine.created_at:type_name -> google.protobuf.Timestamp
-	12, // [12:12] is the sub-list for method output_type
-	12, // [12:12] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	20, // 8: payment.v1.LedgerRequest.decided_at:type_name -> google.protobuf.Timestamp
+	20, // 9: payment.v1.LedgerRequest.created_at:type_name -> google.protobuf.Timestamp
+	20, // 10: payment.v1.LedgerRequest.updated_at:type_name -> google.protobuf.Timestamp
+	20, // 11: payment.v1.LedgerLine.created_at:type_name -> google.protobuf.Timestamp
+	7,  // 12: payment.v1.AgentPaymentDetails.operator:type_name -> payment.v1.Operator
+	7,  // 13: payment.v1.Transfer.recipient_operator:type_name -> payment.v1.Operator
+	6,  // 14: payment.v1.Transfer.from_currency:type_name -> payment.v1.Currency
+	7,  // 15: payment.v1.Transfer.from_operator:type_name -> payment.v1.Operator
+	6,  // 16: payment.v1.Transfer.to_currency:type_name -> payment.v1.Currency
+	8,  // 17: payment.v1.Transfer.status:type_name -> payment.v1.TransferStatus
+	13, // 18: payment.v1.Transfer.agent_payment_details:type_name -> payment.v1.AgentPaymentDetails
+	20, // 19: payment.v1.Transfer.created_at:type_name -> google.protobuf.Timestamp
+	20, // 20: payment.v1.Transfer.updated_at:type_name -> google.protobuf.Timestamp
+	8,  // 21: payment.v1.TransferEvent.from_status:type_name -> payment.v1.TransferStatus
+	8,  // 22: payment.v1.TransferEvent.to_status:type_name -> payment.v1.TransferStatus
+	20, // 23: payment.v1.TransferEvent.created_at:type_name -> google.protobuf.Timestamp
+	9,  // 24: payment.v1.Offer.status:type_name -> payment.v1.OfferStatus
+	20, // 25: payment.v1.Offer.expires_at:type_name -> google.protobuf.Timestamp
+	20, // 26: payment.v1.Offer.decided_at:type_name -> google.protobuf.Timestamp
+	20, // 27: payment.v1.Offer.created_at:type_name -> google.protobuf.Timestamp
+	6,  // 28: payment.v1.Offer.from_currency:type_name -> payment.v1.Currency
+	7,  // 29: payment.v1.Offer.from_operator:type_name -> payment.v1.Operator
+	6,  // 30: payment.v1.Offer.to_currency:type_name -> payment.v1.Currency
+	7,  // 31: payment.v1.Offer.recipient_operator:type_name -> payment.v1.Operator
+	7,  // 32: payment.v1.Beneficiary.operator:type_name -> payment.v1.Operator
+	20, // 33: payment.v1.Beneficiary.created_at:type_name -> google.protobuf.Timestamp
+	20, // 34: payment.v1.Beneficiary.updated_at:type_name -> google.protobuf.Timestamp
+	7,  // 35: payment.v1.AgentWallet.operator:type_name -> payment.v1.Operator
+	6,  // 36: payment.v1.AgentWallet.currency:type_name -> payment.v1.Currency
+	20, // 37: payment.v1.AgentWallet.created_at:type_name -> google.protobuf.Timestamp
+	20, // 38: payment.v1.AgentWallet.updated_at:type_name -> google.protobuf.Timestamp
+	6,  // 39: payment.v1.Quote.from_currency:type_name -> payment.v1.Currency
+	6,  // 40: payment.v1.Quote.to_currency:type_name -> payment.v1.Currency
+	41, // [41:41] is the sub-list for method output_type
+	41, // [41:41] is the sub-list for method input_type
+	41, // [41:41] is the sub-list for extension type_name
+	41, // [41:41] is the sub-list for extension extendee
+	0,  // [0:41] is the sub-list for field type_name
 }
 
 func init() { file_payment_v1_shared_message_proto_init() }
@@ -871,13 +2214,18 @@ func file_payment_v1_shared_message_proto_init() {
 	}
 	file_payment_v1_shared_message_proto_msgTypes[0].OneofWrappers = []any{}
 	file_payment_v1_shared_message_proto_msgTypes[1].OneofWrappers = []any{}
+	file_payment_v1_shared_message_proto_msgTypes[4].OneofWrappers = []any{}
+	file_payment_v1_shared_message_proto_msgTypes[5].OneofWrappers = []any{}
+	file_payment_v1_shared_message_proto_msgTypes[6].OneofWrappers = []any{}
+	file_payment_v1_shared_message_proto_msgTypes[7].OneofWrappers = []any{}
+	file_payment_v1_shared_message_proto_msgTypes[9].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_payment_v1_shared_message_proto_rawDesc), len(file_payment_v1_shared_message_proto_rawDesc)),
-			NumEnums:      6,
-			NumMessages:   3,
+			NumEnums:      10,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

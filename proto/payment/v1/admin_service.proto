@@ -4,6 +4,7 @@ package payment.v1;
 
 import "google/protobuf/empty.proto";
 import "payment/v1/shared_message.proto";
+import "payment/v1/transfer_service.proto";
 
 // Agent-profile lifecycle. Intent-named RPCs on purpose: each carries its
 // own authorization and guards, and the RPC name is the audit entry; one
@@ -22,6 +23,21 @@ service AdminService {
   rpc SuspendAgentProfile(SuspendAgentProfileRequest) returns (AgentProfile);
   // Soft delete; only for a zero-money profile.
   rpc DeleteAgentProfile(DeleteAgentProfileRequest) returns (google.protobuf.Empty);
+  // The ops transfer worklist (optional status filter).
+  rpc ListAllTransfers(ListAllTransfersRequest) returns (ListTransfersResponse);
+  // The ops escape hatch: cancel from any open state, releasing the
+  // hold when one is placed. Reason required — it lands on the timeline.
+  rpc CancelTransferAdmin(CancelTransferAdminRequest) returns (Transfer);
+}
+
+message ListAllTransfersRequest {
+  optional TransferStatus status = 1;
+  int32 limit = 2;  // 0 = server default
+}
+
+message CancelTransferAdminRequest {
+  string id = 1;
+  string reason = 2;
 }
 
 message CreateAgentProfileRequest {

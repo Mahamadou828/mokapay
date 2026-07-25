@@ -100,6 +100,48 @@ func (ns NullAgentProfileStatus) Value() (driver.Value, error) {
 	return string(ns.AgentProfileStatus), nil
 }
 
+type Currency string
+
+const (
+	CurrencyUsd Currency = "usd"
+	CurrencyCdf Currency = "cdf"
+)
+
+func (e *Currency) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = Currency(s)
+	case string:
+		*e = Currency(s)
+	default:
+		return fmt.Errorf("unsupported scan type for Currency: %T", src)
+	}
+	return nil
+}
+
+type NullCurrency struct {
+	Currency Currency
+	Valid    bool // Valid is true if Currency is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullCurrency) Scan(value interface{}) error {
+	if value == nil {
+		ns.Currency, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.Currency.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullCurrency) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.Currency), nil
+}
+
 type LedgerDirection string
 
 const (
@@ -275,6 +317,143 @@ func (ns NullLedgerRequestType) Value() (driver.Value, error) {
 	return string(ns.LedgerRequestType), nil
 }
 
+type OfferStatus string
+
+const (
+	OfferStatusOffered  OfferStatus = "offered"
+	OfferStatusAccepted OfferStatus = "accepted"
+	OfferStatusDeclined OfferStatus = "declined"
+	OfferStatusVoided   OfferStatus = "voided"
+	OfferStatusExpired  OfferStatus = "expired"
+)
+
+func (e *OfferStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = OfferStatus(s)
+	case string:
+		*e = OfferStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for OfferStatus: %T", src)
+	}
+	return nil
+}
+
+type NullOfferStatus struct {
+	OfferStatus OfferStatus
+	Valid       bool // Valid is true if OfferStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullOfferStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.OfferStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.OfferStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullOfferStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.OfferStatus), nil
+}
+
+type PaymentOperator string
+
+const (
+	PaymentOperatorOrangeMoney PaymentOperator = "orange_money"
+	PaymentOperatorMPesa       PaymentOperator = "m_pesa"
+	PaymentOperatorAirtelMoney PaymentOperator = "airtel_money"
+)
+
+func (e *PaymentOperator) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = PaymentOperator(s)
+	case string:
+		*e = PaymentOperator(s)
+	default:
+		return fmt.Errorf("unsupported scan type for PaymentOperator: %T", src)
+	}
+	return nil
+}
+
+type NullPaymentOperator struct {
+	PaymentOperator PaymentOperator
+	Valid           bool // Valid is true if PaymentOperator is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPaymentOperator) Scan(value interface{}) error {
+	if value == nil {
+		ns.PaymentOperator, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.PaymentOperator.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPaymentOperator) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.PaymentOperator), nil
+}
+
+type TransferStatus string
+
+const (
+	TransferStatusPendingMatch              TransferStatus = "pending_match"
+	TransferStatusPendingAgentApproval      TransferStatus = "pending_agent_approval"
+	TransferStatusPendingClientTransfer     TransferStatus = "pending_client_transfer"
+	TransferStatusPendingAgentTransfer      TransferStatus = "pending_agent_transfer"
+	TransferStatusPendingClientConfirmation TransferStatus = "pending_client_confirmation"
+	TransferStatusDone                      TransferStatus = "done"
+	TransferStatusCancelled                 TransferStatus = "cancelled"
+	TransferStatusExpired                   TransferStatus = "expired"
+	TransferStatusDisputed                  TransferStatus = "disputed"
+)
+
+func (e *TransferStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = TransferStatus(s)
+	case string:
+		*e = TransferStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for TransferStatus: %T", src)
+	}
+	return nil
+}
+
+type NullTransferStatus struct {
+	TransferStatus TransferStatus
+	Valid          bool // Valid is true if TransferStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullTransferStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.TransferStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.TransferStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullTransferStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.TransferStatus), nil
+}
+
 type AgentProfile struct {
 	ID             string
 	AccountNk      string
@@ -288,6 +467,29 @@ type AgentProfile struct {
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 	DeletedAt      pgtype.Timestamptz
+}
+
+type AgentWallet struct {
+	ID             string
+	AgentProfileFk string
+	Operator       PaymentOperator
+	Currency       Currency
+	Msisdn         string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	DeletedAt      pgtype.Timestamptz
+}
+
+type Beneficiary struct {
+	ID        string
+	ClientNk  string
+	Name      string
+	Phone     string
+	Operator  PaymentOperator
+	City      pgtype.Text
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt pgtype.Timestamptz
 }
 
 type LedgerLine struct {
@@ -317,6 +519,42 @@ type LedgerRequest struct {
 	UpdatedAt           time.Time
 }
 
+type Offer struct {
+	ID             string
+	TransferFk     string
+	AgentProfileFk string
+	MatchRound     int32
+	Score          int32
+	Status         OfferStatus
+	ExpiresAt      time.Time
+	DecidedAt      pgtype.Timestamptz
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+type PaymentsExtAgentOffer struct {
+	ID                string
+	TransferFk        string
+	AgentProfileFk    string
+	MatchRound        int32
+	Score             int32
+	Status            OfferStatus
+	ExpiresAt         time.Time
+	DecidedAt         pgtype.Timestamptz
+	CreatedAt         time.Time
+	TransferReference string
+	FromCurrency      Currency
+	FromOperator      PaymentOperator
+	FromAmount        int64
+	ToCurrency        Currency
+	RecipientOperator PaymentOperator
+	RecipientCity     pgtype.Text
+	ToAmount          int64
+	TotalAmount       int64
+	HoldAmount        int64
+	Note              pgtype.Text
+}
+
 type PaymentsExtAgentProfile struct {
 	ID             string
 	AccountNk      string
@@ -330,6 +568,35 @@ type PaymentsExtAgentProfile struct {
 	City           pgtype.Text
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
+}
+
+type PaymentsExtAgentStat struct {
+	AgentProfileFk string
+	DoneCount      int64
+	DecidedCount   int64
+	ActiveLoad     int64
+	DeclinedCount  int64
+}
+
+type PaymentsExtAgentWallet struct {
+	ID             string
+	AgentProfileFk string
+	Operator       PaymentOperator
+	Currency       Currency
+	Msisdn         string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+type PaymentsExtBeneficiary struct {
+	ID        string
+	ClientNk  string
+	Name      string
+	Phone     string
+	Operator  PaymentOperator
+	City      pgtype.Text
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 type PaymentsExtLedgerLine struct {
@@ -357,4 +624,98 @@ type PaymentsExtLedgerRequest struct {
 	DecidedAt           pgtype.Timestamptz
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
+}
+
+type PaymentsExtOffer struct {
+	ID             string
+	TransferFk     string
+	AgentProfileFk string
+	MatchRound     int32
+	Score          int32
+	Status         OfferStatus
+	ExpiresAt      time.Time
+	DecidedAt      pgtype.Timestamptz
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+type PaymentsExtTransfer struct {
+	ID                string
+	Reference         string
+	ClientNk          string
+	BeneficiaryFk     uuid.NullUUID
+	RecipientName     string
+	RecipientPhone    string
+	RecipientOperator PaymentOperator
+	RecipientCity     pgtype.Text
+	FromCurrency      Currency
+	FromOperator      PaymentOperator
+	FromAmount        int64
+	ToCurrency        Currency
+	ToAmount          int64
+	FeePct            pgtype.Numeric
+	FeeAmount         int64
+	MarginAmount      int64
+	TotalAmount       int64
+	Rate              pgtype.Numeric
+	HoldAmount        int64
+	Note              pgtype.Text
+	Status            TransferStatus
+	AgentProfileFk    uuid.NullUUID
+	MatchRound        int32
+	ProofClientNk     uuid.NullUUID
+	ProofAgentNk      uuid.NullUUID
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+}
+
+type PaymentsExtTransferEvent struct {
+	ID         string
+	TransferFk string
+	ActorNk    uuid.NullUUID
+	FromStatus NullTransferStatus
+	ToStatus   TransferStatus
+	Reason     pgtype.Text
+	CreatedAt  time.Time
+}
+
+type Transfer struct {
+	ID                string
+	Reference         string
+	ClientNk          string
+	BeneficiaryFk     uuid.NullUUID
+	RecipientName     string
+	RecipientPhone    string
+	RecipientOperator PaymentOperator
+	RecipientCity     pgtype.Text
+	FromCurrency      Currency
+	FromOperator      PaymentOperator
+	FromAmount        int64
+	ToCurrency        Currency
+	ToAmount          int64
+	FeePct            pgtype.Numeric
+	FeeAmount         int64
+	MarginAmount      int64
+	TotalAmount       int64
+	Rate              pgtype.Numeric
+	HoldAmount        int64
+	Note              pgtype.Text
+	Status            TransferStatus
+	AgentProfileFk    uuid.NullUUID
+	MatchRound        int32
+	ProofClientNk     uuid.NullUUID
+	ProofAgentNk      uuid.NullUUID
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	DeletedAt         pgtype.Timestamptz
+}
+
+type TransferEvent struct {
+	ID         string
+	TransferFk string
+	ActorNk    uuid.NullUUID
+	FromStatus NullTransferStatus
+	ToStatus   TransferStatus
+	Reason     pgtype.Text
+	CreatedAt  time.Time
 }

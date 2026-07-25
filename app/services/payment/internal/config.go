@@ -25,6 +25,28 @@ type Config struct {
 	Client struct {
 		UserGRPCPort string
 	}
+	Redis struct {
+		Host string
+		Port string
+	}
+	FX struct {
+		ProviderURL string        // empty = static rate only (local dev)
+		StaticRate  int64         // CDF per USD in micros — the fallback
+		CacheTTL    time.Duration // the display-vs-locked drift bound
+		HTTPTimeout time.Duration
+	}
+	Transfer struct {
+		FeeSameBps       int32 // same-currency fee, basis points
+		FeeFXBps         int32 // cross-currency fee
+		MarginBps        int32 // FX margin, platform-kept
+		MaxAmount        int64 // from_amount cap, minor units
+		MaxAgents        int32 // offers per broadcast round
+		OfferTTL         time.Duration
+		MaxRounds        int32
+		MatchDeadline    time.Duration
+		PaymentTimeout   time.Duration
+		AutoConfirmAfter time.Duration
+	}
 }
 
 // newConfig resolves the whole service config from the environment. Defaults
@@ -48,6 +70,27 @@ func newConfig() Config {
 	cfg.Server.MaxEventWorkers = config.GetEnvAsInt("MAX_EVENT_WORKERS", 10)
 
 	cfg.Client.UserGRPCPort = config.GetEnv("USER_GRPC_PORT", "localhost:50051")
+
+	cfg.Redis.Host = config.GetEnv("REDIS_HOST", "localhost")
+	cfg.Redis.Port = config.GetEnv("REDIS_PORT", "6379")
+
+	// Empty URL = static rate only; the static rate always exists as the
+	// provider fallback (2830 CDF/USD unless overridden).
+	cfg.FX.ProviderURL = config.GetEnv("FX_PROVIDER_URL", "")
+	cfg.FX.StaticRate = int64(config.GetEnvAsInt("FX_STATIC_RATE_MICROS", 2_830_000_000))
+	cfg.FX.CacheTTL = config.GetEnvAsTimeDuration("FX_CACHE_TTL", 5*time.Minute)
+	cfg.FX.HTTPTimeout = config.GetEnvAsTimeDuration("FX_HTTP_TIMEOUT", 5*time.Second)
+
+	cfg.Transfer.FeeSameBps = int32(config.GetEnvAsInt("FEE_SAME_BPS", 150))
+	cfg.Transfer.FeeFXBps = int32(config.GetEnvAsInt("FEE_FX_BPS", 200))
+	cfg.Transfer.MarginBps = int32(config.GetEnvAsInt("FX_MARGIN_BPS", 50))
+	cfg.Transfer.MaxAmount = int64(config.GetEnvAsInt("TRANSFER_MAX_AMOUNT", 1_000_000_000))
+	cfg.Transfer.MaxAgents = int32(config.GetEnvAsInt("MATCH_MAX_AGENTS", 5))
+	cfg.Transfer.OfferTTL = config.GetEnvAsTimeDuration("OFFER_TTL", 2*time.Minute)
+	cfg.Transfer.MaxRounds = int32(config.GetEnvAsInt("MATCH_MAX_ROUNDS", 10))
+	cfg.Transfer.MatchDeadline = config.GetEnvAsTimeDuration("MATCH_DEADLINE", 30*time.Minute)
+	cfg.Transfer.PaymentTimeout = config.GetEnvAsTimeDuration("PAYMENT_TIMEOUT", 24*time.Hour)
+	cfg.Transfer.AutoConfirmAfter = config.GetEnvAsTimeDuration("AUTO_CONFIRM_AFTER", 24*time.Hour)
 
 	return cfg
 }

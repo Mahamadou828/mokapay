@@ -44,7 +44,13 @@ func Run() error {
 			APIHost:            config.GetEnv("API_HOST", ":8080"),
 			CORSAllowedOrigins: config.GetEnvAsSlice("CORS_ALLOWED_ORIGINS", []string{"*"}),
 		},
-		Client: struct{ UserGRPCPort string }{UserGRPCPort: config.GetEnv("USER_GRPC_PORT", "localhost:50051")},
+		Client: struct {
+			UserGRPCPort    string
+			PaymentGRPCPort string
+		}{
+			UserGRPCPort:    config.GetEnv("USER_GRPC_PORT", "localhost:50051"),
+			PaymentGRPCPort: config.GetEnv("PAYMENT_GRPC_PORT", "localhost:50053"),
+		},
 	}
 	cfg.Cognito.ClientID = config.GetEnv("COGNITO_CLIENT_ID", "")
 	cfg.Cognito.ClientSecret = config.GetEnv("COGNITO_CLIENT_SECRET", "")
@@ -69,9 +75,11 @@ func Run() error {
 	// -------------------------------------------------------------------------
 	// init moka client
 	moka, err := client.NewMokaClient(client.Config{
-		UserServiceAddr: cfg.Client.UserGRPCPort,
+		UserServiceAddr:    cfg.Client.UserGRPCPort,
+		PaymentServiceAddr: cfg.Client.PaymentGRPCPort,
 	}, map[client.Connection]bool{
-		client.ConnectionUser: true,
+		client.ConnectionUser:    true,
+		client.ConnectionPayment: true,
 	})
 	if err != nil {
 		log.Error(ctx, "startup", "failed to init cognito client", "error", err)

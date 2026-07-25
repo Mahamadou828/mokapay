@@ -255,3 +255,148 @@ Authorization: Bearer {{access_token}}
 ### Delete an account (soft-delete + Cognito delete) → 204
 DELETE {{host}}/v1/accounts/{{account_id}}
 Authorization: Bearer {{access_token}}
+
+###############################################################################
+# Transfers — client flow (authed tier). Chain: operators → quote → create
+# (captures transfer_id) → read/timeline → confirm. Amounts are minor units
+# (USD cents, CDF whole francs) as JSON strings.
+###############################################################################
+
+### Available operators for the corridor
+GET {{host}}/v1/transfers/operators?from=CURRENCY_USD&to=CURRENCY_CDF
+Authorization: Bearer {{access_token}}
+
+### Quote — 100 USD → CDF (stateless; rate locks at create)
+POST {{host}}/v1/transfers/quote
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+
+{
+  "from_currency": "CURRENCY_USD",
+  "from_amount": "10000",
+  "to_currency": "CURRENCY_CDF"
+}
+
+### Create a transfer (inline recipient — also saves the beneficiary)
+POST {{host}}/v1/transfers
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+
+{
+  "from_currency": "CURRENCY_USD",
+  "from_operator": "OPERATOR_ORANGE_MONEY",
+  "from_amount": "10000",
+  "to_currency": "CURRENCY_CDF",
+  "recipient_name": "Mireille K.",
+  "recipient_phone": "+243812345678",
+  "recipient_operator": "OPERATOR_ORANGE_MONEY",
+  "recipient_city": "Kinshasa",
+  "note": "Frais scolaires"
+}
+
+> {%
+  if (response.body.id) { client.global.set("transfer_id", response.body.id); }
+%}
+
+### My transfers (status filter optional)
+GET {{host}}/v1/transfers?limit=20
+Authorization: Bearer {{access_token}}
+
+### One transfer (owner view — agent payment details once matched)
+GET {{host}}/v1/transfers/{{transfer_id}}
+Authorization: Bearer {{access_token}}
+
+### Its timeline (C13)
+GET {{host}}/v1/transfers/{{transfer_id}}/events
+Authorization: Bearer {{access_token}}
+
+### Confirm receipt (pending_client_confirmation → done, releases the hold)
+POST {{host}}/v1/transfers/{{transfer_id}}/confirm
+Authorization: Bearer {{access_token}}
+
+### Cancel my transfer (pre-accept only)
+POST {{host}}/v1/transfers/{{transfer_id}}/cancel
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+
+{
+  "reason": "changed my mind"
+}
+
+### My saved recipients
+GET {{host}}/v1/beneficiaries
+Authorization: Bearer {{access_token}}
+
+### Delete a saved recipient
+DELETE {{host}}/v1/beneficiaries/{{beneficiary_id}}
+Authorization: Bearer {{access_token}}
+
+###############################################################################
+# Agent — agent tier (Bearer token with agent role)
+###############################################################################
+
+### My agent profile (balance / held / available)
+GET {{host}}/v1/agent/profile
+Authorization: Bearer {{access_token}}
+
+### My offer inbox (live offers, soonest-expiring first)
+GET {{host}}/v1/agent/offers
+Authorization: Bearer {{access_token}}
+
+> {%
+  if (response.body.offers && response.body.offers.length > 0) {
+    client.global.set("offer_id", response.body.offers[0].id);
+  }
+%}
+
+### Accept the offer (first accept wins — reserves the hold)
+POST {{host}}/v1/agent/offers/{{offer_id}}/accept
+Authorization: Bearer {{access_token}}
+
+### Decline the offer (out of this transfer for good)
+POST {{host}}/v1/agent/offers/{{offer_id}}/decline
+Authorization: Bearer {{access_token}}
+
+### My assigned transfers
+GET {{host}}/v1/agent/transfers
+Authorization: Bearer {{access_token}}
+
+### My wallets
+GET {{host}}/v1/agent/wallets
+Authorization: Bearer {{access_token}}
+
+### Declare a wallet (one per {operator, currency} pair)
+POST {{host}}/v1/agent/wallets
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+
+{
+  "operator": "OPERATOR_ORANGE_MONEY",
+  "currency": "CURRENCY_USD",
+  "msisdn": "+243990000001"
+}
+
+> {%
+  if (response.body.id) { client.global.set("wallet_id", response.body.id); }
+%}
+
+### Remove a wallet
+DELETE {{host}}/v1/agent/wallets/{{wallet_id}}
+Authorization: Bearer {{access_token}}
+
+###############################################################################
+# Payment admin — ops tier
+###############################################################################
+
+### All transfers (ops worklist; status filter optional)
+GET {{host}}/v1/admin/transfers?limit=50
+Authorization: Bearer {{access_token}}
+
+### Cancel a transfer from any open state (releases the hold if placed)
+POST {{host}}/v1/admin/transfers/{{transfer_id}}/cancel
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+
+{
+  "reason": "ops intervention"
+}

@@ -11,8 +11,11 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"mokapay.app/app/services/payment/internal/api/admin/mapper"
+	transfermapper "mokapay.app/app/services/payment/internal/api/transfer/mapper"
 	"mokapay.app/app/services/payment/internal/business/agentprofile"
 	"mokapay.app/app/services/payment/internal/business/agentprofile/usecase"
+	"mokapay.app/app/services/payment/internal/business/transfer"
+	transferuc "mokapay.app/app/services/payment/internal/business/transfer/usecase"
 	"mokapay.app/app/services/payment/internal/sdk/grpcerr"
 	"mokapay.app/app/services/payment/internal/sdk/identity"
 	"mokapay.app/core/logger"
@@ -22,12 +25,63 @@ import (
 type Handler struct {
 	paymentv1.UnimplementedAdminServiceServer
 
-	logger *logger.Logger
-	uc     usecase.UseCase
+	logger    *logger.Logger
+	uc        usecase.UseCase
+	transfers transferuc.UseCase
 }
 
-func NewHandler(l *logger.Logger, uc usecase.UseCase) *Handler {
-	return &Handler{logger: l, uc: uc}
+func NewHandler(l *logger.Logger, uc usecase.UseCase, transfers transferuc.UseCase) *Handler {
+	return &Handler{logger: l, uc: uc, transfers: transfers}
+}
+
+// ListAllTransfers is the ops worklist.
+func (h *Handler) ListAllTransfers(ctx context.Context, req *paymentv1.ListAllTransfersRequest) (*paymentv1.ListTransfersResponse, error) {
+	if _, err := identity.RequireSystemOrRoles(ctx, "ops", "admin"); err != nil {
+		return nil, err
+	}
+
+	var st *transfer.Status
+	if req.Status != nil {
+		if s := transfermapper.StatusFromProto(*req.Status); s != "" {
+			st = new(s)
+		}
+	}
+
+	list, err := h.transfers.ListAll(ctx, st, req.Limit)
+	if err != nil {
+		return nil, grpcerr.Map(err)
+	}
+
+	out := make([]*paymentv1.Transfer, 0, len(list))
+	for _, t := range list {
+		out = append(out, transfermapper.TransferToProto(transferuc.TransferView{Transfer: t}))
+	}
+
+	return &paymentv1.ListTransfersResponse{Transfers: out}, nil
+}
+
+// CancelTransferAdmin: ops-only, reason required — cancellation moves
+// (releases) money, so it needs an accountable human.
+func (h *Handler) CancelTransferAdmin(ctx context.Context, req *paymentv1.CancelTransferAdminRequest) (*paymentv1.Transfer, error) {
+	adminID, err := identity.RequireRoles(ctx, "ops", "admin")
+	if err != nil {
+		return nil, err
+	}
+
+	id, err := uuid.Parse(req.Id)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid transfer id")
+	}
+	if req.Reason == "" {
+		return nil, status.Error(codes.InvalidArgument, "reason is required")
+	}
+
+	cancelled, err := h.transfers.CancelByAdmin(ctx, adminID, id, req.Reason)
+	if err != nil {
+		return nil, grpcerr.Map(err)
+	}
+
+	return transfermapper.TransferToProto(transferuc.TransferView{Transfer: cancelled}), nil
 }
 
 func (h *Handler) CreateAgentProfile(ctx context.Context, req *paymentv1.CreateAgentProfileRequest) (*paymentv1.AgentProfile, error) {

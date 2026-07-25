@@ -30,6 +30,18 @@ tags:
       the admin side lives under the Admin tag
   - name: Admin
     description: Account moderation — requires the ops or admin role
+  - name: Transfers
+    description: >
+      The client transfer flow — operators, stateless quote, create (rate
+      locked once), reads, receipt confirmation, pre-accept cancel, saved
+      beneficiaries. Amounts are minor units (USD cents; CDF whole francs).
+  - name: Agent
+    description: >
+      The agent surface — profile, broadcast-offer inbox, accept/decline,
+      assignments, wallet self-service. Requires the agent role
+      (pending_agent may read profile/wallets).
+  - name: PaymentAdmin
+    description: Transfer moderation — requires the ops or admin role
 
 paths:
   /v1/readiness:
@@ -726,6 +738,548 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/transfers/operators:
+    get:
+      tags: [Transfers]
+      summary: List available operators for a corridor
+      description: >
+        The v1 catalogue (all three operators serve both currencies).
+        Rejects the cdf→usd pair — not a corridor.
+      operationId: getAvailableOperators
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema:
+            $ref: "#/components/schemas/Currency"
+        - name: to
+          in: query
+          required: true
+          schema:
+            $ref: "#/components/schemas/Currency"
+      responses:
+        "200":
+          description: The operators
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  operators:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Operator"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /v1/transfers/quote:
+    post:
+      tags: [Transfers]
+      summary: Get a quote
+      description: >
+        Stateless — nothing is persisted; the rate locks at create. The
+        cached rate bounds display-vs-locked drift to the FX cache TTL
+        (5 minutes).
+      operationId: getQuote
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GetQuoteRequest"
+      responses:
+        "200":
+          description: The quote
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Quote"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /v1/transfers:
+    post:
+      tags: [Transfers]
+      summary: Create a transfer
+      description: >
+        Locks the rate, stamps every money value, saves/refreshes the
+        beneficiary when inline recipient details are given, and starts
+        matching immediately.
+      operationId: createTransfer
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTransferRequest"
+      responses:
+        "200":
+          description: The created transfer (pending_match)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transfer"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+    get:
+      tags: [Transfers]
+      summary: List my transfers
+      operationId: listTransfers
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/TransferStatus"
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: My transfers, newest first
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListTransfersResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /v1/transfers/{id}:
+    get:
+      tags: [Transfers]
+      summary: Get a transfer
+      description: >
+        Visible to its owner (payment details of the matched agent's
+        wallet attached), the assigned agent, and ops.
+      operationId: getTransfer
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: The transfer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transfer"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/transfers/{id}/events:
+    get:
+      tags: [Transfers]
+      summary: Get a transfer's timeline
+      operationId: listTransferEvents
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: The timeline, oldest first
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  events:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/TransferEvent"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/transfers/{id}/confirm:
+    post:
+      tags: [Transfers]
+      summary: Confirm receipt
+      description: >
+        The only human path to done — releases the agent's guarantee
+        hold. Auto-confirms after 24h of inactivity.
+      operationId: confirmReceipt
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: The completed transfer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transfer"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/transfers/{id}/cancel:
+    post:
+      tags: [Transfers]
+      summary: Cancel my transfer (pre-accept only)
+      description: >
+        Only before an agent committed (pending_match /
+        pending_agent_approval). Post-accept exits are the payment
+        timeout or an admin cancel.
+      operationId: cancelTransfer
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        "200":
+          description: The cancelled transfer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transfer"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/beneficiaries:
+    get:
+      tags: [Transfers]
+      summary: List my saved recipients
+      operationId: listBeneficiaries
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: My beneficiaries, newest first
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  beneficiaries:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Beneficiary"
+
+  /v1/beneficiaries/{id}:
+    delete:
+      tags: [Transfers]
+      summary: Delete a saved recipient
+      operationId: deleteBeneficiary
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Deleted (idempotent)
+
+  /v1/agent/profile:
+    get:
+      tags: [Agent]
+      summary: Get my agent profile
+      operationId: getMyProfile
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The profile (balance / held / available)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentProfile"
+        "403":
+          $ref: "#/components/responses/PermissionDenied"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/agent/offers:
+    get:
+      tags: [Agent]
+      summary: List my offers
+      description: Default = live inbox (offered), soonest-expiring first.
+      operationId: listMyOffers
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/OfferStatus"
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: The offers with their money summaries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  offers:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Offer"
+        "403":
+          $ref: "#/components/responses/PermissionDenied"
+
+  /v1/agent/offers/{id}/accept:
+    post:
+      tags: [Agent]
+      summary: Accept an offer
+      description: >
+        First accept wins — reserves hold_amount on the guarantee and
+        voids the sibling offers. 400 (failed_precondition) when the
+        available balance cannot cover the hold; 404 when the offer is
+        gone (lost the race, expired, withdrawn).
+      operationId: acceptOffer
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: The transfer, now assigned to me
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transfer"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/agent/offers/{id}/decline:
+    post:
+      tags: [Agent]
+      summary: Decline an offer
+      description: Takes me out of this transfer for good.
+      operationId: declineOffer
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: The declined offer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Offer"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/agent/transfers:
+    get:
+      tags: [Agent]
+      summary: List my assigned transfers
+      operationId: listMyTransfers
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/TransferStatus"
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: My assignments, newest first
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListTransfersResponse"
+
+  /v1/agent/wallets:
+    get:
+      tags: [Agent]
+      summary: List my wallets
+      operationId: listMyWallets
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: My declared {operator, currency} channels
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  wallets:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AgentWallet"
+    post:
+      tags: [Agent]
+      summary: Declare a wallet
+      description: >
+        One wallet per {operator, currency} pair; remove then re-add to
+        change the msisdn. The msisdn is what clients pay after a match.
+      operationId: addWallet
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddWalletRequest"
+      responses:
+        "200":
+          description: The wallet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentWallet"
+        "409":
+          description: Pair already declared
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /v1/agent/wallets/{id}:
+    delete:
+      tags: [Agent]
+      summary: Remove a wallet
+      operationId: removeWallet
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Removed (idempotent)
+
+  /v1/admin/transfers:
+    get:
+      tags: [PaymentAdmin]
+      summary: List all transfers (ops worklist)
+      operationId: listAllTransfers
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/TransferStatus"
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Matching transfers, newest first
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListTransfersResponse"
+        "403":
+          $ref: "#/components/responses/PermissionDenied"
+
+  /v1/admin/transfers/{id}/cancel:
+    post:
+      tags: [PaymentAdmin]
+      summary: Cancel a transfer (any open state)
+      description: >
+        The ops escape hatch — releases the agent's hold when one is
+        placed. The reason lands on the timeline.
+      operationId: cancelTransferAdmin
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+              required: [reason]
+      responses:
+        "200":
+          description: The cancelled transfer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transfer"
+        "403":
+          $ref: "#/components/responses/PermissionDenied"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1088,3 +1642,377 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Account"
+
+    Currency:
+      type: string
+      enum:
+        - CURRENCY_USD
+        - CURRENCY_CDF
+
+    Operator:
+      type: string
+      enum:
+        - OPERATOR_ORANGE_MONEY
+        - OPERATOR_M_PESA
+        - OPERATOR_AIRTEL_MONEY
+
+    TransferStatus:
+      type: string
+      enum:
+        - TRANSFER_STATUS_PENDING_MATCH
+        - TRANSFER_STATUS_PENDING_AGENT_APPROVAL
+        - TRANSFER_STATUS_PENDING_CLIENT_TRANSFER
+        - TRANSFER_STATUS_PENDING_AGENT_TRANSFER
+        - TRANSFER_STATUS_PENDING_CLIENT_CONFIRMATION
+        - TRANSFER_STATUS_DONE
+        - TRANSFER_STATUS_CANCELLED
+        - TRANSFER_STATUS_EXPIRED
+        - TRANSFER_STATUS_DISPUTED
+
+    OfferStatus:
+      type: string
+      enum:
+        - OFFER_STATUS_OFFERED
+        - OFFER_STATUS_ACCEPTED
+        - OFFER_STATUS_DECLINED
+        - OFFER_STATUS_VOIDED
+        - OFFER_STATUS_EXPIRED
+
+    GetQuoteRequest:
+      type: object
+      description: Amounts are minor units of from_currency (USD cents, CDF whole francs).
+      properties:
+        from_currency:
+          $ref: "#/components/schemas/Currency"
+        from_amount:
+          type: string
+          description: int64 as JSON string (proto3-JSON)
+          example: "10000"
+        to_currency:
+          $ref: "#/components/schemas/Currency"
+      required: [from_currency, from_amount, to_currency]
+
+    Quote:
+      type: object
+      properties:
+        from_currency:
+          $ref: "#/components/schemas/Currency"
+        from_amount:
+          type: string
+        to_currency:
+          $ref: "#/components/schemas/Currency"
+        to_amount:
+          type: string
+        fee_pct:
+          type: string
+          example: "2.00"
+        fee_amount:
+          type: string
+        margin_amount:
+          type: string
+        total_amount:
+          type: string
+          description: from_amount + fee_amount — what the client pays
+        rate:
+          type: string
+          description: Absent on same-currency corridors.
+          example: "2830.000000"
+
+    CreateTransferRequest:
+      type: object
+      description: >
+        Either beneficiary_id or the inline recipient trio
+        (name/phone/operator). Inline details also save/refresh the
+        beneficiary.
+      properties:
+        from_currency:
+          $ref: "#/components/schemas/Currency"
+        from_operator:
+          $ref: "#/components/schemas/Operator"
+        from_amount:
+          type: string
+        to_currency:
+          $ref: "#/components/schemas/Currency"
+        beneficiary_id:
+          type: string
+          format: uuid
+        recipient_name:
+          type: string
+        recipient_phone:
+          type: string
+          example: "+243812345678"
+        recipient_operator:
+          $ref: "#/components/schemas/Operator"
+        recipient_city:
+          type: string
+        note:
+          type: string
+          description: Passed to the agent.
+      required: [from_currency, from_operator, from_amount, to_currency]
+
+    AgentPaymentDetails:
+      type: object
+      description: Where the client sends the money after a match.
+      properties:
+        operator:
+          $ref: "#/components/schemas/Operator"
+        msisdn:
+          type: string
+
+    Transfer:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        reference:
+          type: string
+          example: "MKP-2026-000042"
+        client_id:
+          type: string
+          format: uuid
+        beneficiary_id:
+          type: string
+          format: uuid
+        recipient_name:
+          type: string
+        recipient_phone:
+          type: string
+        recipient_operator:
+          $ref: "#/components/schemas/Operator"
+        recipient_city:
+          type: string
+        from_currency:
+          $ref: "#/components/schemas/Currency"
+        from_operator:
+          $ref: "#/components/schemas/Operator"
+        from_amount:
+          type: string
+        to_currency:
+          $ref: "#/components/schemas/Currency"
+        to_amount:
+          type: string
+        fee_pct:
+          type: string
+        fee_amount:
+          type: string
+        margin_amount:
+          type: string
+        total_amount:
+          type: string
+        rate:
+          type: string
+          description: Absent on same-currency corridors.
+        hold_amount:
+          type: string
+          description: USD minor units reserved on the agent at accept.
+        note:
+          type: string
+        status:
+          $ref: "#/components/schemas/TransferStatus"
+        agent_profile_id:
+          type: string
+          format: uuid
+        match_round:
+          type: integer
+        proof_client_file_id:
+          type: string
+          format: uuid
+        proof_agent_file_id:
+          type: string
+          format: uuid
+        agent_payment_details:
+          $ref: "#/components/schemas/AgentPaymentDetails"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    TransferEvent:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        transfer_id:
+          type: string
+          format: uuid
+        actor_id:
+          type: string
+          format: uuid
+          description: Absent = system/timer.
+        from_status:
+          $ref: "#/components/schemas/TransferStatus"
+        to_status:
+          $ref: "#/components/schemas/TransferStatus"
+        reason:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    ListTransfersResponse:
+      type: object
+      properties:
+        transfers:
+          type: array
+          items:
+            $ref: "#/components/schemas/Transfer"
+
+    Offer:
+      type: object
+      description: An inbox offer with the money summary the agent decides on.
+      properties:
+        id:
+          type: string
+          format: uuid
+        transfer_id:
+          type: string
+          format: uuid
+        agent_profile_id:
+          type: string
+          format: uuid
+        match_round:
+          type: integer
+        score:
+          type: integer
+        status:
+          $ref: "#/components/schemas/OfferStatus"
+        expires_at:
+          type: string
+          format: date-time
+        decided_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        transfer_reference:
+          type: string
+        from_currency:
+          $ref: "#/components/schemas/Currency"
+        from_operator:
+          $ref: "#/components/schemas/Operator"
+        from_amount:
+          type: string
+        to_currency:
+          $ref: "#/components/schemas/Currency"
+        recipient_operator:
+          $ref: "#/components/schemas/Operator"
+        recipient_city:
+          type: string
+        to_amount:
+          type: string
+        total_amount:
+          type: string
+        hold_amount:
+          type: string
+          description: What accepting reserves (USD minor units).
+        note:
+          type: string
+
+    Beneficiary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        client_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        phone:
+          type: string
+        operator:
+          $ref: "#/components/schemas/Operator"
+        city:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    AgentProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        account_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+            - AGENT_PROFILE_STATUS_PENDING
+            - AGENT_PROFILE_STATUS_ACTIVE
+            - AGENT_PROFILE_STATUS_SUSPENDED
+        level:
+          type: string
+          enum:
+            - AGENT_LEVEL_N1
+            - AGENT_LEVEL_N2
+            - AGENT_LEVEL_N3
+            - AGENT_LEVEL_N4
+        currency:
+          type: string
+          example: USD
+        balance:
+          type: string
+          description: Minor units.
+        held:
+          type: string
+          description: Reserved by open outflows + accepted transfers.
+        available:
+          type: string
+          description: balance − held, derived.
+        guarantee_floor:
+          type: string
+          description: Not withdrawable.
+        city:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    AgentWallet:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        agent_profile_id:
+          type: string
+          format: uuid
+        operator:
+          $ref: "#/components/schemas/Operator"
+        currency:
+          $ref: "#/components/schemas/Currency"
+        msisdn:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    AddWalletRequest:
+      type: object
+      properties:
+        operator:
+          $ref: "#/components/schemas/Operator"
+        currency:
+          $ref: "#/components/schemas/Currency"
+        msisdn:
+          type: string
+          example: "+243990000001"
+      required: [operator, currency, msisdn]

@@ -25,6 +25,8 @@ const (
 	AdminService_ActivateAgentProfile_FullMethodName = "/payment.v1.AdminService/ActivateAgentProfile"
 	AdminService_SuspendAgentProfile_FullMethodName  = "/payment.v1.AdminService/SuspendAgentProfile"
 	AdminService_DeleteAgentProfile_FullMethodName   = "/payment.v1.AdminService/DeleteAgentProfile"
+	AdminService_ListAllTransfers_FullMethodName     = "/payment.v1.AdminService/ListAllTransfers"
+	AdminService_CancelTransferAdmin_FullMethodName  = "/payment.v1.AdminService/CancelTransferAdmin"
 )
 
 // AdminServiceClient is the client API for AdminService service.
@@ -48,6 +50,11 @@ type AdminServiceClient interface {
 	SuspendAgentProfile(ctx context.Context, in *SuspendAgentProfileRequest, opts ...grpc.CallOption) (*AgentProfile, error)
 	// Soft delete; only for a zero-money profile.
 	DeleteAgentProfile(ctx context.Context, in *DeleteAgentProfileRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// The ops transfer worklist (optional status filter).
+	ListAllTransfers(ctx context.Context, in *ListAllTransfersRequest, opts ...grpc.CallOption) (*ListTransfersResponse, error)
+	// The ops escape hatch: cancel from any open state, releasing the
+	// hold when one is placed. Reason required — it lands on the timeline.
+	CancelTransferAdmin(ctx context.Context, in *CancelTransferAdminRequest, opts ...grpc.CallOption) (*Transfer, error)
 }
 
 type adminServiceClient struct {
@@ -108,6 +115,26 @@ func (c *adminServiceClient) DeleteAgentProfile(ctx context.Context, in *DeleteA
 	return out, nil
 }
 
+func (c *adminServiceClient) ListAllTransfers(ctx context.Context, in *ListAllTransfersRequest, opts ...grpc.CallOption) (*ListTransfersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListTransfersResponse)
+	err := c.cc.Invoke(ctx, AdminService_ListAllTransfers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) CancelTransferAdmin(ctx context.Context, in *CancelTransferAdminRequest, opts ...grpc.CallOption) (*Transfer, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Transfer)
+	err := c.cc.Invoke(ctx, AdminService_CancelTransferAdmin_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AdminServiceServer is the server API for AdminService service.
 // All implementations must embed UnimplementedAdminServiceServer
 // for forward compatibility.
@@ -129,6 +156,11 @@ type AdminServiceServer interface {
 	SuspendAgentProfile(context.Context, *SuspendAgentProfileRequest) (*AgentProfile, error)
 	// Soft delete; only for a zero-money profile.
 	DeleteAgentProfile(context.Context, *DeleteAgentProfileRequest) (*emptypb.Empty, error)
+	// The ops transfer worklist (optional status filter).
+	ListAllTransfers(context.Context, *ListAllTransfersRequest) (*ListTransfersResponse, error)
+	// The ops escape hatch: cancel from any open state, releasing the
+	// hold when one is placed. Reason required — it lands on the timeline.
+	CancelTransferAdmin(context.Context, *CancelTransferAdminRequest) (*Transfer, error)
 	mustEmbedUnimplementedAdminServiceServer()
 }
 
@@ -153,6 +185,12 @@ func (UnimplementedAdminServiceServer) SuspendAgentProfile(context.Context, *Sus
 }
 func (UnimplementedAdminServiceServer) DeleteAgentProfile(context.Context, *DeleteAgentProfileRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteAgentProfile not implemented")
+}
+func (UnimplementedAdminServiceServer) ListAllTransfers(context.Context, *ListAllTransfersRequest) (*ListTransfersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListAllTransfers not implemented")
+}
+func (UnimplementedAdminServiceServer) CancelTransferAdmin(context.Context, *CancelTransferAdminRequest) (*Transfer, error) {
+	return nil, status.Error(codes.Unimplemented, "method CancelTransferAdmin not implemented")
 }
 func (UnimplementedAdminServiceServer) mustEmbedUnimplementedAdminServiceServer() {}
 func (UnimplementedAdminServiceServer) testEmbeddedByValue()                      {}
@@ -265,6 +303,42 @@ func _AdminService_DeleteAgentProfile_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AdminService_ListAllTransfers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListAllTransfersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).ListAllTransfers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_ListAllTransfers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).ListAllTransfers(ctx, req.(*ListAllTransfersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_CancelTransferAdmin_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CancelTransferAdminRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).CancelTransferAdmin(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_CancelTransferAdmin_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).CancelTransferAdmin(ctx, req.(*CancelTransferAdminRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AdminService_ServiceDesc is the grpc.ServiceDesc for AdminService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -291,6 +365,14 @@ var AdminService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteAgentProfile",
 			Handler:    _AdminService_DeleteAgentProfile_Handler,
+		},
+		{
+			MethodName: "ListAllTransfers",
+			Handler:    _AdminService_ListAllTransfers_Handler,
+		},
+		{
+			MethodName: "CancelTransferAdmin",
+			Handler:    _AdminService_CancelTransferAdmin_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

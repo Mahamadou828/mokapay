@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package payment.v1;
+
+import "google/protobuf/empty.proto";
+import "payment/v1/shared_message.proto";
+import "payment/v1/transfer_service.proto";
+
+// The agent-facing surface. The profile is always resolved from the
+// passport identity — an agent only ever acts on their own inbox,
+// wallets and assignments, whatever ids the payload claims.
+service AgentService {
+  rpc GetMyProfile(GetMyProfileRequest) returns (AgentProfile);
+  // The inbox: live offers with the money summary, soonest-expiring
+  // first (status filter optional).
+  rpc ListMyOffers(ListMyOffersRequest) returns (ListMyOffersResponse);
+  // THE race: first accept wins, reserves hold_amount on the agent's
+  // guarantee and voids the sibling offers. FailedPrecondition when the
+  // available balance cannot cover the hold; NotFound when the offer is
+  // gone (lost/expired/withdrawn).
+  rpc AcceptOffer(AcceptOfferRequest) returns (Transfer);
+  // Takes the agent out of this transfer for good.
+  rpc DeclineOffer(DeclineOfferRequest) returns (Offer);
+  rpc ListMyTransfers(ListMyTransfersRequest) returns (ListTransfersResponse);
+  rpc ListMyWallets(ListMyWalletsRequest) returns (ListMyWalletsResponse);
+  // Self-service wallet declaration (settled 2026-07-25): one wallet per
+  // {operator, currency} pair; remove then re-add to change the msisdn.
+  rpc AddWallet(AddWalletRequest) returns (AgentWallet);
+  rpc RemoveWallet(RemoveWalletRequest) returns (google.protobuf.Empty);
+}
+
+message GetMyProfileRequest {}
+
+message ListMyOffersRequest {
+  optional OfferStatus status = 1;  // absent = live inbox (offered)
+  int32 limit = 2;                  // 0 = server default
+}
+
+message ListMyOffersResponse {
+  repeated Offer offers = 1;
+}
+
+message AcceptOfferRequest {
+  string offer_id = 1;
+}
+
+message DeclineOfferRequest {
+  string offer_id = 1;
+}
+
+message ListMyTransfersRequest {
+  optional TransferStatus status = 1;
+  int32 limit = 2;
+}
+
+message ListMyWalletsRequest {}
+
+message ListMyWalletsResponse {
+  repeated AgentWallet wallets = 1;
+}
+
+message AddWalletRequest {
+  Operator operator = 1;
+  Currency currency = 2;
+  string msisdn = 3;
+}
+
+message RemoveWalletRequest {
+  string id = 1;
+}

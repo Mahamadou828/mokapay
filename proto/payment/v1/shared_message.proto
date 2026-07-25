@@ -104,3 +104,159 @@ message LedgerLine {
   int64 balance_after = 5;
   google.protobuf.Timestamp created_at = 6;
 }
+
+// ---------------------------------------------------------------------------
+// Transfers (values mirror the currency, payment_operator, transfer_status
+// and offer_status DB enums — conversion is a plain cast).
+
+enum Currency {
+  CURRENCY_UNSPECIFIED = 0;
+  CURRENCY_USD = 1;
+  CURRENCY_CDF = 2;
+}
+
+enum Operator {
+  OPERATOR_UNSPECIFIED = 0;
+  OPERATOR_ORANGE_MONEY = 1;
+  OPERATOR_M_PESA = 2;
+  OPERATOR_AIRTEL_MONEY = 3;
+}
+
+enum TransferStatus {
+  TRANSFER_STATUS_UNSPECIFIED = 0;
+  TRANSFER_STATUS_PENDING_MATCH = 1;
+  TRANSFER_STATUS_PENDING_AGENT_APPROVAL = 2;
+  TRANSFER_STATUS_PENDING_CLIENT_TRANSFER = 3;
+  TRANSFER_STATUS_PENDING_AGENT_TRANSFER = 4;
+  TRANSFER_STATUS_PENDING_CLIENT_CONFIRMATION = 5;
+  TRANSFER_STATUS_DONE = 6;
+  TRANSFER_STATUS_CANCELLED = 7;
+  TRANSFER_STATUS_EXPIRED = 8;
+  TRANSFER_STATUS_DISPUTED = 9;  // reserved, unreachable v1
+}
+
+enum OfferStatus {
+  OFFER_STATUS_UNSPECIFIED = 0;
+  OFFER_STATUS_OFFERED = 1;
+  OFFER_STATUS_ACCEPTED = 2;
+  OFFER_STATUS_DECLINED = 3;
+  OFFER_STATUS_VOIDED = 4;   // a sibling offer won the race
+  OFFER_STATUS_EXPIRED = 5;
+}
+
+// Where the client sends the money after a match: the matched agent's
+// wallet on the transfer's {from_operator, from_currency} pair.
+message AgentPaymentDetails {
+  Operator operator = 1;
+  string msisdn = 2;
+}
+
+// The transfer. Every money field was stamped at create (rate locked
+// once) and never changes; amounts are minor units (usd = cents,
+// cdf = whole francs), decimals travel as strings.
+message Transfer {
+  string id = 1;
+  string reference = 2;  // MKP-YYYY-NNNNNN
+  string client_id = 3;
+  optional string beneficiary_id = 4;
+  string recipient_name = 5;
+  string recipient_phone = 6;
+  Operator recipient_operator = 7;
+  optional string recipient_city = 8;
+  Currency from_currency = 9;
+  Operator from_operator = 10;
+  int64 from_amount = 11;
+  Currency to_currency = 12;
+  int64 to_amount = 13;
+  string fee_pct = 14;          // e.g. "2.00"
+  int64 fee_amount = 15;        // from_currency minor units
+  int64 margin_amount = 16;     // to_currency; 0 on same-currency
+  int64 total_amount = 17;      // from_amount + fee_amount
+  optional string rate = 18;    // absent = same-currency corridor
+  int64 hold_amount = 19;       // USD minor units, reserved at accept
+  optional string note = 20;
+  TransferStatus status = 21;
+  optional string agent_profile_id = 22;
+  int32 match_round = 23;
+  optional string proof_client_file_id = 24;
+  optional string proof_agent_file_id = 25;
+  // Populated only for the transfer's owner once matched.
+  optional AgentPaymentDetails agent_payment_details = 26;
+  google.protobuf.Timestamp created_at = 27;
+  google.protobuf.Timestamp updated_at = 28;
+}
+
+// One immutable timeline row (C13). from_status absent = the birth row;
+// actor absent = system/timer.
+message TransferEvent {
+  string id = 1;
+  string transfer_id = 2;
+  optional string actor_id = 3;
+  optional TransferStatus from_status = 4;
+  TransferStatus to_status = 5;
+  optional string reason = 6;
+  google.protobuf.Timestamp created_at = 7;
+}
+
+// The agent-inbox offer: the slot plus the money summary the agent
+// decides on.
+message Offer {
+  string id = 1;
+  string transfer_id = 2;
+  string agent_profile_id = 3;
+  int32 match_round = 4;
+  int32 score = 5;
+  OfferStatus status = 6;
+  google.protobuf.Timestamp expires_at = 7;
+  optional google.protobuf.Timestamp decided_at = 8;
+  google.protobuf.Timestamp created_at = 9;
+  string transfer_reference = 10;
+  Currency from_currency = 11;
+  Operator from_operator = 12;
+  int64 from_amount = 13;
+  Currency to_currency = 14;
+  Operator recipient_operator = 15;
+  optional string recipient_city = 16;
+  int64 to_amount = 17;
+  int64 total_amount = 18;
+  int64 hold_amount = 19;  // what accepting reserves, USD minor units
+  optional string note = 20;
+}
+
+// A saved recipient (D7).
+message Beneficiary {
+  string id = 1;
+  string client_id = 2;
+  string name = 3;
+  string phone = 4;
+  Operator operator = 5;
+  optional string city = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+// An agent's declared {operator, currency} channel; msisdn is what the
+// client pays to.
+message AgentWallet {
+  string id = 1;
+  string agent_profile_id = 2;
+  Operator operator = 3;
+  Currency currency = 4;
+  string msisdn = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+// A stateless quote: nothing persisted — the rate locks at
+// CreateTransfer, and the cache TTL bounds the drift in between.
+message Quote {
+  Currency from_currency = 1;
+  int64 from_amount = 2;
+  Currency to_currency = 3;
+  int64 to_amount = 4;
+  string fee_pct = 5;
+  int64 fee_amount = 6;
+  int64 margin_amount = 7;
+  int64 total_amount = 8;
+  optional string rate = 9;  // absent = same-currency corridor
+}
