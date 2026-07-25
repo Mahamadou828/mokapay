@@ -26,9 +26,16 @@ func (h Handler) Routes(public, authed, ops *core.Group) {
 	authed.RegisterHandler(http.MethodPost, "/notifications/read-all", h.markAllNotificationsRead)
 	authed.RegisterHandler(http.MethodPost, "/push/subscriptions", h.subscribePush)
 	authed.RegisterHandler(http.MethodDelete, "/push/subscriptions", h.unsubscribePush)
+	authed.RegisterHandler(http.MethodGet, "/enrollment", h.getMyEnrollment)
+	authed.RegisterHandler(http.MethodPost, "/enrollment/accept", h.acceptEnrollment)
+	authed.RegisterHandler(http.MethodPost, "/enrollment/decline", h.declineEnrollment)
 
 	ops.RegisterHandler(http.MethodGet, "/accounts", h.listAccounts)
 	ops.RegisterHandler(http.MethodGet, "/accounts/{id}", h.getAccount)
 	ops.RegisterHandler(http.MethodPatch, "/accounts/{id}", h.updateAccount)
 	ops.RegisterHandler(http.MethodDelete, "/accounts/{id}", h.deleteAccount)
+	ops.RegisterHandler(http.MethodPost, "/accounts/{id}/promote", h.promoteUserToAgent)
+	ops.RegisterHandler(http.MethodGet, "/enrollments", h.listEnrollments)
+	ops.RegisterHandler(http.MethodPost, "/enrollments/{id}/approve", h.approveEnrollment)
+	ops.RegisterHandler(http.MethodPost, "/enrollments/{id}/cancel", h.cancelEnrollment)
 }

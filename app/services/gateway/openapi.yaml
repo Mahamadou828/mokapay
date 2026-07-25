@@ -24,6 +24,10 @@ tags:
     description: Self-service account routes — the caller is the token's identity
   - name: Notifications
     description: In-app inbox + web-push subscription management (self-service)
+  - name: Enrollment
+    description: >
+      Agent enrollment — the candidate side (view, accept terms, decline);
+      the admin side lives under the Admin tag
   - name: Admin
     description: Account moderation — requires the ops or admin role
 
@@ -377,6 +381,244 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "403":
           $ref: "#/components/responses/PermissionDenied"
+
+  /v1/enrollment:
+    get:
+      tags: [Enrollment]
+      summary: My enrollment
+      description: The caller's latest enrollment request, whatever its status.
+      operationId: getMyEnrollment
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The enrollment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Enrollment"
+        "403":
+          $ref: "#/components/responses/PermissionDenied"
+        "404":
+          description: Never invited
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /v1/enrollment/accept:
+    post:
+      tags: [Enrollment]
+      summary: Accept the agent terms
+      description: >
+        Stamps the TOS acceptance. tos_version must be the current version —
+        a stale one (the client displayed outdated terms) is rejected with
+        failed_precondition. Only works while the enrollment is invited.
+      operationId: acceptEnrollment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                  description: The enrollment id (from GET /v1/enrollment)
+                tos_version:
+                  type: string
+                  example: "1.0"
+              required: [id, tos_version]
+      responses:
+        "200":
+          description: The accepted enrollment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Enrollment"
+        "400":
+          description: Invalid id, or stale tos_version (failed_precondition)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          $ref: "#/components/responses/PermissionDenied"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/enrollment/decline:
+    post:
+      tags: [Enrollment]
+      summary: Decline the invitation
+      description: >
+        Restores the user role. Only works while the enrollment is invited —
+        after accepting the terms, exiting goes through an admin cancel.
+      operationId: declineEnrollment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+              required: [id]
+      responses:
+        "200":
+          description: The declined enrollment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Enrollment"
+        "403":
+          $ref: "#/components/responses/PermissionDenied"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/enrollments:
+    get:
+      tags: [Admin]
+      summary: List enrollments
+      description: The enrollment dashboard; filter by status to find the worklist.
+      operationId: listEnrollments
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/EnrollmentStatus"
+      responses:
+        "200":
+          description: Matching enrollments, newest first
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  enrollments:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Enrollment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/PermissionDenied"
+
+  /v1/accounts/{id}/promote:
+    post:
+      tags: [Admin]
+      summary: Invite a user to become an agent
+      description: >
+        Creates the enrollment and flips the account to pending_agent (still
+        behaves as a user). The account must be active with role user; an
+        existing live enrollment is a conflict.
+      operationId: promoteUserToAgent
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: The created enrollment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Enrollment"
+        "400":
+          description: Account not eligible (failed_precondition)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          $ref: "#/components/responses/PermissionDenied"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: The account already has a live enrollment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /v1/enrollments/{id}/approve:
+    post:
+      tags: [Admin]
+      summary: Approve an enrollment
+      description: >
+        Promotes the candidate to agent. Only from accepted (the TOS gate),
+        and only if the account is still active. v1 note - the admin verifies
+        the guarantee funding manually until the payment service lands.
+      operationId: approveEnrollment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: The approved enrollment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Enrollment"
+        "400":
+          description: Account no longer active (failed_precondition)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          $ref: "#/components/responses/PermissionDenied"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/enrollments/{id}/cancel:
+    post:
+      tags: [Admin]
+      summary: Cancel an enrollment
+      description: >
+        Works from invited or accepted; restores the candidate's user role.
+      operationId: cancelEnrollment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: The cancelled enrollment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Enrollment"
+        "403":
+          $ref: "#/components/responses/PermissionDenied"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /v1/accounts:
     get:
@@ -793,6 +1035,51 @@ components:
           type: string
           description: Client auth secret (subscription.getKey('auth'), base64url)
       required: [endpoint, p256dh, auth]
+
+    EnrollmentStatus:
+      type: string
+      enum:
+        - ENROLLMENT_STATUS_INVITED
+        - ENROLLMENT_STATUS_ACCEPTED
+        - ENROLLMENT_STATUS_DECLINED
+        - ENROLLMENT_STATUS_APPROVED
+        - ENROLLMENT_STATUS_CANCELLED
+
+    Enrollment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        account_id:
+          type: string
+          format: uuid
+          description: The candidate
+        invited_by:
+          type: string
+          format: uuid
+          description: The ops/admin who invited
+        status:
+          $ref: "#/components/schemas/EnrollmentStatus"
+        tos_version:
+          type: string
+          description: Present once accepted.
+        tos_accepted_at:
+          type: string
+          format: date-time
+        decided_by:
+          type: string
+          format: uuid
+          description: Admin on approve/cancel, the candidate on decline.
+        decided_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
 
     ListAccountsResponse:
       type: object

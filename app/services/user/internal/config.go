@@ -36,6 +36,11 @@ type Config struct {
 		PoolID       string
 		Region       string
 	}
+	Enrollment struct {
+		// TOSVersion is the current terms version; an accept carrying a
+		// different one is rejected (the client displayed stale terms).
+		TOSVersion string
+	}
 	Push struct {
 		VapidPublicKey  string
 		VapidPrivateKey string
@@ -72,6 +77,8 @@ func newConfig() Config {
 	cfg.Auth.OtpMaxAttempts = config.GetEnvAsInt("OTP_MAX_ATTEMPTS", 3)
 	cfg.Auth.OtpSendCooldown = config.GetEnvAsTimeDuration("OTP_SEND_COOLDOWN", time.Minute)
 	cfg.Auth.OtpHourlyLimit = config.GetEnvAsInt("OTP_HOURLY_LIMIT", 5)
+
+	cfg.Enrollment.TOSVersion = config.GetEnv("TOS_VERSION", "1.0")
 
 	// Empty VAPID keys switch the service to the logging push sender.
 	cfg.Push.VapidPublicKey = config.GetEnv("VAPID_PUBLIC_KEY", "")

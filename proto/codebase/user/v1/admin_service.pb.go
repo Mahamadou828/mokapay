@@ -306,6 +306,226 @@ func (x *DeleteAccountRequest) GetId() string {
 	return ""
 }
 
+type PromoteUserToAgentRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AccountId     string                 `protobuf:"bytes,1,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PromoteUserToAgentRequest) Reset() {
+	*x = PromoteUserToAgentRequest{}
+	mi := &file_user_v1_admin_service_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PromoteUserToAgentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PromoteUserToAgentRequest) ProtoMessage() {}
+
+func (x *PromoteUserToAgentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_user_v1_admin_service_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PromoteUserToAgentRequest.ProtoReflect.Descriptor instead.
+func (*PromoteUserToAgentRequest) Descriptor() ([]byte, []int) {
+	return file_user_v1_admin_service_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *PromoteUserToAgentRequest) GetAccountId() string {
+	if x != nil {
+		return x.AccountId
+	}
+	return ""
+}
+
+type ApproveEnrollmentRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"` // enrollment id
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ApproveEnrollmentRequest) Reset() {
+	*x = ApproveEnrollmentRequest{}
+	mi := &file_user_v1_admin_service_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ApproveEnrollmentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ApproveEnrollmentRequest) ProtoMessage() {}
+
+func (x *ApproveEnrollmentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_user_v1_admin_service_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ApproveEnrollmentRequest.ProtoReflect.Descriptor instead.
+func (*ApproveEnrollmentRequest) Descriptor() ([]byte, []int) {
+	return file_user_v1_admin_service_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *ApproveEnrollmentRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type CancelEnrollmentRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"` // enrollment id
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CancelEnrollmentRequest) Reset() {
+	*x = CancelEnrollmentRequest{}
+	mi := &file_user_v1_admin_service_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CancelEnrollmentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CancelEnrollmentRequest) ProtoMessage() {}
+
+func (x *CancelEnrollmentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_user_v1_admin_service_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CancelEnrollmentRequest.ProtoReflect.Descriptor instead.
+func (*CancelEnrollmentRequest) Descriptor() ([]byte, []int) {
+	return file_user_v1_admin_service_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *CancelEnrollmentRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type ListEnrollmentsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Status        *EnrollmentStatus      `protobuf:"varint,1,opt,name=status,proto3,enum=user.v1.EnrollmentStatus,oneof" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListEnrollmentsRequest) Reset() {
+	*x = ListEnrollmentsRequest{}
+	mi := &file_user_v1_admin_service_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListEnrollmentsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListEnrollmentsRequest) ProtoMessage() {}
+
+func (x *ListEnrollmentsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_user_v1_admin_service_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListEnrollmentsRequest.ProtoReflect.Descriptor instead.
+func (*ListEnrollmentsRequest) Descriptor() ([]byte, []int) {
+	return file_user_v1_admin_service_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *ListEnrollmentsRequest) GetStatus() EnrollmentStatus {
+	if x != nil && x.Status != nil {
+		return *x.Status
+	}
+	return EnrollmentStatus_ENROLLMENT_STATUS_UNSPECIFIED
+}
+
+type ListEnrollmentsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Enrollments   []*Enrollment          `protobuf:"bytes,1,rep,name=enrollments,proto3" json:"enrollments,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListEnrollmentsResponse) Reset() {
+	*x = ListEnrollmentsResponse{}
+	mi := &file_user_v1_admin_service_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListEnrollmentsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListEnrollmentsResponse) ProtoMessage() {}
+
+func (x *ListEnrollmentsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_user_v1_admin_service_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListEnrollmentsResponse.ProtoReflect.Descriptor instead.
+func (*ListEnrollmentsResponse) Descriptor() ([]byte, []int) {
+	return file_user_v1_admin_service_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *ListEnrollmentsResponse) GetEnrollments() []*Enrollment {
+	if x != nil {
+		return x.Enrollments
+	}
+	return nil
+}
+
 var File_user_v1_admin_service_proto protoreflect.FileDescriptor
 
 const file_user_v1_admin_service_proto_rawDesc = "" +
@@ -339,13 +559,29 @@ const file_user_v1_admin_service_proto_rawDesc = "" +
 	"\x05_roleB\t\n" +
 	"\a_status\"&\n" +
 	"\x14DeleteAccountRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id2\xad\x02\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\":\n" +
+	"\x19PromoteUserToAgentRequest\x12\x1d\n" +
+	"\n" +
+	"account_id\x18\x01 \x01(\tR\taccountId\"*\n" +
+	"\x18ApproveEnrollmentRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\")\n" +
+	"\x17CancelEnrollmentRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"[\n" +
+	"\x16ListEnrollmentsRequest\x126\n" +
+	"\x06status\x18\x01 \x01(\x0e2\x19.user.v1.EnrollmentStatusH\x00R\x06status\x88\x01\x01B\t\n" +
+	"\a_status\"P\n" +
+	"\x17ListEnrollmentsResponse\x125\n" +
+	"\venrollments\x18\x01 \x03(\v2\x13.user.v1.EnrollmentR\venrollments2\xea\x04\n" +
 	"\fAdminService\x12:\n" +
 	"\n" +
 	"GetAccount\x12\x1a.user.v1.GetAccountRequest\x1a\x10.user.v1.Account\x12K\n" +
 	"\fListAccounts\x12\x1c.user.v1.ListAccountsRequest\x1a\x1d.user.v1.ListAccountsResponse\x12L\n" +
 	"\rUpdateAccount\x12).user.v1.AdminServiceUpdateAccountRequest\x1a\x10.user.v1.Account\x12F\n" +
-	"\rDeleteAccount\x12\x1d.user.v1.DeleteAccountRequest\x1a\x16.google.protobuf.EmptyB\x88\x01\n" +
+	"\rDeleteAccount\x12\x1d.user.v1.DeleteAccountRequest\x1a\x16.google.protobuf.Empty\x12M\n" +
+	"\x12PromoteUserToAgent\x12\".user.v1.PromoteUserToAgentRequest\x1a\x13.user.v1.Enrollment\x12K\n" +
+	"\x11ApproveEnrollment\x12!.user.v1.ApproveEnrollmentRequest\x1a\x13.user.v1.Enrollment\x12I\n" +
+	"\x10CancelEnrollment\x12 .user.v1.CancelEnrollmentRequest\x1a\x13.user.v1.Enrollment\x12T\n" +
+	"\x0fListEnrollments\x12\x1f.user.v1.ListEnrollmentsRequest\x1a .user.v1.ListEnrollmentsResponseB\x88\x01\n" +
 	"\vcom.user.v1B\x11AdminServiceProtoP\x01Z)mokapay.app/proto/codebase/user/v1;userv1\xa2\x02\x03UXX\xaa\x02\aUser.V1\xca\x02\aUser\\V1\xe2\x02\x13User\\V1\\GPBMetadata\xea\x02\bUser::V1b\x06proto3"
 
 var (
@@ -360,39 +596,56 @@ func file_user_v1_admin_service_proto_rawDescGZIP() []byte {
 	return file_user_v1_admin_service_proto_rawDescData
 }
 
-var file_user_v1_admin_service_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_user_v1_admin_service_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_user_v1_admin_service_proto_goTypes = []any{
 	(*GetAccountRequest)(nil),                // 0: user.v1.GetAccountRequest
 	(*ListAccountsRequest)(nil),              // 1: user.v1.ListAccountsRequest
 	(*ListAccountsResponse)(nil),             // 2: user.v1.ListAccountsResponse
 	(*AdminServiceUpdateAccountRequest)(nil), // 3: user.v1.AdminServiceUpdateAccountRequest
 	(*DeleteAccountRequest)(nil),             // 4: user.v1.DeleteAccountRequest
-	(AccountRole)(0),                         // 5: user.v1.AccountRole
-	(AccountStatus)(0),                       // 6: user.v1.AccountStatus
-	(*Account)(nil),                          // 7: user.v1.Account
-	(Language)(0),                            // 8: user.v1.Language
-	(*emptypb.Empty)(nil),                    // 9: google.protobuf.Empty
+	(*PromoteUserToAgentRequest)(nil),        // 5: user.v1.PromoteUserToAgentRequest
+	(*ApproveEnrollmentRequest)(nil),         // 6: user.v1.ApproveEnrollmentRequest
+	(*CancelEnrollmentRequest)(nil),          // 7: user.v1.CancelEnrollmentRequest
+	(*ListEnrollmentsRequest)(nil),           // 8: user.v1.ListEnrollmentsRequest
+	(*ListEnrollmentsResponse)(nil),          // 9: user.v1.ListEnrollmentsResponse
+	(AccountRole)(0),                         // 10: user.v1.AccountRole
+	(AccountStatus)(0),                       // 11: user.v1.AccountStatus
+	(*Account)(nil),                          // 12: user.v1.Account
+	(Language)(0),                            // 13: user.v1.Language
+	(EnrollmentStatus)(0),                    // 14: user.v1.EnrollmentStatus
+	(*Enrollment)(nil),                       // 15: user.v1.Enrollment
+	(*emptypb.Empty)(nil),                    // 16: google.protobuf.Empty
 }
 var file_user_v1_admin_service_proto_depIdxs = []int32{
-	5,  // 0: user.v1.ListAccountsRequest.role:type_name -> user.v1.AccountRole
-	6,  // 1: user.v1.ListAccountsRequest.status:type_name -> user.v1.AccountStatus
-	7,  // 2: user.v1.ListAccountsResponse.accounts:type_name -> user.v1.Account
-	8,  // 3: user.v1.AdminServiceUpdateAccountRequest.preferred_language:type_name -> user.v1.Language
-	5,  // 4: user.v1.AdminServiceUpdateAccountRequest.role:type_name -> user.v1.AccountRole
-	6,  // 5: user.v1.AdminServiceUpdateAccountRequest.status:type_name -> user.v1.AccountStatus
-	0,  // 6: user.v1.AdminService.GetAccount:input_type -> user.v1.GetAccountRequest
-	1,  // 7: user.v1.AdminService.ListAccounts:input_type -> user.v1.ListAccountsRequest
-	3,  // 8: user.v1.AdminService.UpdateAccount:input_type -> user.v1.AdminServiceUpdateAccountRequest
-	4,  // 9: user.v1.AdminService.DeleteAccount:input_type -> user.v1.DeleteAccountRequest
-	7,  // 10: user.v1.AdminService.GetAccount:output_type -> user.v1.Account
-	2,  // 11: user.v1.AdminService.ListAccounts:output_type -> user.v1.ListAccountsResponse
-	7,  // 12: user.v1.AdminService.UpdateAccount:output_type -> user.v1.Account
-	9,  // 13: user.v1.AdminService.DeleteAccount:output_type -> google.protobuf.Empty
-	10, // [10:14] is the sub-list for method output_type
-	6,  // [6:10] is the sub-list for method input_type
-	6,  // [6:6] is the sub-list for extension type_name
-	6,  // [6:6] is the sub-list for extension extendee
-	0,  // [0:6] is the sub-list for field type_name
+	10, // 0: user.v1.ListAccountsRequest.role:type_name -> user.v1.AccountRole
+	11, // 1: user.v1.ListAccountsRequest.status:type_name -> user.v1.AccountStatus
+	12, // 2: user.v1.ListAccountsResponse.accounts:type_name -> user.v1.Account
+	13, // 3: user.v1.AdminServiceUpdateAccountRequest.preferred_language:type_name -> user.v1.Language
+	10, // 4: user.v1.AdminServiceUpdateAccountRequest.role:type_name -> user.v1.AccountRole
+	11, // 5: user.v1.AdminServiceUpdateAccountRequest.status:type_name -> user.v1.AccountStatus
+	14, // 6: user.v1.ListEnrollmentsRequest.status:type_name -> user.v1.EnrollmentStatus
+	15, // 7: user.v1.ListEnrollmentsResponse.enrollments:type_name -> user.v1.Enrollment
+	0,  // 8: user.v1.AdminService.GetAccount:input_type -> user.v1.GetAccountRequest
+	1,  // 9: user.v1.AdminService.ListAccounts:input_type -> user.v1.ListAccountsRequest
+	3,  // 10: user.v1.AdminService.UpdateAccount:input_type -> user.v1.AdminServiceUpdateAccountRequest
+	4,  // 11: user.v1.AdminService.DeleteAccount:input_type -> user.v1.DeleteAccountRequest
+	5,  // 12: user.v1.AdminService.PromoteUserToAgent:input_type -> user.v1.PromoteUserToAgentRequest
+	6,  // 13: user.v1.AdminService.ApproveEnrollment:input_type -> user.v1.ApproveEnrollmentRequest
+	7,  // 14: user.v1.AdminService.CancelEnrollment:input_type -> user.v1.CancelEnrollmentRequest
+	8,  // 15: user.v1.AdminService.ListEnrollments:input_type -> user.v1.ListEnrollmentsRequest
+	12, // 16: user.v1.AdminService.GetAccount:output_type -> user.v1.Account
+	2,  // 17: user.v1.AdminService.ListAccounts:output_type -> user.v1.ListAccountsResponse
+	12, // 18: user.v1.AdminService.UpdateAccount:output_type -> user.v1.Account
+	16, // 19: user.v1.AdminService.DeleteAccount:output_type -> google.protobuf.Empty
+	15, // 20: user.v1.AdminService.PromoteUserToAgent:output_type -> user.v1.Enrollment
+	15, // 21: user.v1.AdminService.ApproveEnrollment:output_type -> user.v1.Enrollment
+	15, // 22: user.v1.AdminService.CancelEnrollment:output_type -> user.v1.Enrollment
+	9,  // 23: user.v1.AdminService.ListEnrollments:output_type -> user.v1.ListEnrollmentsResponse
+	16, // [16:24] is the sub-list for method output_type
+	8,  // [8:16] is the sub-list for method input_type
+	8,  // [8:8] is the sub-list for extension type_name
+	8,  // [8:8] is the sub-list for extension extendee
+	0,  // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_user_v1_admin_service_proto_init() }
@@ -403,13 +656,14 @@ func file_user_v1_admin_service_proto_init() {
 	file_user_v1_shared_message_proto_init()
 	file_user_v1_admin_service_proto_msgTypes[1].OneofWrappers = []any{}
 	file_user_v1_admin_service_proto_msgTypes[3].OneofWrappers = []any{}
+	file_user_v1_admin_service_proto_msgTypes[8].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_user_v1_admin_service_proto_rawDesc), len(file_user_v1_admin_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   5,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

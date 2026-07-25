@@ -20,10 +20,14 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AdminService_GetAccount_FullMethodName    = "/user.v1.AdminService/GetAccount"
-	AdminService_ListAccounts_FullMethodName  = "/user.v1.AdminService/ListAccounts"
-	AdminService_UpdateAccount_FullMethodName = "/user.v1.AdminService/UpdateAccount"
-	AdminService_DeleteAccount_FullMethodName = "/user.v1.AdminService/DeleteAccount"
+	AdminService_GetAccount_FullMethodName         = "/user.v1.AdminService/GetAccount"
+	AdminService_ListAccounts_FullMethodName       = "/user.v1.AdminService/ListAccounts"
+	AdminService_UpdateAccount_FullMethodName      = "/user.v1.AdminService/UpdateAccount"
+	AdminService_DeleteAccount_FullMethodName      = "/user.v1.AdminService/DeleteAccount"
+	AdminService_PromoteUserToAgent_FullMethodName = "/user.v1.AdminService/PromoteUserToAgent"
+	AdminService_ApproveEnrollment_FullMethodName  = "/user.v1.AdminService/ApproveEnrollment"
+	AdminService_CancelEnrollment_FullMethodName   = "/user.v1.AdminService/CancelEnrollment"
+	AdminService_ListEnrollments_FullMethodName    = "/user.v1.AdminService/ListEnrollments"
 )
 
 // AdminServiceClient is the client API for AdminService service.
@@ -39,6 +43,13 @@ type AdminServiceClient interface {
 	// the account's refresh tokens.
 	UpdateAccount(ctx context.Context, in *AdminServiceUpdateAccountRequest, opts ...grpc.CallOption) (*Account, error)
 	DeleteAccount(ctx context.Context, in *DeleteAccountRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Agent enrollment (spec agent-onboarding, D4). Invite flips the role to
+	// pending_agent; approve (only from accepted — the TOS gate) flips it to
+	// agent; cancel works from either live state and restores role user.
+	PromoteUserToAgent(ctx context.Context, in *PromoteUserToAgentRequest, opts ...grpc.CallOption) (*Enrollment, error)
+	ApproveEnrollment(ctx context.Context, in *ApproveEnrollmentRequest, opts ...grpc.CallOption) (*Enrollment, error)
+	CancelEnrollment(ctx context.Context, in *CancelEnrollmentRequest, opts ...grpc.CallOption) (*Enrollment, error)
+	ListEnrollments(ctx context.Context, in *ListEnrollmentsRequest, opts ...grpc.CallOption) (*ListEnrollmentsResponse, error)
 }
 
 type adminServiceClient struct {
@@ -89,6 +100,46 @@ func (c *adminServiceClient) DeleteAccount(ctx context.Context, in *DeleteAccoun
 	return out, nil
 }
 
+func (c *adminServiceClient) PromoteUserToAgent(ctx context.Context, in *PromoteUserToAgentRequest, opts ...grpc.CallOption) (*Enrollment, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Enrollment)
+	err := c.cc.Invoke(ctx, AdminService_PromoteUserToAgent_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) ApproveEnrollment(ctx context.Context, in *ApproveEnrollmentRequest, opts ...grpc.CallOption) (*Enrollment, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Enrollment)
+	err := c.cc.Invoke(ctx, AdminService_ApproveEnrollment_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) CancelEnrollment(ctx context.Context, in *CancelEnrollmentRequest, opts ...grpc.CallOption) (*Enrollment, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Enrollment)
+	err := c.cc.Invoke(ctx, AdminService_CancelEnrollment_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) ListEnrollments(ctx context.Context, in *ListEnrollmentsRequest, opts ...grpc.CallOption) (*ListEnrollmentsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListEnrollmentsResponse)
+	err := c.cc.Invoke(ctx, AdminService_ListEnrollments_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AdminServiceServer is the server API for AdminService service.
 // All implementations must embed UnimplementedAdminServiceServer
 // for forward compatibility.
@@ -102,6 +153,13 @@ type AdminServiceServer interface {
 	// the account's refresh tokens.
 	UpdateAccount(context.Context, *AdminServiceUpdateAccountRequest) (*Account, error)
 	DeleteAccount(context.Context, *DeleteAccountRequest) (*emptypb.Empty, error)
+	// Agent enrollment (spec agent-onboarding, D4). Invite flips the role to
+	// pending_agent; approve (only from accepted — the TOS gate) flips it to
+	// agent; cancel works from either live state and restores role user.
+	PromoteUserToAgent(context.Context, *PromoteUserToAgentRequest) (*Enrollment, error)
+	ApproveEnrollment(context.Context, *ApproveEnrollmentRequest) (*Enrollment, error)
+	CancelEnrollment(context.Context, *CancelEnrollmentRequest) (*Enrollment, error)
+	ListEnrollments(context.Context, *ListEnrollmentsRequest) (*ListEnrollmentsResponse, error)
 	mustEmbedUnimplementedAdminServiceServer()
 }
 
@@ -123,6 +181,18 @@ func (UnimplementedAdminServiceServer) UpdateAccount(context.Context, *AdminServ
 }
 func (UnimplementedAdminServiceServer) DeleteAccount(context.Context, *DeleteAccountRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteAccount not implemented")
+}
+func (UnimplementedAdminServiceServer) PromoteUserToAgent(context.Context, *PromoteUserToAgentRequest) (*Enrollment, error) {
+	return nil, status.Error(codes.Unimplemented, "method PromoteUserToAgent not implemented")
+}
+func (UnimplementedAdminServiceServer) ApproveEnrollment(context.Context, *ApproveEnrollmentRequest) (*Enrollment, error) {
+	return nil, status.Error(codes.Unimplemented, "method ApproveEnrollment not implemented")
+}
+func (UnimplementedAdminServiceServer) CancelEnrollment(context.Context, *CancelEnrollmentRequest) (*Enrollment, error) {
+	return nil, status.Error(codes.Unimplemented, "method CancelEnrollment not implemented")
+}
+func (UnimplementedAdminServiceServer) ListEnrollments(context.Context, *ListEnrollmentsRequest) (*ListEnrollmentsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListEnrollments not implemented")
 }
 func (UnimplementedAdminServiceServer) mustEmbedUnimplementedAdminServiceServer() {}
 func (UnimplementedAdminServiceServer) testEmbeddedByValue()                      {}
@@ -217,6 +287,78 @@ func _AdminService_DeleteAccount_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AdminService_PromoteUserToAgent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PromoteUserToAgentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).PromoteUserToAgent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_PromoteUserToAgent_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).PromoteUserToAgent(ctx, req.(*PromoteUserToAgentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_ApproveEnrollment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ApproveEnrollmentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).ApproveEnrollment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_ApproveEnrollment_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).ApproveEnrollment(ctx, req.(*ApproveEnrollmentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_CancelEnrollment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CancelEnrollmentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).CancelEnrollment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_CancelEnrollment_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).CancelEnrollment(ctx, req.(*CancelEnrollmentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_ListEnrollments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListEnrollmentsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).ListEnrollments(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_ListEnrollments_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).ListEnrollments(ctx, req.(*ListEnrollmentsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AdminService_ServiceDesc is the grpc.ServiceDesc for AdminService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -239,6 +381,22 @@ var AdminService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteAccount",
 			Handler:    _AdminService_DeleteAccount_Handler,
+		},
+		{
+			MethodName: "PromoteUserToAgent",
+			Handler:    _AdminService_PromoteUserToAgent_Handler,
+		},
+		{
+			MethodName: "ApproveEnrollment",
+			Handler:    _AdminService_ApproveEnrollment_Handler,
+		},
+		{
+			MethodName: "CancelEnrollment",
+			Handler:    _AdminService_CancelEnrollment_Handler,
+		},
+		{
+			MethodName: "ListEnrollments",
+			Handler:    _AdminService_ListEnrollments_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

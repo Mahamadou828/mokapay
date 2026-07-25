@@ -5,6 +5,7 @@ package account
 
 import (
 	usecase "mokapay.app/app/services/user/internal/business/auth/usecase/account"
+	enrollmentuc "mokapay.app/app/services/user/internal/business/enrollment/usecase"
 	"mokapay.app/core/logger"
 	userv1 "mokapay.app/proto/codebase/user/v1"
 )
@@ -16,11 +17,13 @@ type UserHandler struct {
 
 	logger *logger.Logger
 	uc     usecase.Account
+	enroll enrollmentuc.UseCase
 }
 
-func NewUserHandler(logger *logger.Logger, uc usecase.Account) UserHandler {
+func NewUserHandler(logger *logger.Logger, uc usecase.Account, enroll enrollmentuc.UseCase) UserHandler {
 	return UserHandler{
 		logger: logger,
 		uc:     uc,
+		enroll: enroll,
 	}
 }

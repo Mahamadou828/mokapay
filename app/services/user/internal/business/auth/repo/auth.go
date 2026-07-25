@@ -24,6 +24,13 @@ func New(db *coredb.Postgres) Store {
 	return Store{sqlc: sqlc.New(db.PgxPool)}
 }
 
+// WithTx returns a Store running on the given transaction — used by the
+// enrollment usecase to flip an account role atomically with an
+// enrollment transition.
+func (s Store) WithTx(tx pgx.Tx) Store {
+	return Store{sqlc: s.sqlc.WithTx(tx)}
+}
+
 // GetValidOtp returns the newest live (unconsumed, unexpired) code for the
 // phone/purpose pair.
 func (s Store) GetValidOtp(ctx context.Context, phoneNumber string, purpose auth.OtpPurpose) (auth.Otp, error) {

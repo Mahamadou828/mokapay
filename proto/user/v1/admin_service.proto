@@ -14,6 +14,14 @@ service AdminService {
   // the account's refresh tokens.
   rpc UpdateAccount(AdminServiceUpdateAccountRequest) returns (Account);
   rpc DeleteAccount(DeleteAccountRequest) returns (google.protobuf.Empty);
+
+  // Agent enrollment (spec agent-onboarding, D4). Invite flips the role to
+  // pending_agent; approve (only from accepted — the TOS gate) flips it to
+  // agent; cancel works from either live state and restores role user.
+  rpc PromoteUserToAgent(PromoteUserToAgentRequest) returns (Enrollment);
+  rpc ApproveEnrollment(ApproveEnrollmentRequest) returns (Enrollment);
+  rpc CancelEnrollment(CancelEnrollmentRequest) returns (Enrollment);
+  rpc ListEnrollments(ListEnrollmentsRequest) returns (ListEnrollmentsResponse);
 }
 
 message GetAccountRequest {
@@ -42,4 +50,24 @@ message AdminServiceUpdateAccountRequest {
 
 message DeleteAccountRequest {
   string id = 1;
+}
+
+message PromoteUserToAgentRequest {
+  string account_id = 1;
+}
+
+message ApproveEnrollmentRequest {
+  string id = 1;  // enrollment id
+}
+
+message CancelEnrollmentRequest {
+  string id = 1;  // enrollment id
+}
+
+message ListEnrollmentsRequest {
+  optional EnrollmentStatus status = 1;
+}
+
+message ListEnrollmentsResponse {
+  repeated Enrollment enrollments = 1;
 }

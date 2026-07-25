@@ -52,3 +52,29 @@ message Account {
   google.protobuf.Timestamp created_at = 10;
   google.protobuf.Timestamp updated_at = 11;
 }
+
+// Values mirror the users DB enrollment_status enum.
+enum EnrollmentStatus {
+  ENROLLMENT_STATUS_UNSPECIFIED = 0;
+  ENROLLMENT_STATUS_INVITED = 1;
+  ENROLLMENT_STATUS_ACCEPTED = 2;
+  ENROLLMENT_STATUS_DECLINED = 3;
+  ENROLLMENT_STATUS_APPROVED = 4;
+  ENROLLMENT_STATUS_CANCELLED = 5;
+}
+
+// One agent-enrollment request: the invite → TOS acceptance → approval
+// workflow promoting a user to agent. Shared by AdminService (invite,
+// approve, cancel, list) and UserService (view, accept, decline).
+message Enrollment {
+  string id = 1;
+  string account_id = 2;  // the candidate
+  string invited_by = 3;  // the ops/admin who invited
+  EnrollmentStatus status = 4;
+  optional string tos_version = 5;                       // set once accepted
+  optional google.protobuf.Timestamp tos_accepted_at = 6;
+  optional string decided_by = 7;  // admin on approve/cancel, candidate on decline
+  optional google.protobuf.Timestamp decided_at = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}

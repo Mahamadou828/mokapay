@@ -236,6 +236,65 @@ func (OtpPurpose) EnumDescriptor() ([]byte, []int) {
 	return file_user_v1_shared_message_proto_rawDescGZIP(), []int{3}
 }
 
+// Values mirror the users DB enrollment_status enum.
+type EnrollmentStatus int32
+
+const (
+	EnrollmentStatus_ENROLLMENT_STATUS_UNSPECIFIED EnrollmentStatus = 0
+	EnrollmentStatus_ENROLLMENT_STATUS_INVITED     EnrollmentStatus = 1
+	EnrollmentStatus_ENROLLMENT_STATUS_ACCEPTED    EnrollmentStatus = 2
+	EnrollmentStatus_ENROLLMENT_STATUS_DECLINED    EnrollmentStatus = 3
+	EnrollmentStatus_ENROLLMENT_STATUS_APPROVED    EnrollmentStatus = 4
+	EnrollmentStatus_ENROLLMENT_STATUS_CANCELLED   EnrollmentStatus = 5
+)
+
+// Enum value maps for EnrollmentStatus.
+var (
+	EnrollmentStatus_name = map[int32]string{
+		0: "ENROLLMENT_STATUS_UNSPECIFIED",
+		1: "ENROLLMENT_STATUS_INVITED",
+		2: "ENROLLMENT_STATUS_ACCEPTED",
+		3: "ENROLLMENT_STATUS_DECLINED",
+		4: "ENROLLMENT_STATUS_APPROVED",
+		5: "ENROLLMENT_STATUS_CANCELLED",
+	}
+	EnrollmentStatus_value = map[string]int32{
+		"ENROLLMENT_STATUS_UNSPECIFIED": 0,
+		"ENROLLMENT_STATUS_INVITED":     1,
+		"ENROLLMENT_STATUS_ACCEPTED":    2,
+		"ENROLLMENT_STATUS_DECLINED":    3,
+		"ENROLLMENT_STATUS_APPROVED":    4,
+		"ENROLLMENT_STATUS_CANCELLED":   5,
+	}
+)
+
+func (x EnrollmentStatus) Enum() *EnrollmentStatus {
+	p := new(EnrollmentStatus)
+	*p = x
+	return p
+}
+
+func (x EnrollmentStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (EnrollmentStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_user_v1_shared_message_proto_enumTypes[4].Descriptor()
+}
+
+func (EnrollmentStatus) Type() protoreflect.EnumType {
+	return &file_user_v1_shared_message_proto_enumTypes[4]
+}
+
+func (x EnrollmentStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use EnrollmentStatus.Descriptor instead.
+func (EnrollmentStatus) EnumDescriptor() ([]byte, []int) {
+	return file_user_v1_shared_message_proto_rawDescGZIP(), []int{4}
+}
+
 // The single identity row for every human in the system.
 // No password field anywhere — hashes never cross the wire.
 type Account struct {
@@ -362,6 +421,125 @@ func (x *Account) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+// One agent-enrollment request: the invite → TOS acceptance → approval
+// workflow promoting a user to agent. Shared by AdminService (invite,
+// approve, cancel, list) and UserService (view, accept, decline).
+type Enrollment struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	AccountId     string                 `protobuf:"bytes,2,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"` // the candidate
+	InvitedBy     string                 `protobuf:"bytes,3,opt,name=invited_by,json=invitedBy,proto3" json:"invited_by,omitempty"` // the ops/admin who invited
+	Status        EnrollmentStatus       `protobuf:"varint,4,opt,name=status,proto3,enum=user.v1.EnrollmentStatus" json:"status,omitempty"`
+	TosVersion    *string                `protobuf:"bytes,5,opt,name=tos_version,json=tosVersion,proto3,oneof" json:"tos_version,omitempty"` // set once accepted
+	TosAcceptedAt *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=tos_accepted_at,json=tosAcceptedAt,proto3,oneof" json:"tos_accepted_at,omitempty"`
+	DecidedBy     *string                `protobuf:"bytes,7,opt,name=decided_by,json=decidedBy,proto3,oneof" json:"decided_by,omitempty"` // admin on approve/cancel, candidate on decline
+	DecidedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=decided_at,json=decidedAt,proto3,oneof" json:"decided_at,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Enrollment) Reset() {
+	*x = Enrollment{}
+	mi := &file_user_v1_shared_message_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Enrollment) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Enrollment) ProtoMessage() {}
+
+func (x *Enrollment) ProtoReflect() protoreflect.Message {
+	mi := &file_user_v1_shared_message_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Enrollment.ProtoReflect.Descriptor instead.
+func (*Enrollment) Descriptor() ([]byte, []int) {
+	return file_user_v1_shared_message_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *Enrollment) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Enrollment) GetAccountId() string {
+	if x != nil {
+		return x.AccountId
+	}
+	return ""
+}
+
+func (x *Enrollment) GetInvitedBy() string {
+	if x != nil {
+		return x.InvitedBy
+	}
+	return ""
+}
+
+func (x *Enrollment) GetStatus() EnrollmentStatus {
+	if x != nil {
+		return x.Status
+	}
+	return EnrollmentStatus_ENROLLMENT_STATUS_UNSPECIFIED
+}
+
+func (x *Enrollment) GetTosVersion() string {
+	if x != nil && x.TosVersion != nil {
+		return *x.TosVersion
+	}
+	return ""
+}
+
+func (x *Enrollment) GetTosAcceptedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.TosAcceptedAt
+	}
+	return nil
+}
+
+func (x *Enrollment) GetDecidedBy() string {
+	if x != nil && x.DecidedBy != nil {
+		return *x.DecidedBy
+	}
+	return ""
+}
+
+func (x *Enrollment) GetDecidedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.DecidedAt
+	}
+	return nil
+}
+
+func (x *Enrollment) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *Enrollment) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
 var File_user_v1_shared_message_proto protoreflect.FileDescriptor
 
 const file_user_v1_shared_message_proto_rawDesc = "" +
@@ -384,7 +562,31 @@ const file_user_v1_shared_message_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\b\n" +
 	"\x06_emailB\x10\n" +
-	"\x0e_last_login_at*\xa8\x01\n" +
+	"\x0e_last_login_at\"\x98\x04\n" +
+	"\n" +
+	"Enrollment\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
+	"\n" +
+	"account_id\x18\x02 \x01(\tR\taccountId\x12\x1d\n" +
+	"\n" +
+	"invited_by\x18\x03 \x01(\tR\tinvitedBy\x121\n" +
+	"\x06status\x18\x04 \x01(\x0e2\x19.user.v1.EnrollmentStatusR\x06status\x12$\n" +
+	"\vtos_version\x18\x05 \x01(\tH\x00R\n" +
+	"tosVersion\x88\x01\x01\x12G\n" +
+	"\x0ftos_accepted_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampH\x01R\rtosAcceptedAt\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"decided_by\x18\a \x01(\tH\x02R\tdecidedBy\x88\x01\x01\x12>\n" +
+	"\n" +
+	"decided_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampH\x03R\tdecidedAt\x88\x01\x01\x129\n" +
+	"\n" +
+	"created_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x0e\n" +
+	"\f_tos_versionB\x12\n" +
+	"\x10_tos_accepted_atB\r\n" +
+	"\v_decided_byB\r\n" +
+	"\v_decided_at*\xa8\x01\n" +
 	"\vAccountRole\x12\x1c\n" +
 	"\x18ACCOUNT_ROLE_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11ACCOUNT_ROLE_USER\x10\x01\x12\x1e\n" +
@@ -407,7 +609,14 @@ const file_user_v1_shared_message_proto_rawDesc = "" +
 	"\x17OTP_PURPOSE_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14OTP_PURPOSE_REGISTER\x10\x01\x12\x15\n" +
 	"\x11OTP_PURPOSE_LOGIN\x10\x02\x12\x15\n" +
-	"\x11OTP_PURPOSE_RESET\x10\x03B\x89\x01\n" +
+	"\x11OTP_PURPOSE_RESET\x10\x03*\xd5\x01\n" +
+	"\x10EnrollmentStatus\x12!\n" +
+	"\x1dENROLLMENT_STATUS_UNSPECIFIED\x10\x00\x12\x1d\n" +
+	"\x19ENROLLMENT_STATUS_INVITED\x10\x01\x12\x1e\n" +
+	"\x1aENROLLMENT_STATUS_ACCEPTED\x10\x02\x12\x1e\n" +
+	"\x1aENROLLMENT_STATUS_DECLINED\x10\x03\x12\x1e\n" +
+	"\x1aENROLLMENT_STATUS_APPROVED\x10\x04\x12\x1f\n" +
+	"\x1bENROLLMENT_STATUS_CANCELLED\x10\x05B\x89\x01\n" +
 	"\vcom.user.v1B\x12SharedMessageProtoP\x01Z)mokapay.app/proto/codebase/user/v1;userv1\xa2\x02\x03UXX\xaa\x02\aUser.V1\xca\x02\aUser\\V1\xe2\x02\x13User\\V1\\GPBMetadata\xea\x02\bUser::V1b\x06proto3"
 
 var (
@@ -422,28 +631,35 @@ func file_user_v1_shared_message_proto_rawDescGZIP() []byte {
 	return file_user_v1_shared_message_proto_rawDescData
 }
 
-var file_user_v1_shared_message_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_user_v1_shared_message_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_user_v1_shared_message_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
+var file_user_v1_shared_message_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_user_v1_shared_message_proto_goTypes = []any{
 	(AccountRole)(0),              // 0: user.v1.AccountRole
 	(AccountStatus)(0),            // 1: user.v1.AccountStatus
 	(Language)(0),                 // 2: user.v1.Language
 	(OtpPurpose)(0),               // 3: user.v1.OtpPurpose
-	(*Account)(nil),               // 4: user.v1.Account
-	(*timestamppb.Timestamp)(nil), // 5: google.protobuf.Timestamp
+	(EnrollmentStatus)(0),         // 4: user.v1.EnrollmentStatus
+	(*Account)(nil),               // 5: user.v1.Account
+	(*Enrollment)(nil),            // 6: user.v1.Enrollment
+	(*timestamppb.Timestamp)(nil), // 7: google.protobuf.Timestamp
 }
 var file_user_v1_shared_message_proto_depIdxs = []int32{
-	2, // 0: user.v1.Account.preferred_language:type_name -> user.v1.Language
-	0, // 1: user.v1.Account.role:type_name -> user.v1.AccountRole
-	1, // 2: user.v1.Account.status:type_name -> user.v1.AccountStatus
-	5, // 3: user.v1.Account.last_login_at:type_name -> google.protobuf.Timestamp
-	5, // 4: user.v1.Account.created_at:type_name -> google.protobuf.Timestamp
-	5, // 5: user.v1.Account.updated_at:type_name -> google.protobuf.Timestamp
-	6, // [6:6] is the sub-list for method output_type
-	6, // [6:6] is the sub-list for method input_type
-	6, // [6:6] is the sub-list for extension type_name
-	6, // [6:6] is the sub-list for extension extendee
-	0, // [0:6] is the sub-list for field type_name
+	2,  // 0: user.v1.Account.preferred_language:type_name -> user.v1.Language
+	0,  // 1: user.v1.Account.role:type_name -> user.v1.AccountRole
+	1,  // 2: user.v1.Account.status:type_name -> user.v1.AccountStatus
+	7,  // 3: user.v1.Account.last_login_at:type_name -> google.protobuf.Timestamp
+	7,  // 4: user.v1.Account.created_at:type_name -> google.protobuf.Timestamp
+	7,  // 5: user.v1.Account.updated_at:type_name -> google.protobuf.Timestamp
+	4,  // 6: user.v1.Enrollment.status:type_name -> user.v1.EnrollmentStatus
+	7,  // 7: user.v1.Enrollment.tos_accepted_at:type_name -> google.protobuf.Timestamp
+	7,  // 8: user.v1.Enrollment.decided_at:type_name -> google.protobuf.Timestamp
+	7,  // 9: user.v1.Enrollment.created_at:type_name -> google.protobuf.Timestamp
+	7,  // 10: user.v1.Enrollment.updated_at:type_name -> google.protobuf.Timestamp
+	11, // [11:11] is the sub-list for method output_type
+	11, // [11:11] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_user_v1_shared_message_proto_init() }
@@ -452,13 +668,14 @@ func file_user_v1_shared_message_proto_init() {
 		return
 	}
 	file_user_v1_shared_message_proto_msgTypes[0].OneofWrappers = []any{}
+	file_user_v1_shared_message_proto_msgTypes[1].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_user_v1_shared_message_proto_rawDesc), len(file_user_v1_shared_message_proto_rawDesc)),
-			NumEnums:      4,
-			NumMessages:   1,
+			NumEnums:      5,
+			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

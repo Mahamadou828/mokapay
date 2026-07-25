@@ -18,6 +18,7 @@ import (
 	accountUC "mokapay.app/app/services/user/internal/business/auth/usecase/account"
 	adminUC "mokapay.app/app/services/user/internal/business/auth/usecase/admin"
 	authUC "mokapay.app/app/services/user/internal/business/auth/usecase/auth"
+	enrollmentuc "mokapay.app/app/services/user/internal/business/enrollment/usecase"
 	notificationuc "mokapay.app/app/services/user/internal/business/notification/usecase"
 	"mokapay.app/app/services/user/internal/integration/sms"
 	"mokapay.app/app/services/user/internal/integration/webpush"
@@ -97,6 +98,10 @@ func Run() error {
 	}
 	notificationUC := notificationuc.New(log, pg, pusher, cfg.Push.VapidPublicKey)
 
+	// The enrollment workflow notifies candidates through the notification
+	// usecase directly — same service, no gRPC hop.
+	enrollmentUC := enrollmentuc.New(log, pg, notificationUC, cfg.Enrollment.TOSVersion)
+
 	// -------------------------------------------------------------------------
 	// Init gRPC server & register services. The client interceptor rebuilds
 	// the gateway-forwarded passport into the request context; handlers
@@ -109,8 +114,8 @@ func Run() error {
 	reflection.Register(srv)
 
 	userv1.RegisterAuthServiceServer(srv, authapi.NewHandler(log, authUsecase))
-	userv1.RegisterUserServiceServer(srv, accountapi.NewUserHandler(log, accountUsecase))
-	userv1.RegisterAdminServiceServer(srv, adminapi.NewHandler(log, adminUsecase))
+	userv1.RegisterUserServiceServer(srv, accountapi.NewUserHandler(log, accountUsecase, enrollmentUC))
+	userv1.RegisterAdminServiceServer(srv, adminapi.NewHandler(log, adminUsecase, enrollmentUC))
 	userv1.RegisterNotificationServiceServer(srv, notificationapi.NewHandler(log, notificationUC))
 
 	lis, err := net.Listen("tcp", cfg.GRPC.Port)

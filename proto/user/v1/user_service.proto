@@ -13,6 +13,14 @@ service UserService {
   rpc Me(MeRequest) returns (Account);
   rpc UpdateAccount(UpdateAccountRequest) returns (Account);
   rpc GetAccountBySub(GetAccountBySubRequest) returns (Account);
+
+  // Agent enrollment, candidate side. GetMyEnrollment returns the latest
+  // request whatever its status (NotFound if never invited); accept stamps
+  // the TOS version the client displayed; decline only works before
+  // accepting — afterwards the exit is an admin cancel.
+  rpc GetMyEnrollment(GetMyEnrollmentRequest) returns (Enrollment);
+  rpc AcceptEnrollment(AcceptEnrollmentRequest) returns (Enrollment);
+  rpc DeclineEnrollment(DeclineEnrollmentRequest) returns (Enrollment);
 }
 
 message MeRequest {}
@@ -26,4 +34,15 @@ message UpdateAccountRequest {
   optional string last_name = 2;
   optional string email = 3;
   optional Language preferred_language = 4;
+}
+
+message GetMyEnrollmentRequest {}
+
+message AcceptEnrollmentRequest {
+  string id = 1;           // enrollment id
+  string tos_version = 2;  // the terms version the client displayed
+}
+
+message DeclineEnrollmentRequest {
+  string id = 1;  // enrollment id
 }

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -143,6 +144,51 @@ func (ns NullAccountStatus) Value() (driver.Value, error) {
 	return string(ns.AccountStatus), nil
 }
 
+type EnrollmentStatus string
+
+const (
+	EnrollmentStatusInvited   EnrollmentStatus = "invited"
+	EnrollmentStatusAccepted  EnrollmentStatus = "accepted"
+	EnrollmentStatusDeclined  EnrollmentStatus = "declined"
+	EnrollmentStatusApproved  EnrollmentStatus = "approved"
+	EnrollmentStatusCancelled EnrollmentStatus = "cancelled"
+)
+
+func (e *EnrollmentStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = EnrollmentStatus(s)
+	case string:
+		*e = EnrollmentStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for EnrollmentStatus: %T", src)
+	}
+	return nil
+}
+
+type NullEnrollmentStatus struct {
+	EnrollmentStatus EnrollmentStatus
+	Valid            bool // Valid is true if EnrollmentStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullEnrollmentStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.EnrollmentStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.EnrollmentStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullEnrollmentStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.EnrollmentStatus), nil
+}
+
 type NotificationStatus string
 
 const (
@@ -244,6 +290,20 @@ type Account struct {
 	DeletedAt         pgtype.Timestamptz
 }
 
+type EnrollmentRequest struct {
+	ID            string
+	AccountFk     string
+	InvitedBy     string
+	Status        EnrollmentStatus
+	TosVersion    pgtype.Text
+	TosAcceptedAt pgtype.Timestamptz
+	DecidedBy     uuid.NullUUID
+	DecidedAt     pgtype.Timestamptz
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	DeletedAt     pgtype.Timestamptz
+}
+
 type Notification struct {
 	ID        string
 	AccountFk string
@@ -284,6 +344,19 @@ type UsersExtAccount struct {
 	LastLoginAt       pgtype.Timestamptz
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
+}
+
+type UsersExtEnrollmentRequest struct {
+	ID            string
+	AccountFk     string
+	InvitedBy     string
+	Status        EnrollmentStatus
+	TosVersion    pgtype.Text
+	TosAcceptedAt pgtype.Timestamptz
+	DecidedBy     uuid.NullUUID
+	DecidedAt     pgtype.Timestamptz
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 type UsersExtNotification struct {

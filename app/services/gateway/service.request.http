@@ -164,8 +164,63 @@ Authorization: Bearer {{access_token}}
 }
 
 ###############################################################################
+# Enrollment — candidate side (authed tier)
+###############################################################################
+
+### My enrollment (latest, whatever its status)
+GET {{host}}/v1/enrollment
+Authorization: Bearer {{access_token}}
+
+> {%
+  if (response.body.id) { client.global.set("enrollment_id", response.body.id); }
+%}
+
+### Accept the agent terms (tos_version must match the backend's TOS_VERSION)
+POST {{host}}/v1/enrollment/accept
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+
+{
+  "id": "{{enrollment_id}}",
+  "tos_version": "1.0"
+}
+
+### Decline the invitation (only before accepting)
+POST {{host}}/v1/enrollment/decline
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+
+{
+  "id": "{{enrollment_id}}"
+}
+
+###############################################################################
 # Admin — ops tier (Bearer token with ops/admin role)
 ###############################################################################
+
+### Invite a user to become an agent (role → pending_agent)
+POST {{host}}/v1/accounts/{{account_id}}/promote
+Authorization: Bearer {{access_token}}
+
+> {%
+  if (response.body.id) { client.global.set("enrollment_id", response.body.id); }
+%}
+
+### Enrollment dashboard — all
+GET {{host}}/v1/enrollments
+Authorization: Bearer {{access_token}}
+
+### Enrollment dashboard — the approval worklist (TOS accepted)
+GET {{host}}/v1/enrollments?status=ENROLLMENT_STATUS_ACCEPTED
+Authorization: Bearer {{access_token}}
+
+### Approve an enrollment (accepted → approved, role → agent)
+POST {{host}}/v1/enrollments/{{enrollment_id}}/approve
+Authorization: Bearer {{access_token}}
+
+### Cancel an enrollment (invited/accepted → cancelled, role → user)
+POST {{host}}/v1/enrollments/{{enrollment_id}}/cancel
+Authorization: Bearer {{access_token}}
 
 ### List accounts
 GET {{host}}/v1/accounts

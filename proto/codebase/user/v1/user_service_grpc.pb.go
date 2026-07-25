@@ -19,9 +19,12 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	UserService_Me_FullMethodName              = "/user.v1.UserService/Me"
-	UserService_UpdateAccount_FullMethodName   = "/user.v1.UserService/UpdateAccount"
-	UserService_GetAccountBySub_FullMethodName = "/user.v1.UserService/GetAccountBySub"
+	UserService_Me_FullMethodName                = "/user.v1.UserService/Me"
+	UserService_UpdateAccount_FullMethodName     = "/user.v1.UserService/UpdateAccount"
+	UserService_GetAccountBySub_FullMethodName   = "/user.v1.UserService/GetAccountBySub"
+	UserService_GetMyEnrollment_FullMethodName   = "/user.v1.UserService/GetMyEnrollment"
+	UserService_AcceptEnrollment_FullMethodName  = "/user.v1.UserService/AcceptEnrollment"
+	UserService_DeclineEnrollment_FullMethodName = "/user.v1.UserService/DeclineEnrollment"
 )
 
 // UserServiceClient is the client API for UserService service.
@@ -37,6 +40,13 @@ type UserServiceClient interface {
 	Me(ctx context.Context, in *MeRequest, opts ...grpc.CallOption) (*Account, error)
 	UpdateAccount(ctx context.Context, in *UpdateAccountRequest, opts ...grpc.CallOption) (*Account, error)
 	GetAccountBySub(ctx context.Context, in *GetAccountBySubRequest, opts ...grpc.CallOption) (*Account, error)
+	// Agent enrollment, candidate side. GetMyEnrollment returns the latest
+	// request whatever its status (NotFound if never invited); accept stamps
+	// the TOS version the client displayed; decline only works before
+	// accepting — afterwards the exit is an admin cancel.
+	GetMyEnrollment(ctx context.Context, in *GetMyEnrollmentRequest, opts ...grpc.CallOption) (*Enrollment, error)
+	AcceptEnrollment(ctx context.Context, in *AcceptEnrollmentRequest, opts ...grpc.CallOption) (*Enrollment, error)
+	DeclineEnrollment(ctx context.Context, in *DeclineEnrollmentRequest, opts ...grpc.CallOption) (*Enrollment, error)
 }
 
 type userServiceClient struct {
@@ -77,6 +87,36 @@ func (c *userServiceClient) GetAccountBySub(ctx context.Context, in *GetAccountB
 	return out, nil
 }
 
+func (c *userServiceClient) GetMyEnrollment(ctx context.Context, in *GetMyEnrollmentRequest, opts ...grpc.CallOption) (*Enrollment, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Enrollment)
+	err := c.cc.Invoke(ctx, UserService_GetMyEnrollment_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) AcceptEnrollment(ctx context.Context, in *AcceptEnrollmentRequest, opts ...grpc.CallOption) (*Enrollment, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Enrollment)
+	err := c.cc.Invoke(ctx, UserService_AcceptEnrollment_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) DeclineEnrollment(ctx context.Context, in *DeclineEnrollmentRequest, opts ...grpc.CallOption) (*Enrollment, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Enrollment)
+	err := c.cc.Invoke(ctx, UserService_DeclineEnrollment_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // UserServiceServer is the server API for UserService service.
 // All implementations must embed UnimplementedUserServiceServer
 // for forward compatibility.
@@ -90,6 +130,13 @@ type UserServiceServer interface {
 	Me(context.Context, *MeRequest) (*Account, error)
 	UpdateAccount(context.Context, *UpdateAccountRequest) (*Account, error)
 	GetAccountBySub(context.Context, *GetAccountBySubRequest) (*Account, error)
+	// Agent enrollment, candidate side. GetMyEnrollment returns the latest
+	// request whatever its status (NotFound if never invited); accept stamps
+	// the TOS version the client displayed; decline only works before
+	// accepting — afterwards the exit is an admin cancel.
+	GetMyEnrollment(context.Context, *GetMyEnrollmentRequest) (*Enrollment, error)
+	AcceptEnrollment(context.Context, *AcceptEnrollmentRequest) (*Enrollment, error)
+	DeclineEnrollment(context.Context, *DeclineEnrollmentRequest) (*Enrollment, error)
 	mustEmbedUnimplementedUserServiceServer()
 }
 
@@ -108,6 +155,15 @@ func (UnimplementedUserServiceServer) UpdateAccount(context.Context, *UpdateAcco
 }
 func (UnimplementedUserServiceServer) GetAccountBySub(context.Context, *GetAccountBySubRequest) (*Account, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetAccountBySub not implemented")
+}
+func (UnimplementedUserServiceServer) GetMyEnrollment(context.Context, *GetMyEnrollmentRequest) (*Enrollment, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetMyEnrollment not implemented")
+}
+func (UnimplementedUserServiceServer) AcceptEnrollment(context.Context, *AcceptEnrollmentRequest) (*Enrollment, error) {
+	return nil, status.Error(codes.Unimplemented, "method AcceptEnrollment not implemented")
+}
+func (UnimplementedUserServiceServer) DeclineEnrollment(context.Context, *DeclineEnrollmentRequest) (*Enrollment, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeclineEnrollment not implemented")
 }
 func (UnimplementedUserServiceServer) mustEmbedUnimplementedUserServiceServer() {}
 func (UnimplementedUserServiceServer) testEmbeddedByValue()                     {}
@@ -184,6 +240,60 @@ func _UserService_GetAccountBySub_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _UserService_GetMyEnrollment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetMyEnrollmentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).GetMyEnrollment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_GetMyEnrollment_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).GetMyEnrollment(ctx, req.(*GetMyEnrollmentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_AcceptEnrollment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AcceptEnrollmentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).AcceptEnrollment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_AcceptEnrollment_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).AcceptEnrollment(ctx, req.(*AcceptEnrollmentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_DeclineEnrollment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeclineEnrollmentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).DeclineEnrollment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_DeclineEnrollment_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).DeclineEnrollment(ctx, req.(*DeclineEnrollmentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // UserService_ServiceDesc is the grpc.ServiceDesc for UserService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -202,6 +312,18 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetAccountBySub",
 			Handler:    _UserService_GetAccountBySub_Handler,
+		},
+		{
+			MethodName: "GetMyEnrollment",
+			Handler:    _UserService_GetMyEnrollment_Handler,
+		},
+		{
+			MethodName: "AcceptEnrollment",
+			Handler:    _UserService_AcceptEnrollment_Handler,
+		},
+		{
+			MethodName: "DeclineEnrollment",
+			Handler:    _UserService_DeclineEnrollment_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

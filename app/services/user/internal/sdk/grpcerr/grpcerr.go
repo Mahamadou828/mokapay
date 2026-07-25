@@ -9,6 +9,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"mokapay.app/app/services/user/internal/business/auth"
+	"mokapay.app/app/services/user/internal/business/enrollment"
+	"mokapay.app/app/services/user/internal/business/notification"
 	"mokapay.app/core/aws"
 )
 
@@ -33,8 +35,17 @@ func Map(err error) error {
 		return status.Error(codes.InvalidArgument, err.Error())
 
 	case errors.Is(err, auth.ErrOtpNotFound),
-		errors.Is(err, auth.ErrAccountNotFound):
+		errors.Is(err, auth.ErrAccountNotFound),
+		errors.Is(err, notification.ErrNotificationNotFound),
+		errors.Is(err, enrollment.ErrEnrollmentNotFound):
 		return status.Error(codes.NotFound, err.Error())
+
+	case errors.Is(err, enrollment.ErrEnrollmentPending):
+		return status.Error(codes.AlreadyExists, err.Error())
+
+	case errors.Is(err, enrollment.ErrNotEligible),
+		errors.Is(err, enrollment.ErrTOSVersionMismatch):
+		return status.Error(codes.FailedPrecondition, err.Error())
 
 	case errors.Is(err, auth.ErrTooManyAttempts),
 		errors.Is(err, aws.ErrTooManyRequests):
