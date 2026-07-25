@@ -37,6 +37,10 @@ file/%:
 payment/%:
 	$(MAKE) -C app/services/payment $(@F)
 
+# Frontends (submodules under app/ui/)
+mobile/%:
+	$(MAKE) -C app/ui/mokapay-mobile $(@F)
+
 # Fan-outs over the Go services
 check-all: $(addsuffix /check,$(GO_SERVICES))
 lint-all: $(addsuffix /lint,$(GO_SERVICES))
