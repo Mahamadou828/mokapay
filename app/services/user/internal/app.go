@@ -23,6 +23,7 @@ import (
 	"mokapay.app/app/services/user/internal/integration/sms"
 	"mokapay.app/app/services/user/internal/integration/webpush"
 	"mokapay.app/core/aws"
+	"mokapay.app/core/cache"
 	"mokapay.app/core/client"
 	"mokapay.app/core/db"
 	"mokapay.app/core/grpc/middleware"
@@ -81,8 +82,30 @@ func Run() error {
 	sender := sms.NewLog(log)
 
 	// -------------------------------------------------------------------------
+	// Redis backs the OTP rate limiter; unreachable redis fails open (the
+	// limiter protects SMS cost — the DB attempt cap holds the security
+	// floor), it never blocks startup.
+	var redis *cache.Cache
+	if c, err := cache.New(ctx, cache.Config{Host: cfg.Redis.Host, Port: cfg.Redis.Port}); err != nil {
+		log.Error(ctx, "startup", "redis unreachable, otp rate limiting disabled", "error", err)
+	} else {
+		redis = c
+		defer func() {
+			if err := redis.Close(); err != nil {
+				log.Error(ctx, "shutdown", "failed to close redis", "error", err)
+			}
+		}()
+	}
+	limiter := authUC.NewLimiter(log, redis, authUC.LimiterConfig{
+		SendCooldown: cfg.Auth.OtpSendCooldown,
+		HourlyLimit:  cfg.Auth.OtpHourlyLimit,
+		VerifyLimit:  cfg.Auth.OtpVerifyLimit,
+		VerifyWindow: cfg.Auth.OtpVerifyWindow,
+	})
+
+	// -------------------------------------------------------------------------
 	// Init usecases
-	authUsecase, err := authUC.New(log, pg, sender, cognito, cfg.Auth.OtpPepper)
+	authUsecase, err := authUC.New(log, pg, sender, cognito, cfg.Auth.OtpPepper, limiter)
 	if err != nil {
 		log.Error(ctx, "startup", "failed to init auth usecase", "error", err)
 		return err

@@ -29,6 +29,8 @@ type Config struct {
 		OtpMaxAttempts  int
 		OtpSendCooldown time.Duration
 		OtpHourlyLimit  int
+		OtpVerifyLimit  int // verify attempts per phone per window (cross-code)
+		OtpVerifyWindow time.Duration
 	}
 	Cognito struct {
 		ClientID     string
@@ -80,6 +82,8 @@ func newConfig() Config {
 	cfg.Auth.OtpMaxAttempts = config.GetEnvAsInt("OTP_MAX_ATTEMPTS", 3)
 	cfg.Auth.OtpSendCooldown = config.GetEnvAsTimeDuration("OTP_SEND_COOLDOWN", time.Minute)
 	cfg.Auth.OtpHourlyLimit = config.GetEnvAsInt("OTP_HOURLY_LIMIT", 5)
+	cfg.Auth.OtpVerifyLimit = config.GetEnvAsInt("OTP_VERIFY_LIMIT", 10)
+	cfg.Auth.OtpVerifyWindow = config.GetEnvAsTimeDuration("OTP_VERIFY_WINDOW", 10*time.Minute)
 
 	cfg.Enrollment.TOSVersion = config.GetEnv("TOS_VERSION", "1.0")
 

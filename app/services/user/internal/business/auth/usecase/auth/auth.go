@@ -37,9 +37,10 @@ type Auth struct {
 	otp      OTPSender
 	provider AuthProvider
 	hasher   Hasher
+	limiter  Limiter
 }
 
-func New(l *logger.Logger, db *coredb.Postgres, otp OTPSender, p AuthProvider, hash string) (Auth, error) {
+func New(l *logger.Logger, db *coredb.Postgres, otp OTPSender, p AuthProvider, hash string, limiter Limiter) (Auth, error) {
 	h, err := NewHasher([]byte(hash))
 	if err != nil {
 		return Auth{}, err
@@ -52,6 +53,7 @@ func New(l *logger.Logger, db *coredb.Postgres, otp OTPSender, p AuthProvider, h
 		logger:   l,
 		db:       db,
 		hasher:   h,
+		limiter:  limiter,
 	}, nil
 }
 
@@ -66,6 +68,12 @@ func (a Auth) SendOTP(ctx context.Context, phoneNumber string, purpose auth.OtpP
 	if err != nil {
 		a.logger.Error(ctx, "Auth.SendOTP: failed to parse phone number", "err", err)
 		return time.Time{}, auth.ErrInvalidPhoneNumber
+	}
+
+	// Rate limits before any work: an SMS costs money — cooldown + hourly
+	// cap per phone (redis; fails open on an outage).
+	if err := a.limiter.AllowSend(ctx, phoneNumber); err != nil {
+		return time.Time{}, err
 	}
 
 	// check if the user already has such otp open
@@ -289,6 +297,12 @@ func (a Auth) LogOut(ctx context.Context, sub string) error {
 // it on success. phoneNumber must already be in E.164 form — codes are stored
 // under it. A failed verify counts against the attempts cap.
 func (a Auth) CheckAndConsumeOTP(ctx context.Context, phoneNumber, code string, purpose auth.OtpPurpose) error {
+	// The DB caps attempts per CODE (below); this caps guesses per PHONE
+	// across codes, so cycling fresh codes never resets the budget.
+	if err := a.limiter.AllowVerify(ctx, phoneNumber); err != nil {
+		return err
+	}
+
 	// find otp attempt
 	otp, err := a.repo.GetValidOtp(ctx, phoneNumber, purpose)
 	if err != nil {
