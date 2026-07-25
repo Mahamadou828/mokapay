@@ -42,6 +42,12 @@ tags:
       (pending_agent may read profile/wallets).
   - name: PaymentAdmin
     description: Transfer moderation — requires the ops or admin role
+  - name: Files
+    description: >
+      Proof uploads (presign + confirm): POST /v1/files returns a
+      short-lived presigned PUT URL, the browser sends the bytes straight
+      to object storage, then confirms. Reads return 1-hour presigned
+      GETs. Owner-scoped service-side.
   - name: Ledger
     description: >
       The guarantee ledger — agent side (own funding/withdrawal requests +
@@ -1286,6 +1292,147 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/files:
+    post:
+      tags: [Files]
+      summary: Register an upload, get the presigned PUT URL
+      description: >
+        Validates purpose/mime/size and returns the URL to PUT the bytes
+        to (Content-Type must match). Then call confirm. For proofs,
+        related_type/related_id name the entity the file advances
+        ("transfer", "ledger_request").
+      operationId: createUpload
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUploadRequest"
+      responses:
+        "200":
+          description: The pending file + upload URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateUploadResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+    get:
+      tags: [Files]
+      summary: List files attached to an entity
+      operationId: listFiles
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: related_type
+          in: query
+          required: true
+          schema:
+            type: string
+            example: transfer
+        - name: related_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: purpose
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/FilePurpose"
+      responses:
+        "200":
+          description: The files
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListFilesResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /v1/files/{id}:
+    get:
+      tags: [Files]
+      summary: Get a file (+ presigned download URL once stored)
+      operationId: getFile
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: The file + download URL when stored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetFileResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/files/{id}/confirm:
+    post:
+      tags: [Files]
+      summary: Confirm the upload
+      description: >
+        Verifies the object landed (existence + declared size), hashes
+        it, marks the file stored and kicks the proof consumer (ledger
+        forward / transfer status move) via the background worker.
+      operationId: confirmUpload
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: The stored file
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/File"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/admin/files/{id}/reject:
+    post:
+      tags: [Files]
+      summary: Reject a file (bad proof) — ops
+      operationId: rejectFile
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: The rejected file
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/File"
+        "403":
+          $ref: "#/components/responses/PermissionDenied"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /v1/agent/ledger/requests:
     get:
       tags: [Ledger]
@@ -2385,6 +2532,111 @@ components:
           type: string
           example: "+243990000001"
       required: [operator, currency, msisdn]
+
+    FilePurpose:
+      type: string
+      enum:
+        - FILE_PURPOSE_SENDER_PROOF
+        - FILE_PURPOSE_AGENT_PROOF
+        - FILE_PURPOSE_RECIPIENT_PROOF
+        - FILE_PURPOSE_DEPOSIT_PROOF
+        - FILE_PURPOSE_KYC
+        - FILE_PURPOSE_OTHER
+
+    FileStatus:
+      type: string
+      enum:
+        - FILE_STATUS_PENDING
+        - FILE_STATUS_STORED
+        - FILE_STATUS_REJECTED
+
+    File:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        owner_id:
+          type: string
+          format: uuid
+        purpose:
+          $ref: "#/components/schemas/FilePurpose"
+        related_type:
+          type: string
+          example: transfer
+        related_id:
+          type: string
+          format: uuid
+        file_name:
+          type: string
+          description: Original client name, display only.
+        content_type:
+          type: string
+        size_bytes:
+          type: string
+        sha256:
+          type: string
+          description: Set once stored.
+        status:
+          $ref: "#/components/schemas/FileStatus"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateUploadRequest:
+      type: object
+      properties:
+        purpose:
+          $ref: "#/components/schemas/FilePurpose"
+        related_type:
+          type: string
+          example: transfer
+        related_id:
+          type: string
+          format: uuid
+        file_name:
+          type: string
+        content_type:
+          type: string
+          example: image/jpeg
+        size_bytes:
+          type: string
+          description: Enforced against the stored object at confirm.
+      required: [purpose, file_name, content_type, size_bytes]
+
+    CreateUploadResponse:
+      type: object
+      properties:
+        file:
+          $ref: "#/components/schemas/File"
+        upload_url:
+          type: string
+          description: HTTP PUT target; Content-Type must match.
+        upload_url_expires_in:
+          type: string
+          description: Seconds.
+
+    GetFileResponse:
+      type: object
+      properties:
+        file:
+          $ref: "#/components/schemas/File"
+        download_url:
+          type: string
+          description: Present only for stored files (1h presigned GET).
+        download_url_expires_in:
+          type: string
+
+    ListFilesResponse:
+      type: object
+      properties:
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/File"
 
     LedgerRequestType:
       type: string

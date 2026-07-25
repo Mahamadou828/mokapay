@@ -21,6 +21,7 @@ type Config struct {
 	Client struct {
 		UserGRPCPort    string
 		PaymentGRPCPort string
+		FileGRPCPort    string
 	}
 	Cognito struct {
 		ClientID     string

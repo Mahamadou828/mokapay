@@ -385,6 +385,53 @@ DELETE {{host}}/v1/agent/wallets/{{wallet_id}}
 Authorization: Bearer {{access_token}}
 
 ###############################################################################
+# Files — proof uploads (authed tier). Chain: create (captures file_id +
+# upload_url) → PUT the bytes to upload_url with the SAME Content-Type →
+# confirm → the worker advances the ledger request / transfer.
+###############################################################################
+
+### Register an upload (sender proof for a transfer)
+POST {{host}}/v1/files
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+
+{
+  "purpose": "FILE_PURPOSE_SENDER_PROOF",
+  "related_type": "transfer",
+  "related_id": "{{transfer_id}}",
+  "file_name": "payment-proof.jpg",
+  "content_type": "image/jpeg",
+  "size_bytes": "12"
+}
+
+> {%
+  if (response.body.file) { client.global.set("file_id", response.body.file.id); }
+  if (response.body.upload_url) { client.global.set("upload_url", response.body.upload_url); }
+%}
+
+### PUT the bytes straight to storage (12 bytes to match size_bytes above)
+PUT {{upload_url}}
+Content-Type: image/jpeg
+
+hello-proof!
+
+### Confirm the upload (verifies + hashes + kicks the proof consumer)
+POST {{host}}/v1/files/{{file_id}}/confirm
+Authorization: Bearer {{access_token}}
+
+### File metadata + download URL once stored
+GET {{host}}/v1/files/{{file_id}}
+Authorization: Bearer {{access_token}}
+
+### Files attached to a transfer
+GET {{host}}/v1/files?related_type=transfer&related_id={{transfer_id}}
+Authorization: Bearer {{access_token}}
+
+### Reject a bad proof (ops)
+POST {{host}}/v1/admin/files/{{file_id}}/reject
+Authorization: Bearer {{access_token}}
+
+###############################################################################
 # Ledger — agent side (agent tier; scope pinned to my own profile)
 ###############################################################################
 

@@ -24,6 +24,13 @@ func (h Handler) Routes(authed, agent, ops *core.Group) {
 	authed.RegisterHandler(http.MethodGet, "/beneficiaries", h.listBeneficiaries)
 	authed.RegisterHandler(http.MethodDelete, "/beneficiaries/{id}", h.deleteBeneficiary)
 
+	// The proof upload flow (presign + confirm): the bytes go straight to
+	// object storage; the file service enforces owner scoping.
+	authed.RegisterHandler(http.MethodPost, "/files", h.createUpload)
+	authed.RegisterHandler(http.MethodPost, "/files/{id}/confirm", h.confirmUpload)
+	authed.RegisterHandler(http.MethodGet, "/files/{id}", h.getFile)
+	authed.RegisterHandler(http.MethodGet, "/files", h.listFiles)
+
 	// The agent surface.
 	agent.RegisterHandler(http.MethodGet, "/agent/profile", h.getMyProfile)
 	agent.RegisterHandler(http.MethodGet, "/agent/ledger/requests", h.listMyLedgerRequests)
@@ -50,4 +57,5 @@ func (h Handler) Routes(authed, agent, ops *core.Group) {
 	ops.RegisterHandler(http.MethodGet, "/admin/agent-profiles/{id}", h.getAgentProfileAdmin)
 	ops.RegisterHandler(http.MethodPost, "/admin/agent-profiles/{id}/activate", h.activateAgentProfile)
 	ops.RegisterHandler(http.MethodPost, "/admin/agent-profiles/{id}/suspend", h.suspendAgentProfile)
+	ops.RegisterHandler(http.MethodPost, "/admin/files/{id}/reject", h.rejectFile)
 }

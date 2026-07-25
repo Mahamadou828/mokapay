@@ -78,6 +78,10 @@ services:
     environment:
       MINIO_ROOT_USER: mokapay
       MINIO_ROOT_PASSWORD: mokapay1234 # MinIO requires >= 8 chars
+      # Browser presigned PUTs need CORS on the S3 API. "*" is MinIO's
+      # default — pinned here so it survives a default change; production
+      # (real S3) sets a bucket CORS policy with the app origins instead.
+      MINIO_API_CORS_ALLOW_ORIGIN: "*"
     volumes:
       - minio_data:/data
     healthcheck:
@@ -203,6 +207,7 @@ services:
     environment:
       USER_GRPC_PORT: user:50051
       PAYMENT_GRPC_PORT: payment:50053
+      FILE_GRPC_PORT: file:50052
     depends_on:
       postgres:
         condition: service_healthy
@@ -211,4 +216,6 @@ services:
       user:
         condition: service_started
       payment:
+        condition: service_started
+      file:
         condition: service_started

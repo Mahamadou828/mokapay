@@ -6,6 +6,7 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	filev1 "mokapay.app/proto/codebase/file/v1"
 	paymentv1 "mokapay.app/proto/codebase/payment/v1"
 	userv1 "mokapay.app/proto/codebase/user/v1"
 )
@@ -15,6 +16,7 @@ type Connection string
 const (
 	ConnectionUser    Connection = "user"
 	ConnectionPayment Connection = "payment"
+	ConnectionFile    Connection = "file"
 )
 
 type Config struct {
@@ -42,9 +44,16 @@ type Payment struct {
 	Agent    paymentv1.AgentServiceClient
 }
 
+// File bundles the file-service client (presign + confirm uploads).
+type File struct {
+	conn *grpc.ClientConn
+	File filev1.FileServiceClient
+}
+
 type MokaClient struct {
 	User    *User
 	Payment *Payment
+	File    *File
 }
 
 func NewMokaClient(config Config, requiredConnection map[Connection]bool) (*MokaClient, error) {
@@ -98,7 +107,29 @@ func NewMokaClient(config Config, requiredConnection map[Connection]bool) (*Moka
 		return nil, errors.New("payment connection required")
 	}
 
-	return &MokaClient{User: u, Payment: p}, nil
+	var f *File
+	if config.FileServiceAddr != "" {
+		conn, err := grpc.NewClient(
+			config.FileServiceAddr,
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+			grpc.WithChainUnaryInterceptor(
+				UnaryClientInterceptor(),
+			),
+		)
+		if err != nil {
+			return nil, err
+		}
+		f = &File{
+			conn: conn,
+			File: filev1.NewFileServiceClient(conn),
+		}
+	}
+
+	if f == nil && requiredConnection[ConnectionFile] {
+		return nil, errors.New("file connection required")
+	}
+
+	return &MokaClient{User: u, Payment: p, File: f}, nil
 }
 
 func (c *MokaClient) Close(ctx context.Context) error {
@@ -109,6 +140,11 @@ func (c *MokaClient) Close(ctx context.Context) error {
 	}
 	if c.Payment != nil {
 		if err := c.Payment.conn.Close(); err != nil {
+			return err
+		}
+	}
+	if c.File != nil {
+		if err := c.File.conn.Close(); err != nil {
 			return err
 		}
 	}
