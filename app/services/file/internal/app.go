@@ -101,28 +101,33 @@ func Run() error {
 		Logger: log,
 	})
 
+	// The sweep worker needs the usecase, which needs the river client —
+	// register it now, inject the usecase below, before Start.
+	sweepWorker := &events.SweepWorker{Logger: log}
+	river.AddWorker(workers, sweepWorker)
+
 	// init river client
 	riverClient, err := river.NewClient(riverpgxv5.New(pg.PgxPool), &river.Config{
 		Queues: map[string]river.QueueConfig{
 			river.QueueDefault: {MaxWorkers: cfg.Server.MaxEventWorkers},
 		},
 		Workers: workers,
+		PeriodicJobs: []*river.PeriodicJob{
+			// The orphan sweep: cancels pending uploads whose presign TTL
+			// elapsed (and deletes any half-uploaded object).
+			river.NewPeriodicJob(
+				river.PeriodicInterval(15*time.Minute),
+				func() (river.JobArgs, *river.InsertOpts) {
+					return events.SweepArg{}, nil
+				},
+				nil,
+			),
+		},
 	})
 	if err != nil {
 		log.Error(ctx, "startup", "failed to init river client", "error", err)
 		return err
 	}
-	// Without Start the workers never pick jobs up — inserts alone only
-	// queue them.
-	if err := riverClient.Start(ctx); err != nil {
-		log.Error(ctx, "startup", "failed to start river client", "error", err)
-		return err
-	}
-	defer func() {
-		if err := riverClient.Stop(ctx); err != nil {
-			log.Error(ctx, "shutdown", "failed to stop river client", "error", err)
-		}
-	}()
 
 	// -------------------------------------------------------------------------
 	// Init usecase
@@ -134,10 +139,21 @@ func Run() error {
 		MaxSizeBytes: cfg.Upload.MaxSizeBytes,
 	})
 
+	// Close the worker↔usecase loop, then start picking jobs up. Without
+	// Start the workers never run — inserts alone only queue them.
+	sweepWorker.UC = uc
+	if err := riverClient.Start(ctx); err != nil {
+		log.Error(ctx, "startup", "failed to start river client", "error", err)
+		return err
+	}
+	defer func() {
+		if err := riverClient.Stop(ctx); err != nil {
+			log.Error(ctx, "shutdown", "failed to stop river client", "error", err)
+		}
+	}()
+
 	// Init gRPC server & register services. The client interceptor rebuilds
 	// the gateway-forwarded passport into the request context.
-	// TODO(Mahamadou): a River periodic job for the orphan sweep
-	// (uc.SweepExpired).
 	srv := grpc.NewServer(grpc.ChainUnaryInterceptor(
 		middleware.PanicUnaryServerInterceptor(log.Error),
 		middleware.LoggerUnaryServerInterceptor(log.Info),

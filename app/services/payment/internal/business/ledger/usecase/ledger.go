@@ -132,6 +132,17 @@ func (u UseCase) GetLedgerRequest(ctx context.Context, id uuid.UUID) (ledger.Led
 	return u.repo.Get(ctx, id.String())
 }
 
+// OwnProfileID resolves the caller's agent profile — the handlers use it
+// to pin agent-scoped reads to the agent's own money, whatever ids the
+// request claims.
+func (u UseCase) OwnProfileID(ctx context.Context, accountID uuid.UUID) (uuid.UUID, error) {
+	p, err := u.profiles.GetByAccount(ctx, accountID.String())
+	if err != nil {
+		return uuid.UUID{}, err
+	}
+	return p.ID, nil
+}
+
 func (u UseCase) GetLedgerRequestByReference(ctx context.Context, ref ledger.Reference) (ledger.LedgerRequest, error) {
 	return u.repo.GetByReference(ctx, ref)
 }

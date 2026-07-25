@@ -26,6 +26,9 @@ func (h Handler) Routes(authed, agent, ops *core.Group) {
 
 	// The agent surface.
 	agent.RegisterHandler(http.MethodGet, "/agent/profile", h.getMyProfile)
+	agent.RegisterHandler(http.MethodGet, "/agent/ledger/requests", h.listMyLedgerRequests)
+	agent.RegisterHandler(http.MethodPost, "/agent/ledger/requests", h.createMyLedgerRequest)
+	agent.RegisterHandler(http.MethodGet, "/agent/ledger/lines", h.listMyLedgerLines)
 	agent.RegisterHandler(http.MethodGet, "/agent/offers", h.listMyOffers)
 	agent.RegisterHandler(http.MethodPost, "/agent/offers/{id}/accept", h.acceptOffer)
 	agent.RegisterHandler(http.MethodPost, "/agent/offers/{id}/decline", h.declineOffer)
@@ -37,4 +40,14 @@ func (h Handler) Routes(authed, agent, ops *core.Group) {
 	// The ops surface.
 	ops.RegisterHandler(http.MethodGet, "/admin/transfers", h.listAllTransfers)
 	ops.RegisterHandler(http.MethodPost, "/admin/transfers/{id}/cancel", h.cancelTransferAdmin)
+	ops.RegisterHandler(http.MethodGet, "/admin/ledger/requests", h.listLedgerRequestsAdmin)
+	ops.RegisterHandler(http.MethodPost, "/admin/ledger/requests", h.createLedgerRequestAdmin)
+	ops.RegisterHandler(http.MethodGet, "/admin/ledger/requests/{id}", h.getLedgerRequest)
+	ops.RegisterHandler(http.MethodPost, "/admin/ledger/requests/{id}/approve", h.approveLedgerRequest)
+	ops.RegisterHandler(http.MethodPost, "/admin/ledger/requests/{id}/reject", h.rejectLedgerRequest)
+	ops.RegisterHandler(http.MethodGet, "/admin/ledger/lines", h.listLedgerLinesAdmin)
+	ops.RegisterHandler(http.MethodGet, "/admin/agent-profiles", h.getAgentProfileByAccount)
+	ops.RegisterHandler(http.MethodGet, "/admin/agent-profiles/{id}", h.getAgentProfileAdmin)
+	ops.RegisterHandler(http.MethodPost, "/admin/agent-profiles/{id}/activate", h.activateAgentProfile)
+	ops.RegisterHandler(http.MethodPost, "/admin/agent-profiles/{id}/suspend", h.suspendAgentProfile)
 }

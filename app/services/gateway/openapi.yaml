@@ -42,6 +42,12 @@ tags:
       (pending_agent may read profile/wallets).
   - name: PaymentAdmin
     description: Transfer moderation — requires the ops or admin role
+  - name: Ledger
+    description: >
+      The guarantee ledger — agent side (own funding/withdrawal requests +
+      statement, scope pinned service-side) and ops side (worklist,
+      approve/reject = the only paths that move a balance, agent-profile
+      lifecycle). Amounts are USD minor units.
 
 paths:
   /v1/readiness:
@@ -1280,6 +1286,369 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/agent/ledger/requests:
+    get:
+      tags: [Ledger]
+      summary: List my ledger requests
+      description: Always scoped to my own profile, whatever filters say.
+      operationId: listMyLedgerRequests
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/LedgerRequestStatus"
+        - name: type
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/LedgerRequestType"
+      responses:
+        "200":
+          description: My requests, newest first
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListLedgerRequestsResponse"
+        "403":
+          $ref: "#/components/responses/PermissionDenied"
+    post:
+      tags: [Ledger]
+      summary: Create a funding or withdrawal request (mine)
+      description: >
+        Agent-only types: FUNDING (deposit — then upload the deposit
+        proof) and WITHDRAWAL (reserves the amount immediately; fails on
+        insufficient available or the guarantee floor). The profile
+        resolves from my token.
+      operationId: createMyLedgerRequest
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLedgerRequestRequest"
+      responses:
+        "200":
+          description: The created request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LedgerRequest"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/PermissionDenied"
+
+  /v1/agent/ledger/lines:
+    get:
+      tags: [Ledger]
+      summary: My statement (settlement lines, newest first)
+      operationId: listMyLedgerLines
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: The lines
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListLedgerLinesResponse"
+        "403":
+          $ref: "#/components/responses/PermissionDenied"
+
+  /v1/admin/ledger/requests:
+    get:
+      tags: [Ledger]
+      summary: Ledger worklist (all agents)
+      operationId: listLedgerRequestsAdmin
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/LedgerRequestStatus"
+        - name: type
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/LedgerRequestType"
+        - name: agent_profile_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Matching requests, newest first
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListLedgerRequestsResponse"
+        "403":
+          $ref: "#/components/responses/PermissionDenied"
+    post:
+      tags: [Ledger]
+      summary: Create a request as ops (funding w/ enrollment reference, refund)
+      operationId: createLedgerRequestAdmin
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLedgerRequestRequest"
+      responses:
+        "200":
+          description: The created request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LedgerRequest"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/PermissionDenied"
+        "409":
+          description: The referenced entity already has a live-or-settled request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /v1/admin/ledger/requests/{id}:
+    get:
+      tags: [Ledger]
+      summary: Get a ledger request
+      operationId: getLedgerRequest
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: The request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LedgerRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/admin/ledger/requests/{id}/approve:
+    post:
+      tags: [Ledger]
+      summary: Approve (settle) a request
+      description: >
+        request → done, balance moved, one immutable line — idempotent
+        on an already-done request.
+      operationId: approveLedgerRequest
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: The settled request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LedgerRequest"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/admin/ledger/requests/{id}/reject:
+    post:
+      tags: [Ledger]
+      summary: Reject a request (releases an outflow's reservation)
+      operationId: rejectLedgerRequest
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+              required: [reason]
+      responses:
+        "200":
+          description: The rejected request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LedgerRequest"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/admin/ledger/lines:
+    get:
+      tags: [Ledger]
+      summary: An agent's statement (ops view)
+      operationId: listLedgerLinesAdmin
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: agent_profile_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: The lines, newest first
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListLedgerLinesResponse"
+        "403":
+          $ref: "#/components/responses/PermissionDenied"
+
+  /v1/admin/agent-profiles:
+    get:
+      tags: [Ledger]
+      summary: Get an agent profile by account id
+      operationId: getAgentProfileByAccount
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: account_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: The profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentProfile"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/admin/agent-profiles/{id}:
+    get:
+      tags: [Ledger]
+      summary: Get an agent profile
+      operationId: getAgentProfileAdmin
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: The profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentProfile"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/admin/agent-profiles/{id}/activate:
+    post:
+      tags: [Ledger]
+      summary: Activate an agent profile (idempotent)
+      operationId: activateAgentProfile
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: The profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentProfile"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/admin/agent-profiles/{id}/suspend:
+    post:
+      tags: [Ledger]
+      summary: Suspend an agent profile (idempotent)
+      operationId: suspendAgentProfile
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: The profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentProfile"
+        "400":
+          description: Illegal transition (e.g. suspending a pending profile)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -2016,3 +2385,137 @@ components:
           type: string
           example: "+243990000001"
       required: [operator, currency, msisdn]
+
+    LedgerRequestType:
+      type: string
+      enum:
+        - LEDGER_REQUEST_TYPE_FUNDING
+        - LEDGER_REQUEST_TYPE_WITHDRAWAL
+        - LEDGER_REQUEST_TYPE_REFUND
+        - LEDGER_REQUEST_TYPE_DEDUCTION
+        - LEDGER_REQUEST_TYPE_COMMISSION
+
+    LedgerRequestStatus:
+      type: string
+      enum:
+        - LEDGER_REQUEST_STATUS_INITIATED
+        - LEDGER_REQUEST_STATUS_PENDING_AGENT_ACTION
+        - LEDGER_REQUEST_STATUS_PENDING_ADMIN_APPROVAL
+        - LEDGER_REQUEST_STATUS_DONE
+        - LEDGER_REQUEST_STATUS_REJECTED
+        - LEDGER_REQUEST_STATUS_DISPUTED
+
+    LedgerReferenceType:
+      type: string
+      enum:
+        - LEDGER_REFERENCE_TYPE_ENROLLMENT
+        - LEDGER_REFERENCE_TYPE_TRANSFER
+
+    CreateLedgerRequestRequest:
+      type: object
+      description: >
+        Role decides the legal types and the landing status: agents may
+        FUNDING/WITHDRAWAL on their own profile (id optional — resolved
+        from the token); ops may FUNDING (requires the enrollment
+        reference) and REFUND. Direction and status are engine
+        derivations, never wire input.
+      properties:
+        agent_profile_id:
+          type: string
+          format: uuid
+          description: Required for ops; ignored/optional for agents.
+        type:
+          $ref: "#/components/schemas/LedgerRequestType"
+        amount:
+          type: string
+          description: USD minor units, positive (int64 as JSON string).
+          example: "2000"
+        reference_entity_type:
+          $ref: "#/components/schemas/LedgerReferenceType"
+        reference_entity_id:
+          type: string
+          format: uuid
+        reason:
+          type: string
+      required: [type, amount]
+
+    LedgerRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        agent_profile_id:
+          type: string
+          format: uuid
+        type:
+          $ref: "#/components/schemas/LedgerRequestType"
+        direction:
+          type: string
+          enum:
+            - LEDGER_DIRECTION_INFLOW
+            - LEDGER_DIRECTION_OUTFLOW
+        amount:
+          type: string
+          description: USD minor units, always positive; sign lives in direction.
+        status:
+          $ref: "#/components/schemas/LedgerRequestStatus"
+        reference_entity_type:
+          $ref: "#/components/schemas/LedgerReferenceType"
+        reference_entity_id:
+          type: string
+          format: uuid
+        proof_file_id:
+          type: string
+          format: uuid
+        reason:
+          type: string
+        decided_by:
+          type: string
+          format: uuid
+        decided_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ListLedgerRequestsResponse:
+      type: object
+      properties:
+        requests:
+          type: array
+          items:
+            $ref: "#/components/schemas/LedgerRequest"
+
+    LedgerLine:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        agent_profile_id:
+          type: string
+          format: uuid
+        ledger_request_id:
+          type: string
+          format: uuid
+        amount:
+          type: string
+          description: SIGNED — inflow +, outflow −.
+        balance_after:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    ListLedgerLinesResponse:
+      type: object
+      properties:
+        lines:
+          type: array
+          items:
+            $ref: "#/components/schemas/LedgerLine"

@@ -385,8 +385,102 @@ DELETE {{host}}/v1/agent/wallets/{{wallet_id}}
 Authorization: Bearer {{access_token}}
 
 ###############################################################################
+# Ledger — agent side (agent tier; scope pinned to my own profile)
+###############################################################################
+
+### My ledger requests (status/type filters optional)
+GET {{host}}/v1/agent/ledger/requests
+Authorization: Bearer {{access_token}}
+
+### Request a deposit (funding — then upload the deposit proof)
+POST {{host}}/v1/agent/ledger/requests
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+
+{
+  "type": "LEDGER_REQUEST_TYPE_FUNDING",
+  "amount": "5000"
+}
+
+> {%
+  if (response.body.id) { client.global.set("ledger_request_id", response.body.id); }
+%}
+
+### Request a withdrawal (reserves the amount immediately)
+POST {{host}}/v1/agent/ledger/requests
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+
+{
+  "type": "LEDGER_REQUEST_TYPE_WITHDRAWAL",
+  "amount": "1000"
+}
+
+### My statement (settlement lines, newest first)
+GET {{host}}/v1/agent/ledger/lines?limit=50
+Authorization: Bearer {{access_token}}
+
+###############################################################################
 # Payment admin — ops tier
 ###############################################################################
+
+### Ledger worklist — awaiting approval
+GET {{host}}/v1/admin/ledger/requests?status=LEDGER_REQUEST_STATUS_PENDING_ADMIN_APPROVAL
+Authorization: Bearer {{access_token}}
+
+### One ledger request
+GET {{host}}/v1/admin/ledger/requests/{{ledger_request_id}}
+Authorization: Bearer {{access_token}}
+
+### Create a request as ops (funding with the enrollment reference)
+POST {{host}}/v1/admin/ledger/requests
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+
+{
+  "agent_profile_id": "{{agent_profile_id}}",
+  "type": "LEDGER_REQUEST_TYPE_FUNDING",
+  "amount": "2000",
+  "reference_entity_type": "LEDGER_REFERENCE_TYPE_ENROLLMENT",
+  "reference_entity_id": "{{enrollment_id}}"
+}
+
+### Approve (settle) — request → done, balance moved, one immutable line
+POST {{host}}/v1/admin/ledger/requests/{{ledger_request_id}}/approve
+Authorization: Bearer {{access_token}}
+
+### Reject (releases an outflow's reservation)
+POST {{host}}/v1/admin/ledger/requests/{{ledger_request_id}}/reject
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+
+{
+  "reason": "proof unreadable"
+}
+
+### An agent's statement (ops view)
+GET {{host}}/v1/admin/ledger/lines?agent_profile_id={{agent_profile_id}}&limit=50
+Authorization: Bearer {{access_token}}
+
+### Agent profile by account
+GET {{host}}/v1/admin/agent-profiles?account_id={{account_id}}
+Authorization: Bearer {{access_token}}
+
+> {%
+  if (response.body.id) { client.global.set("agent_profile_id", response.body.id); }
+%}
+
+### Agent profile by id
+GET {{host}}/v1/admin/agent-profiles/{{agent_profile_id}}
+Authorization: Bearer {{access_token}}
+
+### Activate / suspend an agent profile (idempotent)
+POST {{host}}/v1/admin/agent-profiles/{{agent_profile_id}}/activate
+Authorization: Bearer {{access_token}}
+
+### Suspend
+POST {{host}}/v1/admin/agent-profiles/{{agent_profile_id}}/suspend
+Authorization: Bearer {{access_token}}
 
 ### All transfers (ops worklist; status filter optional)
 GET {{host}}/v1/admin/transfers?limit=50

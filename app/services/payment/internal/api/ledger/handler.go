@@ -32,15 +32,29 @@ func NewHandler(l *logger.Logger, uc usecase.UseCase) *Handler {
 	return &Handler{logger: l, uc: uc}
 }
 
+// isAgent reports whether the caller is an agent-role user passport (the
+// scope-pinning cases).
+func isAgent(ctx context.Context) bool {
+	pass, err := passport.FromContext(ctx)
+	return err == nil && !pass.IsSystem() && pass.User.Role == "agent"
+}
+
 func (h *Handler) CreateLedgerRequest(ctx context.Context, req *paymentv1.CreateLedgerRequestRequest) (*paymentv1.LedgerRequest, error) {
 	pass, err := passport.FromContext(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Unauthenticated, "no passport in context")
 	}
 
-	profileID, err := uuid.Parse(req.AgentProfileId)
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid agent profile id")
+	// Agents may omit the profile id — the engine resolves their own from
+	// the passport regardless of what the payload claims.
+	var profileID uuid.UUID
+	if req.AgentProfileId != "" {
+		profileID, err = uuid.Parse(req.AgentProfileId)
+		if err != nil {
+			return nil, status.Error(codes.InvalidArgument, "invalid agent profile id")
+		}
+	} else if !isAgent(ctx) {
+		return nil, status.Error(codes.InvalidArgument, "agent profile id is required")
 	}
 	if req.Amount <= 0 {
 		return nil, status.Error(codes.InvalidArgument, "amount must be positive")
@@ -101,7 +115,8 @@ func (h *Handler) GetLedgerRequestByReference(ctx context.Context, req *paymentv
 }
 
 func (h *Handler) ListLedgerRequests(ctx context.Context, req *paymentv1.ListLedgerRequestsRequest) (*paymentv1.ListLedgerRequestsResponse, error) {
-	if _, err := identity.RequireSystemOrRoles(ctx, "ops", "admin"); err != nil {
+	callerID, err := identity.RequireSystemOrRoles(ctx, "agent", "ops", "admin")
+	if err != nil {
 		return nil, err
 	}
 
@@ -122,6 +137,16 @@ func (h *Handler) ListLedgerRequests(ctx context.Context, req *paymentv1.ListLed
 			return nil, status.Error(codes.InvalidArgument, "invalid agent profile id")
 		}
 		f.AgentProfileID = new(id)
+	}
+
+	// An agent only ever sees their own requests: the filter is pinned to
+	// their profile, whatever the request claims.
+	if isAgent(ctx) {
+		own, err := h.uc.OwnProfileID(ctx, callerID)
+		if err != nil {
+			return nil, grpcerr.Map(err)
+		}
+		f.AgentProfileID = new(own)
 	}
 
 	list, err := h.uc.ListLedgerRequests(ctx, f)
@@ -215,13 +240,24 @@ func (h *Handler) RejectLedgerRequest(ctx context.Context, req *paymentv1.Reject
 }
 
 func (h *Handler) ListLedgerLines(ctx context.Context, req *paymentv1.ListLedgerLinesRequest) (*paymentv1.ListLedgerLinesResponse, error) {
-	if _, err := identity.RequireSystemOrRoles(ctx, "agent", "ops", "admin"); err != nil {
+	callerID, err := identity.RequireSystemOrRoles(ctx, "agent", "ops", "admin")
+	if err != nil {
 		return nil, err
 	}
 
-	profileID, err := uuid.Parse(req.AgentProfileId)
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid agent profile id")
+	// An agent reads their OWN statement — the id in the request is
+	// ignored (and may be empty); ops/system name the profile explicitly.
+	var profileID uuid.UUID
+	if isAgent(ctx) {
+		profileID, err = h.uc.OwnProfileID(ctx, callerID)
+		if err != nil {
+			return nil, grpcerr.Map(err)
+		}
+	} else {
+		profileID, err = uuid.Parse(req.AgentProfileId)
+		if err != nil {
+			return nil, status.Error(codes.InvalidArgument, "invalid agent profile id")
+		}
 	}
 
 	lines, err := h.uc.ListLedgerLines(ctx, profileID, req.Limit)
