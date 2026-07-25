@@ -11,11 +11,14 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
+	adminapi "mokapay.app/app/services/payment/internal/api/admin"
+	profileuc "mokapay.app/app/services/payment/internal/business/agentprofile/usecase"
 	"mokapay.app/core/client"
 	"mokapay.app/core/db"
 	"mokapay.app/core/grpc/middleware"
 	coreweb "mokapay.app/core/http"
 	"mokapay.app/core/logger"
+	paymentv1 "mokapay.app/proto/codebase/payment/v1"
 )
 
 const serviceName = "payment"
@@ -58,16 +61,23 @@ func Run() error {
 	defer pg.Close()
 
 	// -------------------------------------------------------------------------
-	// Init gRPC server. The client interceptor rebuilds the gateway-forwarded
-	// passport into the request context.
-	// TODO: register the payment services (Transfer/Agent/AdminPayment) once
-	// the payment-service design doc is approved and the protos exist.
+	// Init usecases
+	profileUC := profileuc.New(log, pg)
+
+	// -------------------------------------------------------------------------
+	// Init gRPC server & register services. The client interceptor rebuilds
+	// the gateway-forwarded passport into the request context; handlers
+	// police it themselves (internal RPCs — no gateway tier in front).
+	// TODO: register LedgerService once the engine usecase lands (ledger.md
+	// slice 3) and TransferService with the transfers volley.
 	srv := grpc.NewServer(grpc.ChainUnaryInterceptor(
 		middleware.PanicUnaryServerInterceptor(log.Error),
 		middleware.LoggerUnaryServerInterceptor(log.Info),
 		client.UnaryServerInterceptor(),
 	))
 	reflection.Register(srv)
+
+	paymentv1.RegisterAdminServiceServer(srv, adminapi.NewHandler(log, profileUC))
 
 	lis, err := net.Listen("tcp", cfg.GRPC.Port)
 	if err != nil {

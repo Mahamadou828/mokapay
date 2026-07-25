@@ -25,10 +25,17 @@ func Reset() error {
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 
-	// Extend as the payment schema lands (tables, enums) — see the
-	// payment-service design doc.
+	// Extend as the payment schema grows (transfers, offers, holds, …).
 	statements := []string{
 		"DROP SCHEMA IF EXISTS payments_ext CASCADE",
+		"DROP TABLE IF EXISTS ledger_lines",
+		"DROP TABLE IF EXISTS ledger_requests",
+		"DROP TABLE IF EXISTS agent_profiles",
+		"DROP TYPE IF EXISTS ledger_direction",
+		"DROP TYPE IF EXISTS ledger_request_status",
+		"DROP TYPE IF EXISTS ledger_request_type",
+		"DROP TYPE IF EXISTS agent_level",
+		"DROP TYPE IF EXISTS agent_profile_status",
 		"DROP TABLE IF EXISTS gorp_migrations",
 		"DROP FUNCTION IF EXISTS set_updated_at",
 	}

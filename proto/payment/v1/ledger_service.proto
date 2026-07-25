@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+package payment.v1;
+
+import "payment/v1/shared_message.proto";
+
+// The ledger workflow: create (with reservation for outflows), report
+// proofs, approve (settle) or reject. Passport policy: CreateRequest
+// accepts system or ops; UpdateStatus is system-only (the file worker —
+// proof reporting must never be able to move money); Approve/Reject are
+// ops/admin; reads are system or ops.
+service LedgerService {
+  // An outflow reserves its amount on creation (held += amount) behind
+  // the feasibility guards — insufficient funds fail HERE, never at
+  // approval. idempotency_key is required; a duplicate is AlreadyExists
+  // and the caller re-reads with GetRequestByKey.
+  rpc CreateLedgerRequest(CreateLedgerRequestRequest) returns (LedgerRequest);
+  rpc GetLedgerRequest(GetLedgerRequestRequest) returns (LedgerRequest);
+  // The replay/linkage lookup (e.g. by enrollment id).
+  rpc GetLedgerRequestByKey(GetLedgerRequestByKeyRequest) returns (LedgerRequest);
+  rpc ListLedgerRequests(ListLedgerRequestsRequest) returns (ListLedgerRequestsResponse);
+  // Forward-only between the pending states; attaches the proof.
+  rpc UpdateLedgerRequestStatus(UpdateLedgerRequestStatusRequest) returns (LedgerRequest);
+  // Settlement: request → done, balance moved, one immutable line.
+  // Idempotent for callers: approving a done request returns it unchanged.
+  rpc ApproveLedgerRequest(ApproveLedgerRequestRequest) returns (LedgerRequest);
+  rpc RejectLedgerRequest(RejectLedgerRequestRequest) returns (LedgerRequest);
+  // The agent statement, newest first.
+  rpc ListLedgerLines(ListLedgerLinesRequest) returns (ListLedgerLinesResponse);
+}
+
+message CreateLedgerRequestRequest {
+  string agent_profile_id = 1;
+  LedgerRequestType type = 2;
+  LedgerDirection direction = 3;
+  int64 amount = 4;  // minor units, positive
+  string idempotency_key = 5;
+  optional string enrollment_id = 6;
+  optional string reason = 7;
+}
+
+message GetLedgerRequestRequest {
+  string id = 1;
+}
+
+message GetLedgerRequestByKeyRequest {
+  string idempotency_key = 1;
+}
+
+message ListLedgerRequestsRequest {
+  optional LedgerRequestStatus status = 1;
+  optional LedgerRequestType type = 2;
+  optional string agent_profile_id = 3;
+}
+
+message ListLedgerRequestsResponse {
+  repeated LedgerRequest requests = 1;
+}
+
+message UpdateLedgerRequestStatusRequest {
+  string id = 1;
+  LedgerRequestStatus status = 2;      // pending_agent_action or pending_admin_approval only
+  optional string proof_file_id = 3;
+}
+
+message ApproveLedgerRequestRequest {
+  string id = 1;
+}
+
+message RejectLedgerRequestRequest {
+  string id = 1;
+  string reason = 2;
+}
+
+message ListLedgerLinesRequest {
+  string agent_profile_id = 1;
+  int32 limit = 2;  // 0 = server default
+}
+
+message ListLedgerLinesResponse {
+  repeated LedgerLine lines = 1;
+}

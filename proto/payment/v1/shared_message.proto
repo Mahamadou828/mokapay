@@ -1,0 +1,97 @@
+syntax = "proto3";
+
+package payment.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// Values mirror the payments DB enums (agent_profile_status, agent_level,
+// ledger_request_type, ledger_request_status, ledger_direction) —
+// conversion is a plain cast.
+
+enum AgentProfileStatus {
+  AGENT_PROFILE_STATUS_UNSPECIFIED = 0;
+  AGENT_PROFILE_STATUS_PENDING = 1;
+  AGENT_PROFILE_STATUS_ACTIVE = 2;
+  AGENT_PROFILE_STATUS_SUSPENDED = 3;
+}
+
+enum AgentLevel {
+  AGENT_LEVEL_UNSPECIFIED = 0;
+  AGENT_LEVEL_N1 = 1;
+  AGENT_LEVEL_N2 = 2;
+  AGENT_LEVEL_N3 = 3;
+  AGENT_LEVEL_N4 = 4;
+}
+
+enum LedgerRequestType {
+  LEDGER_REQUEST_TYPE_UNSPECIFIED = 0;
+  LEDGER_REQUEST_TYPE_FUNDING = 1;
+  LEDGER_REQUEST_TYPE_WITHDRAWAL = 2;
+  LEDGER_REQUEST_TYPE_REFUND = 3;
+  LEDGER_REQUEST_TYPE_DEDUCTION = 4;
+  LEDGER_REQUEST_TYPE_COMMISSION = 5;
+}
+
+enum LedgerRequestStatus {
+  LEDGER_REQUEST_STATUS_UNSPECIFIED = 0;
+  LEDGER_REQUEST_STATUS_INITIATED = 1;
+  LEDGER_REQUEST_STATUS_PENDING_AGENT_ACTION = 2;
+  LEDGER_REQUEST_STATUS_PENDING_ADMIN_APPROVAL = 3;
+  LEDGER_REQUEST_STATUS_DONE = 4;
+  LEDGER_REQUEST_STATUS_REJECTED = 5;
+  LEDGER_REQUEST_STATUS_DISPUTED = 6;  // reserved, transfers volley
+}
+
+// Whether a request increases or decreases the balance — deliberately not
+// credit/debit (that vocabulary flips with the point of view).
+enum LedgerDirection {
+  LEDGER_DIRECTION_UNSPECIFIED = 0;
+  LEDGER_DIRECTION_INFLOW = 1;
+  LEDGER_DIRECTION_OUTFLOW = 2;
+}
+
+// The agent's money account. balance moves only through the ledger;
+// available = balance − held is derived, never stored.
+message AgentProfile {
+  string id = 1;
+  string account_id = 2;  // user-service account
+  AgentProfileStatus status = 3;
+  AgentLevel level = 4;
+  string currency = 5;         // denomination of the amounts below
+  int64 balance = 6;           // minor units
+  int64 held = 7;              // reserved by open outflow requests
+  int64 available = 8;         // balance − held
+  int64 guarantee_floor = 9;   // not withdrawable
+  optional string city = 10;   // geo matching input
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+}
+
+// The mutable workflow object — the only path to a balance change. An
+// open outflow request IS a reservation on the profile's held.
+message LedgerRequest {
+  string id = 1;
+  string agent_profile_id = 2;
+  LedgerRequestType type = 3;
+  LedgerDirection direction = 4;
+  int64 amount = 5;  // minor units, always positive; sign lives in direction
+  LedgerRequestStatus status = 6;
+  optional string enrollment_id = 7;   // guarantee-funding linkage
+  optional string proof_file_id = 8;   // file-service NK
+  optional string reason = 9;
+  string idempotency_key = 10;
+  optional string decided_by = 11;     // deciding admin's account id
+  optional google.protobuf.Timestamp decided_at = 12;
+  google.protobuf.Timestamp created_at = 13;
+  google.protobuf.Timestamp updated_at = 14;
+}
+
+// One immutable settlement record.
+message LedgerLine {
+  string id = 1;
+  string agent_profile_id = 2;
+  string ledger_request_id = 3;
+  int64 amount = 4;         // SIGNED: inflow +, outflow −
+  int64 balance_after = 5;
+  google.protobuf.Timestamp created_at = 6;
+}

@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package payment.v1;
+
+import "google/protobuf/empty.proto";
+import "payment/v1/shared_message.proto";
+
+// Agent-profile lifecycle. Intent-named RPCs on purpose: each carries its
+// own authorization and guards, and the RPC name is the audit entry; one
+// usecase/procedure serves them all underneath. Handlers check the
+// gateway-forwarded passport (system or ops/admin — see each RPC).
+service AdminService {
+  // Create the (pending) money account. Callers: the user service during
+  // enrollment Accept (system passport) or ops. Creating an existing
+  // profile is AlreadyExists — idempotent callers look it up and move on.
+  rpc CreateAgentProfile(CreateAgentProfileRequest) returns (AgentProfile);
+  rpc GetAgentProfile(GetAgentProfileRequest) returns (AgentProfile);
+  // pending/suspended → active. Idempotent: activating an active profile
+  // returns it unchanged (enrollment-approve retries depend on this).
+  rpc ActivateAgentProfile(ActivateAgentProfileRequest) returns (AgentProfile);
+  // active → suspended. Idempotent on an already-suspended profile.
+  rpc SuspendAgentProfile(SuspendAgentProfileRequest) returns (AgentProfile);
+  // Soft delete; only for a zero-money profile.
+  rpc DeleteAgentProfile(DeleteAgentProfileRequest) returns (google.protobuf.Empty);
+}
+
+message CreateAgentProfileRequest {
+  string account_id = 1;  // user-service account
+  optional string currency = 2;         // default USD
+  optional int64 guarantee_floor = 3;   // minor units; default 20 USD
+  optional string city = 4;
+}
+
+// Exactly one selector.
+message GetAgentProfileRequest {
+  oneof selector {
+    string id = 1;
+    string account_id = 2;
+  }
+}
+
+message ActivateAgentProfileRequest {
+  string id = 1;
+}
+
+message SuspendAgentProfileRequest {
+  string id = 1;
+}
+
+message DeleteAgentProfileRequest {
+  string id = 1;
+}

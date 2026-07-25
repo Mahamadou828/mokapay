@@ -162,6 +162,8 @@ func (u UseCase) Approve(ctx context.Context, decidedBy, id uuid.UUID) (enrollme
 	var approved enrollment.Enrollment
 	if err := u.db.BeginPgx(ctx, func(tx pgx.Tx) error {
 		var err error
+
+		// TODO: APPROVE THE LEDGER REQUEST
 		approved, err = u.repo.WithTx(tx).Approve(ctx, id.String(), decidedBy.String())
 		if err != nil {
 			return err
