@@ -1,0 +1,2 @@
+-- No views yet: the read surface arrives with the approved payment schema.
+-- (Comment-only file — kept so the go:embed of this directory has content.)

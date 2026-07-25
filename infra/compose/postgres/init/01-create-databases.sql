@@ -9,3 +9,4 @@
 
 CREATE DATABASE users;
 CREATE DATABASE files;
+CREATE DATABASE payments;

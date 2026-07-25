@@ -151,6 +151,27 @@ services:
       minio:
         condition: service_healthy
 
+  payment:
+    build:
+      context: ../..
+      dockerfile: app/services/payment/Dockerfile
+      args:
+        BUILD_REF: develop
+    command: ["--migrate"]
+    networks:
+      - mokapay.app
+      - mokapay.infrastructure
+    env_file:
+      - ../../app/services/payment/.env
+    # The .env targets host-side local dev; inside compose the stores live on
+    # the infrastructure network under their service names.
+    environment:
+      DB_HOST: postgres
+      DB_PORT: "5432"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   gateway:
     build:
       context: ../..

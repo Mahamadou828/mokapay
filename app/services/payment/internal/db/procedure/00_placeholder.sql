@@ -1,0 +1,2 @@
+-- No procedures yet: the write surface arrives with the approved payment
+-- schema. (Comment-only file — kept so the go:embed has content.)
