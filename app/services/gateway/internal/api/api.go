@@ -5,28 +5,46 @@ package api
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
+	userapi "mokapay.app/app/services/gateway/internal/api/user"
+	"mokapay.app/app/services/gateway/internal/middleware"
+	"mokapay.app/core/client"
 	coreweb "mokapay.app/core/http"
 	"mokapay.app/core/logger"
 )
 
-// Config carries the settings the API layer needs to wire its handlers
-// (downstream service addresses, feature flags, …).
-type Config struct{}
+// Config carries the settings the API layer needs to wire its handlers.
+type Config struct {
+	// Moka is the shared downstream gRPC client (owned and closed by the
+	// caller).
+	Moka *client.MokaClient
+	// Auth is the token-validation + passport-rehydration middleware,
+	// applied per tier — never globally, the public auth routes are
+	// anonymous by design.
+	Auth coreweb.MidFunc
+}
 
-// Close releases the resources held by the registered handlers (gRPC conns).
+// Close releases the resources held by the registered handlers.
 type Close func(ctx context.Context)
 
 // Register mounts every v1 route on the server and returns a Close function
 // the caller runs on shutdown.
 func Register(cfg Config, log *logger.Logger, s *coreweb.Server) (Close, error) {
-	// -------------------------------------------------------------------------
-	// create main v1 group
-	v1 := s.NewGroup("/v1")
+	if cfg.Moka == nil || cfg.Auth == nil {
+		return nil, errors.New("api: Moka client and Auth middleware are required")
+	}
 
 	// -------------------------------------------------------------------------
-	// create readiness route
+	// Route tiers. Empty group paths keep the /v1 prefix while layering
+	// middleware: public (anonymous), authed (valid token), ops (+role).
+	v1 := s.NewGroup("/v1")
+	authed := v1.NewGroup("", cfg.Auth)
+	ops := v1.NewGroup("", cfg.Auth, middleware.RequireRoles("ops", "admin"))
+
+	// -------------------------------------------------------------------------
+	// health routes
 	v1.RegisterHandler(http.MethodGet, "/readiness", func(ctx context.Context, r *http.Request) coreweb.Encoder {
 		return nil
 	})
@@ -36,9 +54,8 @@ func Register(cfg Config, log *logger.Logger, s *coreweb.Server) (Close, error) 
 	})
 
 	// -------------------------------------------------------------------------
-	// Service routes go here: init the downstream gRPC client, build the
-	// domain handlers, mount them on a sub-group of v1, and close the client
-	// connection in the returned Close function.
+	// user service surface (auth flows, self-service, account moderation)
+	userapi.NewHandler(log, cfg.Moka).Routes(v1, authed, ops)
 
 	return func(ctx context.Context) {}, nil
 }

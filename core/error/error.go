@@ -16,12 +16,13 @@ type ErrCode interface {
 	MarshalText() ([]byte, error)
 }
 
-// Error represent an http handler error
+// Error represent an http handler error. FuncName/FileName are for logs
+// only — never serialized to the client.
 type Error struct {
 	Code     ErrCode `json:"code"`
 	Message  string  `json:"message"`
-	FuncName string
-	FileName string
+	FuncName string  `json:"-"`
+	FileName string  `json:"-"`
 }
 
 // New constructs an error based on an app error.

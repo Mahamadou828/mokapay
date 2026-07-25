@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -22,7 +23,7 @@ type AuthValidator interface {
 
 // Auth validates signature, expiry, issuer, client and token type.
 // Currently base on aws cognito integration.
-func Auth(v AuthValidator, client client.MokaClient) core.MidFunc {
+func Auth(v AuthValidator, client *client.MokaClient) core.MidFunc {
 	return func(next core.HandlerFunc) core.HandlerFunc {
 		return func(ctx context.Context, r *http.Request) core.Encoder {
 			token := r.Header.Get("Authorization")
@@ -51,11 +52,11 @@ func Auth(v AuthValidator, client client.MokaClient) core.MidFunc {
 					Sub: cl.Subject,
 				})
 				if err != nil {
-					return coreerrs.New(errs.PermissionDenied, err)
+					return coreerrs.New(errs.PermissionDenied, fmt.Errorf("failed to fetch user: %w", err))
 				}
 			}
 			if user == nil {
-				return coreerrs.New(errs.PermissionDenied, errors.New("invalid token"))
+				return coreerrs.New(errs.PermissionDenied, errors.New("user not found"))
 			}
 
 			ctx = passport.AddToContext(ctx, &passport.Passport{
@@ -66,8 +67,8 @@ func Auth(v AuthValidator, client client.MokaClient) core.MidFunc {
 					LastName:          user.LastName,
 					Email:             user.Email,
 					PhoneNumber:       user.PhoneNumber,
-					Role:              user.Role.String(),
-					PreferredLanguage: user.PreferredLanguage.String(),
+					Role:              roleString(user.Role),
+					PreferredLanguage: languageString(user.PreferredLanguage),
 				},
 				Type: passport.TypeUser,
 			})
@@ -75,4 +76,33 @@ func Auth(v AuthValidator, client client.MokaClient) core.MidFunc {
 			return next(ctx, r)
 		}
 	}
+}
+
+// roleString / languageString carry the DB enum strings in the passport —
+// every service compares against those ("ops"), never the proto names
+// ("ACCOUNT_ROLE_OPS").
+func roleString(r userv1.AccountRole) string {
+	switch r {
+	case userv1.AccountRole_ACCOUNT_ROLE_USER:
+		return "user"
+	case userv1.AccountRole_ACCOUNT_ROLE_PENDING_AGENT:
+		return "pending_agent"
+	case userv1.AccountRole_ACCOUNT_ROLE_AGENT:
+		return "agent"
+	case userv1.AccountRole_ACCOUNT_ROLE_OPS:
+		return "ops"
+	case userv1.AccountRole_ACCOUNT_ROLE_ADMIN:
+		return "admin"
+	}
+	return ""
+}
+
+func languageString(l userv1.Language) string {
+	switch l {
+	case userv1.Language_LANGUAGE_FR:
+		return "fr"
+	case userv1.Language_LANGUAGE_EN:
+		return "en"
+	}
+	return ""
 }

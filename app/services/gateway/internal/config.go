@@ -18,6 +18,15 @@ type Config struct {
 		RequestTimeout     time.Duration
 		CORSAllowedOrigins []string
 	}
+	Client struct {
+		UserGRPCPort string
+	}
+	Cognito struct {
+		ClientID     string
+		ClientSecret string
+		PoolID       string
+		Region       string
+	}
 }
 
 // newLogger builds the structured logger used by every command, wiring the

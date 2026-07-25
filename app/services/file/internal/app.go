@@ -15,7 +15,9 @@ import (
 	"mokapay.app/app/services/file/internal/business/file/usecase"
 	"mokapay.app/app/services/file/internal/integration/events"
 	"mokapay.app/core/aws"
+	"mokapay.app/core/client"
 	"mokapay.app/core/db"
+	"mokapay.app/core/grpc/middleware"
 	coreweb "mokapay.app/core/http"
 	"mokapay.app/core/logger"
 	filev1 "mokapay.app/proto/codebase/file/v1"
@@ -80,11 +82,15 @@ func Run() error {
 	})
 
 	// -------------------------------------------------------------------------
-	// Init gRPC server & register services
-	// TODO(Mahamadou): add the passport server interceptor here once the
-	// metadata wiring lands, and start the River workers (DeliverEvent,
-	// orphan sweep via uc.SweepExpired).
-	srv := grpc.NewServer()
+	// Init gRPC server & register services. The client interceptor rebuilds
+	// the gateway-forwarded passport into the request context.
+	// TODO(Mahamadou): start the River workers here (DeliverEvent, orphan
+	// sweep via uc.SweepExpired).
+	srv := grpc.NewServer(grpc.ChainUnaryInterceptor(
+		middleware.PanicUnaryServerInterceptor(log.Error),
+		middleware.LoggerUnaryServerInterceptor(log.Info),
+		client.UnaryServerInterceptor(),
+	))
 	reflection.Register(srv)
 
 	filev1.RegisterFileServiceServer(srv, fileapi.NewHandler(log, uc))

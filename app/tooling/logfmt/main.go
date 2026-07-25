@@ -37,8 +37,10 @@ func main() {
 			continue
 		}
 
-		// if a service filter was provided, check.
-		if service != "" && strings.ToLower(m["service"].(string)) != service {
+		// if a service filter was provided, check. A JSON line without a
+		// service field (or a non-string one) is skipped, not a panic.
+		svc, _ := m["service"].(string)
+		if service != "" && strings.ToLower(svc) != service {
 			continue
 		}
 

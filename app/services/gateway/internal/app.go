@@ -9,6 +9,9 @@ import (
 	"time"
 
 	"mokapay.app/app/services/gateway/internal/api"
+	appMiddleware "mokapay.app/app/services/gateway/internal/middleware"
+	"mokapay.app/core/aws"
+	"mokapay.app/core/client"
 	"mokapay.app/core/config"
 	coreweb "mokapay.app/core/http"
 	"mokapay.app/core/http/middleware"
@@ -41,7 +44,12 @@ func Run() error {
 			APIHost:            config.GetEnv("API_HOST", ":8080"),
 			CORSAllowedOrigins: config.GetEnvAsSlice("CORS_ALLOWED_ORIGINS", []string{"*"}),
 		},
+		Client: struct{ UserGRPCPort string }{UserGRPCPort: config.GetEnv("USER_GRPC_PORT", "localhost:50051")},
 	}
+	cfg.Cognito.ClientID = config.GetEnv("COGNITO_CLIENT_ID", "")
+	cfg.Cognito.ClientSecret = config.GetEnv("COGNITO_CLIENT_SECRET", "")
+	cfg.Cognito.PoolID = config.GetEnv("COGNITO_POOL_ID", "")
+	cfg.Cognito.Region = config.GetEnv("COGNITO_REGION", "eu-west-1")
 	// -----------------------------------------------------------------------------------------------------------------
 	// Init logger
 	log := newLogger()
@@ -49,6 +57,26 @@ func Run() error {
 	// -------------------------------------------------------------------------
 	// GOMAXPROCS
 	log.Info(ctx, "startup", "GOMAXPROCS", runtime.GOMAXPROCS(0), "build", build)
+
+	// -------------------------------------------------------------------------
+	// init cognito client
+	cognito, err := aws.NewCognito(ctx, cfg.Cognito.ClientID, cfg.Cognito.ClientSecret, cfg.Cognito.PoolID, cfg.Cognito.Region)
+	if err != nil {
+		log.Error(ctx, "startup", "failed to init cognito client", "error", err)
+		return err
+	}
+
+	// -------------------------------------------------------------------------
+	// init moka client
+	moka, err := client.NewMokaClient(client.Config{
+		UserServiceAddr: cfg.Client.UserGRPCPort,
+	}, map[client.Connection]bool{
+		client.ConnectionUser: true,
+	})
+	if err != nil {
+		log.Error(ctx, "startup", "failed to init cognito client", "error", err)
+		return err
+	}
 
 	// -------------------------------------------------------------------------
 	// Init Debug Service
@@ -62,7 +90,8 @@ func Run() error {
 	}
 
 	// -------------------------------------------------------------------------
-	// Init HTTP server
+	// Init HTTP server. Auth is NOT global — it is applied per route tier in
+	// api.Register (public auth flows are anonymous by design).
 	server := coreweb.NewServer(
 		log.Info,
 		nil,
@@ -77,13 +106,17 @@ func Run() error {
 	})
 
 	// Handlers
-	closer, err := api.Register(api.Config{}, log, server)
+	closer, err := api.Register(api.Config{
+		Moka: moka,
+		Auth: appMiddleware.Auth(cognito, moka),
+	}, log, server)
 	if err != nil {
 		log.Error(ctx, "failed to register handlers", "error", err)
 		return err
 	}
 
 	defer closer(ctx)
+	defer moka.Close(ctx)
 	// Create Server
 
 	// -----------------------------------------------------------------------------------------------------------------

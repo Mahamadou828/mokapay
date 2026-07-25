@@ -1,5 +1,159 @@
+# Gateway request collection (JetBrains HTTP client).
+# Select an environment (local / docker) — hosts and test data come from
+# http-client.private.env.json (copy the .example next to this file).
+# Login/register/refresh capture the tokens into client globals, so the
+# authed and ops requests below work without copy-pasting anything.
+
 ### Readiness probe
 GET {{host}}/v1/readiness
 
 ### Liveness probe
 GET {{host}}/v1/liveness
+
+###############################################################################
+# Auth — public tier
+###############################################################################
+
+### Send OTP — register (code is SMS-logged by the user service in local dev)
+POST {{host}}/v1/auth/otp
+Content-Type: application/json
+
+{
+  "phone_number": "{{phone_number}}",
+  "purpose": "OTP_PURPOSE_REGISTER"
+}
+
+### Send OTP — login
+POST {{host}}/v1/auth/otp
+Content-Type: application/json
+
+{
+  "phone_number": "{{phone_number}}",
+  "purpose": "OTP_PURPOSE_LOGIN"
+}
+
+### Send OTP — password reset
+POST {{host}}/v1/auth/otp
+Content-Type: application/json
+
+{
+  "phone_number": "{{phone_number}}",
+  "purpose": "OTP_PURPOSE_RESET"
+}
+
+### Register (needs a fresh REGISTER OTP in {{otp_code}})
+POST {{host}}/v1/auth/register
+Content-Type: application/json
+
+{
+  "phone_number": "{{phone_number}}",
+  "code": "{{otp_code}}",
+  "password": "{{password}}",
+  "first_name": "Test",
+  "last_name": "User",
+  "preferred_language": "LANGUAGE_FR",
+  "email": "test.user@example.com"
+}
+
+> {%
+  client.global.set("access_token", response.body.access_token);
+  client.global.set("refresh_token", response.body.refresh_token);
+%}
+
+### Login (needs a fresh LOGIN OTP in {{otp_code}})
+POST {{host}}/v1/auth/login
+Content-Type: application/json
+
+{
+  "phone_number": "{{phone_number}}",
+  "password": "{{password}}",
+  "code": "{{otp_code}}"
+}
+
+> {%
+  client.global.set("access_token", response.body.access_token);
+  client.global.set("refresh_token", response.body.refresh_token);
+%}
+
+### Refresh token (sub = the access token's `sub` claim)
+POST {{host}}/v1/auth/refresh
+Content-Type: application/json
+
+{
+  "refresh_token": "{{refresh_token}}",
+  "sub": "{{sub}}"
+}
+
+> {%
+  client.global.set("access_token", response.body.access_token);
+%}
+
+### Reset password (needs a fresh RESET OTP in {{otp_code}}) → 204
+POST {{host}}/v1/auth/password
+Content-Type: application/json
+
+{
+  "phone_number": "{{phone_number}}",
+  "code": "{{otp_code}}",
+  "new_password": "{{password}}"
+}
+
+###############################################################################
+# Account — authed tier (Bearer token)
+###############################################################################
+
+### My account
+GET {{host}}/v1/me
+Authorization: Bearer {{access_token}}
+
+### Update my account (partial — absent fields keep their value)
+PATCH {{host}}/v1/me
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+
+{
+  "first_name": "Updated",
+  "preferred_language": "LANGUAGE_EN"
+}
+
+### Logout everywhere (revokes all refresh tokens) → 204
+POST {{host}}/v1/auth/logout
+Authorization: Bearer {{access_token}}
+
+###############################################################################
+# Admin — ops tier (Bearer token with ops/admin role)
+###############################################################################
+
+### List accounts
+GET {{host}}/v1/accounts
+Authorization: Bearer {{access_token}}
+
+### List accounts — filtered (enum names, both filters optional)
+GET {{host}}/v1/accounts?role=ACCOUNT_ROLE_USER&status=ACCOUNT_STATUS_ACTIVE&phone_number={{phone_number}}
+Authorization: Bearer {{access_token}}
+
+### Get an account
+GET {{host}}/v1/accounts/{{account_id}}
+Authorization: Bearer {{access_token}}
+
+### Update an account (moderation — SUSPENDED/BANNED revokes refresh tokens)
+PATCH {{host}}/v1/accounts/{{account_id}}
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+
+{
+  "status": "ACCOUNT_STATUS_SUSPENDED"
+}
+
+### Promote an account to ops
+PATCH {{host}}/v1/accounts/{{account_id}}
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+
+{
+  "role": "ACCOUNT_ROLE_OPS"
+}
+
+### Delete an account (soft-delete + Cognito delete) → 204
+DELETE {{host}}/v1/accounts/{{account_id}}
+Authorization: Bearer {{access_token}}

@@ -24,8 +24,10 @@ type Encoder interface {
 	Encode() ([]byte, string, error)
 }
 
+// httpStatus lets an Encoder pick its response code (protocodec.Proto,
+// core/error.Error, ... all expose Status() int).
 type httpStatus interface {
-	HTTPStatus() int
+	Status() int
 }
 
 type Logger func(ctx context.Context, msg string, args ...any)
@@ -242,12 +244,15 @@ func (s *Server) sendResponse(ctx context.Context, w http.ResponseWriter, res En
 
 	switch v := res.(type) {
 	case httpStatus:
-		statusCode = v.HTTPStatus()
+		statusCode = v.Status()
 	case error:
 		statusCode = http.StatusInternalServerError
 	default:
 		if res == nil {
 			statusCode = http.StatusNoContent
+		} else {
+			// An encoder without an explicit status is a success payload.
+			statusCode = http.StatusOK
 		}
 	}
 

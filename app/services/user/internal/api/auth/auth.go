@@ -8,7 +8,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 	"mokapay.app/app/services/user/internal/api/auth/mapper"
 	"mokapay.app/app/services/user/internal/sdk/grpcerr"
-	"mokapay.app/app/services/user/internal/sdk/identity"
+	"mokapay.app/core/passport"
 	userv1 "mokapay.app/proto/codebase/user/v1"
 )
 
@@ -85,12 +85,12 @@ func (h Handler) RefreshToken(ctx context.Context, req *userv1.RefreshTokenReque
 }
 
 func (h Handler) Logout(ctx context.Context, _ *userv1.LogoutRequest) (*emptypb.Empty, error) {
-	sub, err := identity.Sub(ctx)
+	pass, err := passport.FromContext(ctx)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.Unauthenticated, "no passport in context")
 	}
 
-	if err := h.uc.LogOut(ctx, sub); err != nil {
+	if err := h.uc.LogOut(ctx, pass.Claim.Subject); err != nil {
 		return nil, grpcerr.Map(err)
 	}
 

@@ -3,12 +3,13 @@ package client
 import (
 	"context"
 	"encoding/base64"
-	"errors"
 	"fmt"
 
 	"github.com/golang-jwt/jwt/v5"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"mokapay.app/core/passport"
@@ -19,11 +20,15 @@ const (
 	PassportMetadataKey = "passport-metadata"
 )
 
+// UnaryClientInterceptor forwards the caller's passport as gRPC metadata.
+// A context without a passport passes through untouched — public flows
+// (login, register) are anonymous by design; the receiving handlers decide
+// whether an identity is required.
 func UnaryClientInterceptor() grpc.UnaryClientInterceptor {
 	return func(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
 		p, err := passport.FromContext(ctx)
 		if err != nil {
-			return errors.New("passport not found in context")
+			return invoker(ctx, method, req, reply, cc, opts...)
 		}
 
 		pStr, err := encodePassport(p)
@@ -44,21 +49,26 @@ func UnaryClientInterceptor() grpc.UnaryClientInterceptor {
 	}
 }
 
+// UnaryServerInterceptor rebuilds the passport from incoming metadata. A
+// request without passport metadata is served without one — anonymous
+// (public) and service-internal calls are legitimate; handlers that need an
+// identity fail on passport.FromContext. A present-but-corrupt passport is
+// rejected: that is never a healthy caller.
 func UnaryServerInterceptor() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 		md, ok := metadata.FromIncomingContext(ctx)
 		if !ok {
-			return nil, errors.New("no metadata found in context")
+			return handler(ctx, req)
 		}
 
 		passportMD, ok := md[PassportMetadataKey]
 		if !ok || len(passportMD) == 0 || passportMD[0] == "" {
-			return nil, errors.New("no passport metadata found in context")
+			return handler(ctx, req)
 		}
 
 		p, err := decodePassport(passportMD[0])
 		if err != nil {
-			return nil, err
+			return nil, status.Error(codes.Unauthenticated, "malformed passport metadata")
 		}
 
 		ctx = passport.AddToContext(ctx, p)

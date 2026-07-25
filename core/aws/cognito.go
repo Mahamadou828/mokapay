@@ -40,11 +40,15 @@ type Token struct {
 	ExpiresAt    time.Time
 }
 
+// Claims - the Cognito access-token payload. The tags must match Cognito's
+// snake_case claim names exactly: untagged fields only match
+// case-insensitively, which never bridges ClientID → client_id. The subject
+// lives on the embedded RegisteredClaims (json:"sub") — never redeclare it
+// here, a depth-0 "sub" tag would shadow it and decode Subject empty.
 type Claims struct {
-	Sub      string
-	Username string
-	ClientID string
-	TokenUse string
+	Username string `json:"username"`
+	ClientID string `json:"client_id"`
+	TokenUse string `json:"token_use"`
 	jwt.RegisteredClaims
 }
 

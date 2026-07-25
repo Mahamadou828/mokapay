@@ -7,17 +7,17 @@ import (
 	"google.golang.org/grpc/status"
 	"mokapay.app/app/services/user/internal/api/account/mapper"
 	"mokapay.app/app/services/user/internal/sdk/grpcerr"
-	"mokapay.app/app/services/user/internal/sdk/identity"
+	"mokapay.app/core/passport"
 	userv1 "mokapay.app/proto/codebase/user/v1"
 )
 
 func (h UserHandler) Me(ctx context.Context, _ *userv1.MeRequest) (*userv1.Account, error) {
-	sub, err := identity.Sub(ctx)
+	pass, err := passport.FromContext(ctx)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.Unauthenticated, "no passport in context")
 	}
 
-	account, err := h.uc.Me(ctx, sub)
+	account, err := h.uc.Me(ctx, pass.Claim.Subject)
 	if err != nil {
 		return nil, grpcerr.Map(err)
 	}
@@ -25,10 +25,13 @@ func (h UserHandler) Me(ctx context.Context, _ *userv1.MeRequest) (*userv1.Accou
 	return mapper.AccountToProto(account), nil
 }
 
-// GetAccountBySub is the gateway-internal passport-rehydration lookup: the
-// sub comes from a token the gateway just validated, so there is no
-// caller-identity check here — the route is never exposed over REST.
+// GetAccountBySub is the gateway-internal passport-rehydration lookup
 func (h UserHandler) GetAccountBySub(ctx context.Context, req *userv1.GetAccountBySubRequest) (*userv1.Account, error) {
+	pass, err := passport.FromContext(ctx)
+	if err != nil || !pass.IsSystem() {
+		return nil, status.Error(codes.Unauthenticated, "no valid passport in context")
+	}
+
 	if req.Sub == "" {
 		return nil, status.Error(codes.InvalidArgument, "sub is required")
 	}
@@ -42,12 +45,12 @@ func (h UserHandler) GetAccountBySub(ctx context.Context, req *userv1.GetAccount
 }
 
 func (h UserHandler) UpdateAccount(ctx context.Context, req *userv1.UpdateAccountRequest) (*userv1.Account, error) {
-	sub, err := identity.Sub(ctx)
+	pass, err := passport.FromContext(ctx)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.Unauthenticated, "no passport in context")
 	}
 
-	account, err := h.uc.UpdateOwnAccount(ctx, sub, mapper.UpdateOwnToDomain(req))
+	account, err := h.uc.UpdateOwnAccount(ctx, pass.Claim.Subject, mapper.UpdateOwnToDomain(req))
 	if err != nil {
 		return nil, grpcerr.Map(err)
 	}

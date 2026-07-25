@@ -9,7 +9,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	accountapi "mokapay.app/app/services/user/internal/api/account"
@@ -18,7 +17,9 @@ import (
 	"mokapay.app/app/services/user/internal/business/auth/usecase"
 	"mokapay.app/app/services/user/internal/integration/sms"
 	"mokapay.app/core/aws"
+	"mokapay.app/core/client"
 	"mokapay.app/core/db"
+	"mokapay.app/core/grpc/middleware"
 	coreweb "mokapay.app/core/http"
 	"mokapay.app/core/logger"
 	userv1 "mokapay.app/proto/codebase/user/v1"
@@ -83,11 +84,15 @@ func Run() error {
 	accountUC := usecase.NewAccount(log, pg, cognito)
 
 	// -------------------------------------------------------------------------
-	// Init gRPC server & register services
-	srv := grpc.NewServer()
+	// Init gRPC server & register services. The client interceptor rebuilds
+	// the gateway-forwarded passport into the request context; handlers
+	// needing an identity read it with passport.FromContext.
+	srv := grpc.NewServer(grpc.ChainUnaryInterceptor(
+		middleware.PanicUnaryServerInterceptor(log.Error),
+		middleware.LoggerUnaryServerInterceptor(log.Info),
+		client.UnaryServerInterceptor(),
+	))
 	reflection.Register(srv)
-
-	recovery.UnaryServerInterceptor()
 
 	userv1.RegisterAuthServiceServer(srv, authapi.NewHandler(log, authUC))
 	userv1.RegisterUserServiceServer(srv, accountapi.NewUserHandler(log, accountUC))

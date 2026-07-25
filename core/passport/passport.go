@@ -42,6 +42,10 @@ type Passport struct {
 	Type  Type
 }
 
+func (p *Passport) IsSystem() bool {
+	return p.Type == TypeSystem
+}
+
 func AddToContext(ctx context.Context, p *Passport) context.Context {
 	return context.WithValue(ctx, passportKey, p)
 }

@@ -164,8 +164,14 @@ services:
       - "8085:8080"
     env_file:
       - ../../app/services/gateway/.env
+    # Inside compose the user service lives on the app network under its
+    # service name.
+    environment:
+      USER_GRPC_PORT: user:50051
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      user:
+        condition: service_started

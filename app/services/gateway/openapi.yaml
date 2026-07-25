@@ -5,15 +5,25 @@ info:
   description: >
     REST gateway over the project's gRPC services. Each endpoint proxies to a
     gRPC RPC; request/response bodies are proto3-JSON (snake_case field names,
-    enums as their string names). List filters are passed as query parameters;
-    create/update bodies mirror the corresponding gRPC request message.
+    enums as their full string names, int64 as JSON strings, timestamps as
+    RFC 3339). List filters are passed as query parameters; create/update
+    bodies mirror the corresponding gRPC request message. Errors map gRPC
+    status codes to HTTP and return an Error body.
 
 servers:
   - url: http://localhost:8080
-    description: Local gateway
+    description: Local gateway (go run)
+  - url: http://localhost:8085
+    description: Docker compose gateway (host 8085 → container 8080)
 
 tags:
   - name: Health
+  - name: Auth
+    description: Anonymous authentication flows (Cognito-backed, SMS-OTP second factor)
+  - name: Account
+    description: Self-service account routes — the caller is the token's identity
+  - name: Admin
+    description: Account moderation — requires the ops or admin role
 
 paths:
   /v1/readiness:
@@ -22,7 +32,7 @@ paths:
       summary: Readiness probe
       operationId: readiness
       responses:
-        "200":
+        "204":
           description: Service ready
 
   /v1/liveness:
@@ -31,5 +41,559 @@ paths:
       summary: Liveness probe
       operationId: liveness
       responses:
-        "200":
+        "204":
           description: Service alive
+
+  /v1/auth/otp:
+    post:
+      tags: [Auth]
+      summary: Send an SMS OTP
+      description: >
+        Sends a one-time code by SMS for the given purpose (register, login or
+        password reset). The code never appears in the response.
+      operationId: sendOtp
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendOtpRequest"
+      responses:
+        "200":
+          description: OTP sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SendOtpResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /v1/auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new account
+      description: >
+        Creates the account (Cognito + local row). Requires a REGISTER OTP
+        obtained via /v1/auth/otp.
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "200":
+          description: Account created, session opened
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          description: Phone number or email already registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /v1/auth/login:
+    post:
+      tags: [Auth]
+      summary: Log in
+      description: >
+        Single call: phone + password + LOGIN OTP (obtained via /v1/auth/otp)
+        together. Suspended/banned accounts are rejected.
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Session opened
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+
+  /v1/auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh the session
+      description: >
+        Exchanges a refresh token for new tokens. `sub` is the Cognito subject
+        read from the access token's `sub` claim (Cognito derives the refresh
+        SECRET_HASH from it).
+      operationId: refreshToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshTokenRequest"
+      responses:
+        "200":
+          description: New tokens
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+
+  /v1/auth/password:
+    post:
+      tags: [Auth]
+      summary: Reset the password
+      description: >
+        Sets a new password using a RESET OTP obtained via /v1/auth/otp.
+        Anonymous — this is the forgot-password flow.
+      operationId: changePassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordRequest"
+      responses:
+        "204":
+          description: Password changed
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /v1/auth/logout:
+    post:
+      tags: [Auth]
+      summary: Log out everywhere
+      description: >
+        Cognito global sign-out — revokes every refresh token of the calling
+        account. The access token stays valid until it expires.
+      operationId: logout
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Logged out
+        "403":
+          $ref: "#/components/responses/PermissionDenied"
+
+  /v1/me:
+    get:
+      tags: [Account]
+      summary: Get my account
+      operationId: me
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The caller's account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+        "403":
+          $ref: "#/components/responses/PermissionDenied"
+    patch:
+      tags: [Account]
+      summary: Update my account
+      description: Partial update — absent fields keep their stored value.
+      operationId: updateMe
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAccountRequest"
+      responses:
+        "200":
+          description: The updated account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/PermissionDenied"
+
+  /v1/accounts:
+    get:
+      tags: [Admin]
+      summary: List accounts
+      description: Optional filters; an absent parameter disables its filter.
+      operationId: listAccounts
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: role
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/AccountRole"
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/AccountStatus"
+        - name: phone_number
+          in: query
+          required: false
+          schema:
+            type: string
+            example: "+243812345678"
+      responses:
+        "200":
+          description: Matching accounts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListAccountsResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/PermissionDenied"
+
+  /v1/accounts/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Admin]
+      summary: Get an account
+      operationId: getAccount
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+        "403":
+          $ref: "#/components/responses/PermissionDenied"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Admin]
+      summary: Update an account (moderation)
+      description: >
+        Partial update including role and status changes. Setting status to
+        SUSPENDED or BANNED revokes the account's refresh tokens. The path
+        owns the id — an id in the body is ignored.
+      operationId: adminUpdateAccount
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminUpdateAccountRequest"
+      responses:
+        "200":
+          description: The updated account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/PermissionDenied"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Admin]
+      summary: Delete an account
+      description: Soft-deletes the local row and deletes the Cognito user.
+      operationId: deleteAccount
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Account deleted
+        "403":
+          $ref: "#/components/responses/PermissionDenied"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Cognito access token from /v1/auth/login, /register or /refresh.
+
+  responses:
+    BadRequest:
+      description: Invalid request (malformed body, bad enum name, business validation)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Unauthenticated:
+      description: Wrong credentials or expired/revoked session
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    PermissionDenied:
+      description: Missing/invalid token, or insufficient role on an ops route
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: No account with this id
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    TooManyRequests:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+  schemas:
+    Error:
+      type: object
+      description: Uniform error body for every non-2xx response.
+      properties:
+        code:
+          type: string
+          description: Machine-readable code mirroring the gRPC status vocabulary.
+          example: invalid_argument
+          enum:
+            - invalid_argument
+            - not_found
+            - already_exists
+            - permission_denied
+            - unauthenticated
+            - failed_precondition
+            - too_many_requests
+            - internal
+            - unavailable
+        message:
+          type: string
+          example: invalid phone number
+      required: [code, message]
+
+    AccountRole:
+      type: string
+      description: Full proto enum names, both in bodies and query parameters.
+      enum:
+        - ACCOUNT_ROLE_USER
+        - ACCOUNT_ROLE_PENDING_AGENT
+        - ACCOUNT_ROLE_AGENT
+        - ACCOUNT_ROLE_OPS
+        - ACCOUNT_ROLE_ADMIN
+
+    AccountStatus:
+      type: string
+      enum:
+        - ACCOUNT_STATUS_PENDING
+        - ACCOUNT_STATUS_ACTIVE
+        - ACCOUNT_STATUS_SUSPENDED
+        - ACCOUNT_STATUS_BANNED
+
+    Language:
+      type: string
+      enum:
+        - LANGUAGE_FR
+        - LANGUAGE_EN
+
+    OtpPurpose:
+      type: string
+      enum:
+        - OTP_PURPOSE_REGISTER
+        - OTP_PURPOSE_LOGIN
+        - OTP_PURPOSE_RESET
+
+    SendOtpRequest:
+      type: object
+      properties:
+        phone_number:
+          type: string
+          description: E.164
+          example: "+243812345678"
+        purpose:
+          $ref: "#/components/schemas/OtpPurpose"
+      required: [phone_number, purpose]
+
+    SendOtpResponse:
+      type: object
+      properties:
+        expires_in_seconds:
+          type: string
+          description: proto3 int64 — serialized as a JSON string.
+          example: "299"
+
+    RegisterRequest:
+      type: object
+      properties:
+        phone_number:
+          type: string
+          example: "+243812345678"
+        code:
+          type: string
+          description: REGISTER OTP from /v1/auth/otp
+        password:
+          type: string
+          format: password
+        first_name:
+          type: string
+        last_name:
+          type: string
+        preferred_language:
+          $ref: "#/components/schemas/Language"
+        email:
+          type: string
+          format: email
+      required: [phone_number, code, password, first_name, last_name, preferred_language]
+
+    LoginRequest:
+      type: object
+      properties:
+        phone_number:
+          type: string
+          example: "+243812345678"
+        password:
+          type: string
+          format: password
+        code:
+          type: string
+          description: LOGIN OTP from /v1/auth/otp
+      required: [phone_number, password, code]
+
+    RefreshTokenRequest:
+      type: object
+      properties:
+        refresh_token:
+          type: string
+        sub:
+          type: string
+          description: Cognito subject — the `sub` claim of the access token.
+      required: [refresh_token, sub]
+
+    ChangePasswordRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          description: RESET OTP from /v1/auth/otp
+        new_password:
+          type: string
+          format: password
+        phone_number:
+          type: string
+          example: "+243812345678"
+      required: [code, new_password, phone_number]
+
+    AuthResponse:
+      type: object
+      description: Tokens only — fetch the profile via GET /v1/me.
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        access_expires_in:
+          type: string
+          description: Seconds; proto3 int64 — serialized as a JSON string.
+          example: "3600"
+
+    Account:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        phone_number:
+          type: string
+          description: E.164
+        first_name:
+          type: string
+        last_name:
+          type: string
+        email:
+          type: string
+          format: email
+          description: Absent when not set.
+        preferred_language:
+          $ref: "#/components/schemas/Language"
+        role:
+          $ref: "#/components/schemas/AccountRole"
+        status:
+          $ref: "#/components/schemas/AccountStatus"
+        last_login_at:
+          type: string
+          format: date-time
+          description: Absent if the account never logged in.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    UpdateAccountRequest:
+      type: object
+      description: Self-service partial update — absent fields keep their value.
+      properties:
+        first_name:
+          type: string
+        last_name:
+          type: string
+        email:
+          type: string
+          format: email
+        preferred_language:
+          $ref: "#/components/schemas/Language"
+
+    AdminUpdateAccountRequest:
+      type: object
+      description: Moderation partial update — absent fields keep their value.
+      properties:
+        first_name:
+          type: string
+        last_name:
+          type: string
+        email:
+          type: string
+          format: email
+        preferred_language:
+          $ref: "#/components/schemas/Language"
+        role:
+          $ref: "#/components/schemas/AccountRole"
+        status:
+          $ref: "#/components/schemas/AccountStatus"
+
+    ListAccountsResponse:
+      type: object
+      properties:
+        accounts:
+          type: array
+          items:
+            $ref: "#/components/schemas/Account"

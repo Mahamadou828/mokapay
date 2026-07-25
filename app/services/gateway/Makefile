@@ -48,7 +48,7 @@ restart-dev:
 	kubectl rollout restart deployment "$(APP)" --namespace="$(NAMESPACE)"
 
 logs:
-	cd ../../.. && docker compose logs -f $(SERVICE)
+	cd ../../.. && docker compose logs -f --no-log-prefix $(SERVICE) | go run ./app/tooling/logfmt -service $(SERVICE)
 
 logs-dev:
 	kubectl logs -n "$(NAMESPACE)" -l app="$(APP)" --all-containers=true -f --tail=100 --max-log-requests=10 | go run ../../../app/tooling/logfmt -service $(SERVICE)

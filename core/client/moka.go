@@ -9,6 +9,12 @@ import (
 	userv1 "mokapay.app/proto/codebase/user/v1"
 )
 
+type Connection string
+
+const (
+	ConnectionUser Connection = "user"
+)
+
 type Config struct {
 	UserServiceAddr    string
 	PaymentServiceAddr string
@@ -26,10 +32,7 @@ type MokaClient struct {
 	User *User
 }
 
-func NewMokaClient(config *Config) (*MokaClient, error) {
-	if config == nil {
-		return nil, errors.New("config required")
-	}
+func NewMokaClient(config Config, requiredConnection map[Connection]bool) (*MokaClient, error) {
 	var u *User
 	if config.UserServiceAddr != "" {
 		conn, err := grpc.NewClient(
@@ -50,7 +53,11 @@ func NewMokaClient(config *Config) (*MokaClient, error) {
 		}
 	}
 
-	return &MokaClient{u}, nil
+	if u == nil && requiredConnection[ConnectionUser] {
+		return nil, errors.New("user connection required")
+	}
+
+	return &MokaClient{User: u}, nil
 }
 
 func (c *MokaClient) Close(ctx context.Context) error {
