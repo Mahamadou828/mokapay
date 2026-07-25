@@ -28,6 +28,10 @@ var ErrNotEligible = errors.New("account not eligible for enrollment")
 // refetch.
 var ErrTOSVersionMismatch = errors.New("terms of service version is not current")
 
+// ErrGuaranteeNotSettled blocks an approval whose guarantee funding is
+// missing or not yet approvable on the payment side.
+var ErrGuaranteeNotSettled = errors.New("guarantee funding not settled")
+
 // Status values mirror the stored enrollment_status enum.
 type Status string
 

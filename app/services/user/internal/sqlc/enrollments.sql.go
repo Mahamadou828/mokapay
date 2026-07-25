@@ -169,6 +169,30 @@ func (q *Queries) DeclineEnrollment(ctx context.Context, arg DeclineEnrollmentPa
 	return i, err
 }
 
+const getEnrollment = `-- name: GetEnrollment :one
+SELECT id, account_fk, invited_by, status, tos_version, tos_accepted_at, decided_by, decided_at, created_at, updated_at
+FROM users_ext.enrollment_requests
+WHERE id = $1::uuid
+`
+
+func (q *Queries) GetEnrollment(ctx context.Context, id string) (UsersExtEnrollmentRequest, error) {
+	row := q.db.QueryRow(ctx, getEnrollment, id)
+	var i UsersExtEnrollmentRequest
+	err := row.Scan(
+		&i.ID,
+		&i.AccountFk,
+		&i.InvitedBy,
+		&i.Status,
+		&i.TosVersion,
+		&i.TosAcceptedAt,
+		&i.DecidedBy,
+		&i.DecidedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getLatestEnrollmentByAccount = `-- name: GetLatestEnrollmentByAccount :one
 SELECT id, account_fk, invited_by, status, tos_version, tos_accepted_at, decided_by, decided_at, created_at, updated_at
 FROM users_ext.enrollment_requests

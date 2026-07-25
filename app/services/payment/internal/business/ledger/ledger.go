@@ -15,14 +15,27 @@ import (
 // caller reads the request back to tell).
 var ErrRequestNotFound = errors.New("ledger request not found")
 
-// ErrDuplicateKey is returned by Add when the idempotency key already
-// exists — a producer retry; read the existing request with GetByKey.
-var ErrDuplicateKey = errors.New("idempotency key already used")
+// ErrReferenceInUse is returned by Add when the referenced entity
+// already has a live-or-settled request (rejected ones free the slot) —
+// a replayed create; read the existing request with GetByReference.
+var ErrReferenceInUse = errors.New("entity already has a ledger request")
 
 // ErrNotFeasible is returned by Add when the request cannot be honored:
 // insufficient available funds (incl. the withdrawal guarantee floor) or
 // an ineligible/unknown profile (outflows need an active one).
 var ErrNotFeasible = errors.New("ledger request not feasible")
+
+var ErrLedgerStatusClose = errors.New("ledger request is already in a closed status")
+
+// ErrInvalidType rejects a type the caller may not create (or one with no
+// direction mapping).
+var ErrInvalidType = errors.New("ledger type not allowed")
+
+// ErrInvalidStatusMove rejects a transition outside the state machine.
+var ErrInvalidStatusMove = errors.New("invalid ledger status transition")
+
+// ErrNotAllowed rejects a caller whose role has no business here.
+var ErrNotAllowed = errors.New("caller not allowed")
 
 // Type values mirror the stored ledger_request_type enum.
 type Type string
@@ -57,6 +70,22 @@ const (
 	DirectionOutflow Direction = "outflow"
 )
 
+// ReferenceType values mirror the stored ledger_reference_type enum.
+type ReferenceType string
+
+const (
+	ReferenceEnrollment ReferenceType = "enrollment"
+	ReferenceTransfer   ReferenceType = "transfer"
+)
+
+// Reference names the entity a request settles (guarantee → enrollment,
+// capture → transfer). At most one live-or-settled request per entity;
+// free-standing requests (agent deposits, withdrawals) carry none.
+type Reference struct {
+	Type ReferenceType
+	ID   uuid.UUID
+}
+
 // LedgerRequest is the read entity of the workflow object. An open
 // outflow request IS a reservation: its amount sits in the profile's held
 // until it settles or is rejected.
@@ -67,24 +96,24 @@ type LedgerRequest struct {
 	Direction      Direction
 	Amount         int64 // minor units, always positive; sign lives in Direction
 	Status         Status
-	EnrollmentID   *uuid.UUID // guarantee-funding linkage (user service NK)
+	Reference      *Reference // nil for free-standing requests
 	ProofFileID    *uuid.UUID // file service NK, attached on proof upload
 	Reason         *string
-	IdempotencyKey string
 	DecidedBy      *uuid.UUID // account NK of the deciding admin
 	DecidedAt      *time.Time
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
+	CreatedBy      uuid.UUID
 }
 
-// NewRequest is the create payload.
+// NewRequest is the create payload. Direction is deliberately absent —
+// the caller never decides it; the usecase derives it from Type and
+// hands it to the repo separately.
 type NewRequest struct {
 	AgentProfileID uuid.UUID
 	Type           Type
-	Direction      Direction
 	Amount         int64
-	IdempotencyKey string
-	EnrollmentID   *uuid.UUID
+	Reference      *Reference // decided at review: typed reference, no idempotency key
 	Reason         *string
 }
 

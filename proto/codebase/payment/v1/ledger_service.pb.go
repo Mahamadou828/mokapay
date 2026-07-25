@@ -25,13 +25,13 @@ type CreateLedgerRequestRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	AgentProfileId string                 `protobuf:"bytes,1,opt,name=agent_profile_id,json=agentProfileId,proto3" json:"agent_profile_id,omitempty"`
 	Type           LedgerRequestType      `protobuf:"varint,2,opt,name=type,proto3,enum=payment.v1.LedgerRequestType" json:"type,omitempty"`
-	Direction      LedgerDirection        `protobuf:"varint,3,opt,name=direction,proto3,enum=payment.v1.LedgerDirection" json:"direction,omitempty"`
 	Amount         int64                  `protobuf:"varint,4,opt,name=amount,proto3" json:"amount,omitempty"` // minor units, positive
-	IdempotencyKey string                 `protobuf:"bytes,5,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
-	EnrollmentId   *string                `protobuf:"bytes,6,opt,name=enrollment_id,json=enrollmentId,proto3,oneof" json:"enrollment_id,omitempty"`
-	Reason         *string                `protobuf:"bytes,7,opt,name=reason,proto3,oneof" json:"reason,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Optional typed reference — both fields or neither.
+	ReferenceEntityType *LedgerReferenceType `protobuf:"varint,5,opt,name=reference_entity_type,json=referenceEntityType,proto3,enum=payment.v1.LedgerReferenceType,oneof" json:"reference_entity_type,omitempty"`
+	ReferenceEntityId   *string              `protobuf:"bytes,6,opt,name=reference_entity_id,json=referenceEntityId,proto3,oneof" json:"reference_entity_id,omitempty"`
+	Reason              *string              `protobuf:"bytes,7,opt,name=reason,proto3,oneof" json:"reason,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *CreateLedgerRequestRequest) Reset() {
@@ -78,13 +78,6 @@ func (x *CreateLedgerRequestRequest) GetType() LedgerRequestType {
 	return LedgerRequestType_LEDGER_REQUEST_TYPE_UNSPECIFIED
 }
 
-func (x *CreateLedgerRequestRequest) GetDirection() LedgerDirection {
-	if x != nil {
-		return x.Direction
-	}
-	return LedgerDirection_LEDGER_DIRECTION_UNSPECIFIED
-}
-
 func (x *CreateLedgerRequestRequest) GetAmount() int64 {
 	if x != nil {
 		return x.Amount
@@ -92,16 +85,16 @@ func (x *CreateLedgerRequestRequest) GetAmount() int64 {
 	return 0
 }
 
-func (x *CreateLedgerRequestRequest) GetIdempotencyKey() string {
-	if x != nil {
-		return x.IdempotencyKey
+func (x *CreateLedgerRequestRequest) GetReferenceEntityType() LedgerReferenceType {
+	if x != nil && x.ReferenceEntityType != nil {
+		return *x.ReferenceEntityType
 	}
-	return ""
+	return LedgerReferenceType_LEDGER_REFERENCE_TYPE_UNSPECIFIED
 }
 
-func (x *CreateLedgerRequestRequest) GetEnrollmentId() string {
-	if x != nil && x.EnrollmentId != nil {
-		return *x.EnrollmentId
+func (x *CreateLedgerRequestRequest) GetReferenceEntityId() string {
+	if x != nil && x.ReferenceEntityId != nil {
+		return *x.ReferenceEntityId
 	}
 	return ""
 }
@@ -157,27 +150,28 @@ func (x *GetLedgerRequestRequest) GetId() string {
 	return ""
 }
 
-type GetLedgerRequestByKeyRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	IdempotencyKey string                 `protobuf:"bytes,1,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+type GetLedgerRequestByReferenceRequest struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	ReferenceEntityType LedgerReferenceType    `protobuf:"varint,1,opt,name=reference_entity_type,json=referenceEntityType,proto3,enum=payment.v1.LedgerReferenceType" json:"reference_entity_type,omitempty"`
+	ReferenceEntityId   string                 `protobuf:"bytes,2,opt,name=reference_entity_id,json=referenceEntityId,proto3" json:"reference_entity_id,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
-func (x *GetLedgerRequestByKeyRequest) Reset() {
-	*x = GetLedgerRequestByKeyRequest{}
+func (x *GetLedgerRequestByReferenceRequest) Reset() {
+	*x = GetLedgerRequestByReferenceRequest{}
 	mi := &file_payment_v1_ledger_service_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetLedgerRequestByKeyRequest) String() string {
+func (x *GetLedgerRequestByReferenceRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetLedgerRequestByKeyRequest) ProtoMessage() {}
+func (*GetLedgerRequestByReferenceRequest) ProtoMessage() {}
 
-func (x *GetLedgerRequestByKeyRequest) ProtoReflect() protoreflect.Message {
+func (x *GetLedgerRequestByReferenceRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_payment_v1_ledger_service_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -189,14 +183,21 @@ func (x *GetLedgerRequestByKeyRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetLedgerRequestByKeyRequest.ProtoReflect.Descriptor instead.
-func (*GetLedgerRequestByKeyRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use GetLedgerRequestByReferenceRequest.ProtoReflect.Descriptor instead.
+func (*GetLedgerRequestByReferenceRequest) Descriptor() ([]byte, []int) {
 	return file_payment_v1_ledger_service_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *GetLedgerRequestByKeyRequest) GetIdempotencyKey() string {
+func (x *GetLedgerRequestByReferenceRequest) GetReferenceEntityType() LedgerReferenceType {
 	if x != nil {
-		return x.IdempotencyKey
+		return x.ReferenceEntityType
+	}
+	return LedgerReferenceType_LEDGER_REFERENCE_TYPE_UNSPECIFIED
+}
+
+func (x *GetLedgerRequestByReferenceRequest) GetReferenceEntityId() string {
+	if x != nil {
+		return x.ReferenceEntityId
 	}
 	return ""
 }
@@ -562,21 +563,22 @@ var File_payment_v1_ledger_service_proto protoreflect.FileDescriptor
 const file_payment_v1_ledger_service_proto_rawDesc = "" +
 	"\n" +
 	"\x1fpayment/v1/ledger_service.proto\x12\n" +
-	"payment.v1\x1a\x1fpayment/v1/shared_message.proto\"\xd9\x02\n" +
+	"payment.v1\x1a\x1fpayment/v1/shared_message.proto\"\x80\x03\n" +
 	"\x1aCreateLedgerRequestRequest\x12(\n" +
 	"\x10agent_profile_id\x18\x01 \x01(\tR\x0eagentProfileId\x121\n" +
-	"\x04type\x18\x02 \x01(\x0e2\x1d.payment.v1.LedgerRequestTypeR\x04type\x129\n" +
-	"\tdirection\x18\x03 \x01(\x0e2\x1b.payment.v1.LedgerDirectionR\tdirection\x12\x16\n" +
-	"\x06amount\x18\x04 \x01(\x03R\x06amount\x12'\n" +
-	"\x0fidempotency_key\x18\x05 \x01(\tR\x0eidempotencyKey\x12(\n" +
-	"\renrollment_id\x18\x06 \x01(\tH\x00R\fenrollmentId\x88\x01\x01\x12\x1b\n" +
-	"\x06reason\x18\a \x01(\tH\x01R\x06reason\x88\x01\x01B\x10\n" +
-	"\x0e_enrollment_idB\t\n" +
-	"\a_reason\")\n" +
+	"\x04type\x18\x02 \x01(\x0e2\x1d.payment.v1.LedgerRequestTypeR\x04type\x12\x16\n" +
+	"\x06amount\x18\x04 \x01(\x03R\x06amount\x12X\n" +
+	"\x15reference_entity_type\x18\x05 \x01(\x0e2\x1f.payment.v1.LedgerReferenceTypeH\x00R\x13referenceEntityType\x88\x01\x01\x123\n" +
+	"\x13reference_entity_id\x18\x06 \x01(\tH\x01R\x11referenceEntityId\x88\x01\x01\x12\x1b\n" +
+	"\x06reason\x18\a \x01(\tH\x02R\x06reason\x88\x01\x01B\x18\n" +
+	"\x16_reference_entity_typeB\x16\n" +
+	"\x14_reference_entity_idB\t\n" +
+	"\a_reasonJ\x04\b\x03\x10\x04\")\n" +
 	"\x17GetLedgerRequestRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"G\n" +
-	"\x1cGetLedgerRequestByKeyRequest\x12'\n" +
-	"\x0fidempotency_key\x18\x01 \x01(\tR\x0eidempotencyKey\"\xe9\x01\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\xa9\x01\n" +
+	"\"GetLedgerRequestByReferenceRequest\x12S\n" +
+	"\x15reference_entity_type\x18\x01 \x01(\x0e2\x1f.payment.v1.LedgerReferenceTypeR\x13referenceEntityType\x12.\n" +
+	"\x13reference_entity_id\x18\x02 \x01(\tR\x11referenceEntityId\"\xe9\x01\n" +
 	"\x19ListLedgerRequestsRequest\x12<\n" +
 	"\x06status\x18\x01 \x01(\x0e2\x1f.payment.v1.LedgerRequestStatusH\x00R\x06status\x88\x01\x01\x126\n" +
 	"\x04type\x18\x02 \x01(\x0e2\x1d.payment.v1.LedgerRequestTypeH\x01R\x04type\x88\x01\x01\x12-\n" +
@@ -600,11 +602,11 @@ const file_payment_v1_ledger_service_proto_rawDesc = "" +
 	"\x10agent_profile_id\x18\x01 \x01(\tR\x0eagentProfileId\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\"G\n" +
 	"\x17ListLedgerLinesResponse\x12,\n" +
-	"\x05lines\x18\x01 \x03(\v2\x16.payment.v1.LedgerLineR\x05lines2\xf8\x05\n" +
+	"\x05lines\x18\x01 \x03(\v2\x16.payment.v1.LedgerLineR\x05lines2\x84\x06\n" +
 	"\rLedgerService\x12X\n" +
 	"\x13CreateLedgerRequest\x12&.payment.v1.CreateLedgerRequestRequest\x1a\x19.payment.v1.LedgerRequest\x12R\n" +
-	"\x10GetLedgerRequest\x12#.payment.v1.GetLedgerRequestRequest\x1a\x19.payment.v1.LedgerRequest\x12\\\n" +
-	"\x15GetLedgerRequestByKey\x12(.payment.v1.GetLedgerRequestByKeyRequest\x1a\x19.payment.v1.LedgerRequest\x12c\n" +
+	"\x10GetLedgerRequest\x12#.payment.v1.GetLedgerRequestRequest\x1a\x19.payment.v1.LedgerRequest\x12h\n" +
+	"\x1bGetLedgerRequestByReference\x12..payment.v1.GetLedgerRequestByReferenceRequest\x1a\x19.payment.v1.LedgerRequest\x12c\n" +
 	"\x12ListLedgerRequests\x12%.payment.v1.ListLedgerRequestsRequest\x1a&.payment.v1.ListLedgerRequestsResponse\x12d\n" +
 	"\x19UpdateLedgerRequestStatus\x12,.payment.v1.UpdateLedgerRequestStatusRequest\x1a\x19.payment.v1.LedgerRequest\x12Z\n" +
 	"\x14ApproveLedgerRequest\x12'.payment.v1.ApproveLedgerRequestRequest\x1a\x19.payment.v1.LedgerRequest\x12X\n" +
@@ -628,51 +630,52 @@ func file_payment_v1_ledger_service_proto_rawDescGZIP() []byte {
 
 var file_payment_v1_ledger_service_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_payment_v1_ledger_service_proto_goTypes = []any{
-	(*CreateLedgerRequestRequest)(nil),       // 0: payment.v1.CreateLedgerRequestRequest
-	(*GetLedgerRequestRequest)(nil),          // 1: payment.v1.GetLedgerRequestRequest
-	(*GetLedgerRequestByKeyRequest)(nil),     // 2: payment.v1.GetLedgerRequestByKeyRequest
-	(*ListLedgerRequestsRequest)(nil),        // 3: payment.v1.ListLedgerRequestsRequest
-	(*ListLedgerRequestsResponse)(nil),       // 4: payment.v1.ListLedgerRequestsResponse
-	(*UpdateLedgerRequestStatusRequest)(nil), // 5: payment.v1.UpdateLedgerRequestStatusRequest
-	(*ApproveLedgerRequestRequest)(nil),      // 6: payment.v1.ApproveLedgerRequestRequest
-	(*RejectLedgerRequestRequest)(nil),       // 7: payment.v1.RejectLedgerRequestRequest
-	(*ListLedgerLinesRequest)(nil),           // 8: payment.v1.ListLedgerLinesRequest
-	(*ListLedgerLinesResponse)(nil),          // 9: payment.v1.ListLedgerLinesResponse
-	(LedgerRequestType)(0),                   // 10: payment.v1.LedgerRequestType
-	(LedgerDirection)(0),                     // 11: payment.v1.LedgerDirection
-	(LedgerRequestStatus)(0),                 // 12: payment.v1.LedgerRequestStatus
-	(*LedgerRequest)(nil),                    // 13: payment.v1.LedgerRequest
-	(*LedgerLine)(nil),                       // 14: payment.v1.LedgerLine
+	(*CreateLedgerRequestRequest)(nil),         // 0: payment.v1.CreateLedgerRequestRequest
+	(*GetLedgerRequestRequest)(nil),            // 1: payment.v1.GetLedgerRequestRequest
+	(*GetLedgerRequestByReferenceRequest)(nil), // 2: payment.v1.GetLedgerRequestByReferenceRequest
+	(*ListLedgerRequestsRequest)(nil),          // 3: payment.v1.ListLedgerRequestsRequest
+	(*ListLedgerRequestsResponse)(nil),         // 4: payment.v1.ListLedgerRequestsResponse
+	(*UpdateLedgerRequestStatusRequest)(nil),   // 5: payment.v1.UpdateLedgerRequestStatusRequest
+	(*ApproveLedgerRequestRequest)(nil),        // 6: payment.v1.ApproveLedgerRequestRequest
+	(*RejectLedgerRequestRequest)(nil),         // 7: payment.v1.RejectLedgerRequestRequest
+	(*ListLedgerLinesRequest)(nil),             // 8: payment.v1.ListLedgerLinesRequest
+	(*ListLedgerLinesResponse)(nil),            // 9: payment.v1.ListLedgerLinesResponse
+	(LedgerRequestType)(0),                     // 10: payment.v1.LedgerRequestType
+	(LedgerReferenceType)(0),                   // 11: payment.v1.LedgerReferenceType
+	(LedgerRequestStatus)(0),                   // 12: payment.v1.LedgerRequestStatus
+	(*LedgerRequest)(nil),                      // 13: payment.v1.LedgerRequest
+	(*LedgerLine)(nil),                         // 14: payment.v1.LedgerLine
 }
 var file_payment_v1_ledger_service_proto_depIdxs = []int32{
 	10, // 0: payment.v1.CreateLedgerRequestRequest.type:type_name -> payment.v1.LedgerRequestType
-	11, // 1: payment.v1.CreateLedgerRequestRequest.direction:type_name -> payment.v1.LedgerDirection
-	12, // 2: payment.v1.ListLedgerRequestsRequest.status:type_name -> payment.v1.LedgerRequestStatus
-	10, // 3: payment.v1.ListLedgerRequestsRequest.type:type_name -> payment.v1.LedgerRequestType
-	13, // 4: payment.v1.ListLedgerRequestsResponse.requests:type_name -> payment.v1.LedgerRequest
-	12, // 5: payment.v1.UpdateLedgerRequestStatusRequest.status:type_name -> payment.v1.LedgerRequestStatus
-	14, // 6: payment.v1.ListLedgerLinesResponse.lines:type_name -> payment.v1.LedgerLine
-	0,  // 7: payment.v1.LedgerService.CreateLedgerRequest:input_type -> payment.v1.CreateLedgerRequestRequest
-	1,  // 8: payment.v1.LedgerService.GetLedgerRequest:input_type -> payment.v1.GetLedgerRequestRequest
-	2,  // 9: payment.v1.LedgerService.GetLedgerRequestByKey:input_type -> payment.v1.GetLedgerRequestByKeyRequest
-	3,  // 10: payment.v1.LedgerService.ListLedgerRequests:input_type -> payment.v1.ListLedgerRequestsRequest
-	5,  // 11: payment.v1.LedgerService.UpdateLedgerRequestStatus:input_type -> payment.v1.UpdateLedgerRequestStatusRequest
-	6,  // 12: payment.v1.LedgerService.ApproveLedgerRequest:input_type -> payment.v1.ApproveLedgerRequestRequest
-	7,  // 13: payment.v1.LedgerService.RejectLedgerRequest:input_type -> payment.v1.RejectLedgerRequestRequest
-	8,  // 14: payment.v1.LedgerService.ListLedgerLines:input_type -> payment.v1.ListLedgerLinesRequest
-	13, // 15: payment.v1.LedgerService.CreateLedgerRequest:output_type -> payment.v1.LedgerRequest
-	13, // 16: payment.v1.LedgerService.GetLedgerRequest:output_type -> payment.v1.LedgerRequest
-	13, // 17: payment.v1.LedgerService.GetLedgerRequestByKey:output_type -> payment.v1.LedgerRequest
-	4,  // 18: payment.v1.LedgerService.ListLedgerRequests:output_type -> payment.v1.ListLedgerRequestsResponse
-	13, // 19: payment.v1.LedgerService.UpdateLedgerRequestStatus:output_type -> payment.v1.LedgerRequest
-	13, // 20: payment.v1.LedgerService.ApproveLedgerRequest:output_type -> payment.v1.LedgerRequest
-	13, // 21: payment.v1.LedgerService.RejectLedgerRequest:output_type -> payment.v1.LedgerRequest
-	9,  // 22: payment.v1.LedgerService.ListLedgerLines:output_type -> payment.v1.ListLedgerLinesResponse
-	15, // [15:23] is the sub-list for method output_type
-	7,  // [7:15] is the sub-list for method input_type
-	7,  // [7:7] is the sub-list for extension type_name
-	7,  // [7:7] is the sub-list for extension extendee
-	0,  // [0:7] is the sub-list for field type_name
+	11, // 1: payment.v1.CreateLedgerRequestRequest.reference_entity_type:type_name -> payment.v1.LedgerReferenceType
+	11, // 2: payment.v1.GetLedgerRequestByReferenceRequest.reference_entity_type:type_name -> payment.v1.LedgerReferenceType
+	12, // 3: payment.v1.ListLedgerRequestsRequest.status:type_name -> payment.v1.LedgerRequestStatus
+	10, // 4: payment.v1.ListLedgerRequestsRequest.type:type_name -> payment.v1.LedgerRequestType
+	13, // 5: payment.v1.ListLedgerRequestsResponse.requests:type_name -> payment.v1.LedgerRequest
+	12, // 6: payment.v1.UpdateLedgerRequestStatusRequest.status:type_name -> payment.v1.LedgerRequestStatus
+	14, // 7: payment.v1.ListLedgerLinesResponse.lines:type_name -> payment.v1.LedgerLine
+	0,  // 8: payment.v1.LedgerService.CreateLedgerRequest:input_type -> payment.v1.CreateLedgerRequestRequest
+	1,  // 9: payment.v1.LedgerService.GetLedgerRequest:input_type -> payment.v1.GetLedgerRequestRequest
+	2,  // 10: payment.v1.LedgerService.GetLedgerRequestByReference:input_type -> payment.v1.GetLedgerRequestByReferenceRequest
+	3,  // 11: payment.v1.LedgerService.ListLedgerRequests:input_type -> payment.v1.ListLedgerRequestsRequest
+	5,  // 12: payment.v1.LedgerService.UpdateLedgerRequestStatus:input_type -> payment.v1.UpdateLedgerRequestStatusRequest
+	6,  // 13: payment.v1.LedgerService.ApproveLedgerRequest:input_type -> payment.v1.ApproveLedgerRequestRequest
+	7,  // 14: payment.v1.LedgerService.RejectLedgerRequest:input_type -> payment.v1.RejectLedgerRequestRequest
+	8,  // 15: payment.v1.LedgerService.ListLedgerLines:input_type -> payment.v1.ListLedgerLinesRequest
+	13, // 16: payment.v1.LedgerService.CreateLedgerRequest:output_type -> payment.v1.LedgerRequest
+	13, // 17: payment.v1.LedgerService.GetLedgerRequest:output_type -> payment.v1.LedgerRequest
+	13, // 18: payment.v1.LedgerService.GetLedgerRequestByReference:output_type -> payment.v1.LedgerRequest
+	4,  // 19: payment.v1.LedgerService.ListLedgerRequests:output_type -> payment.v1.ListLedgerRequestsResponse
+	13, // 20: payment.v1.LedgerService.UpdateLedgerRequestStatus:output_type -> payment.v1.LedgerRequest
+	13, // 21: payment.v1.LedgerService.ApproveLedgerRequest:output_type -> payment.v1.LedgerRequest
+	13, // 22: payment.v1.LedgerService.RejectLedgerRequest:output_type -> payment.v1.LedgerRequest
+	9,  // 23: payment.v1.LedgerService.ListLedgerLines:output_type -> payment.v1.ListLedgerLinesResponse
+	16, // [16:24] is the sub-list for method output_type
+	8,  // [8:16] is the sub-list for method input_type
+	8,  // [8:8] is the sub-list for extension type_name
+	8,  // [8:8] is the sub-list for extension extendee
+	0,  // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_payment_v1_ledger_service_proto_init() }

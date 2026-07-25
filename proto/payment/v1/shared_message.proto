@@ -50,6 +50,15 @@ enum LedgerDirection {
   LEDGER_DIRECTION_OUTFLOW = 2;
 }
 
+// What a referenced request settles. At most one live-or-settled request
+// per entity (rejected ones free the slot); free-standing requests carry
+// no reference.
+enum LedgerReferenceType {
+  LEDGER_REFERENCE_TYPE_UNSPECIFIED = 0;
+  LEDGER_REFERENCE_TYPE_ENROLLMENT = 1;
+  LEDGER_REFERENCE_TYPE_TRANSFER = 2;
+}
+
 // The agent's money account. balance moves only through the ledger;
 // available = balance − held is derived, never stored.
 message AgentProfile {
@@ -76,10 +85,10 @@ message LedgerRequest {
   LedgerDirection direction = 4;
   int64 amount = 5;  // minor units, always positive; sign lives in direction
   LedgerRequestStatus status = 6;
-  optional string enrollment_id = 7;   // guarantee-funding linkage
-  optional string proof_file_id = 8;   // file-service NK
-  optional string reason = 9;
-  string idempotency_key = 10;
+  optional LedgerReferenceType reference_entity_type = 7;  // with reference_entity_id or not at all
+  optional string reference_entity_id = 8;
+  optional string proof_file_id = 9;   // file-service NK
+  optional string reason = 10;
   optional string decided_by = 11;     // deciding admin's account id
   optional google.protobuf.Timestamp decided_at = 12;
   google.protobuf.Timestamp created_at = 13;

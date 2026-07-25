@@ -36,6 +36,9 @@ type Config struct {
 		PoolID       string
 		Region       string
 	}
+	Client struct {
+		PaymentGRPCPort string
+	}
 	Enrollment struct {
 		// TOSVersion is the current terms version; an accept carrying a
 		// different one is rejected (the client displayed stale terms).
@@ -79,6 +82,8 @@ func newConfig() Config {
 	cfg.Auth.OtpHourlyLimit = config.GetEnvAsInt("OTP_HOURLY_LIMIT", 5)
 
 	cfg.Enrollment.TOSVersion = config.GetEnv("TOS_VERSION", "1.0")
+
+	cfg.Client.PaymentGRPCPort = config.GetEnv("PAYMENT_GRPC_PORT", "localhost:50053")
 
 	// Empty VAPID keys switch the service to the logging push sender.
 	cfg.Push.VapidPublicKey = config.GetEnv("VAPID_PUBLIC_KEY", "")

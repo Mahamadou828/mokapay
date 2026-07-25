@@ -145,11 +145,17 @@ services:
       DB_HOST: postgres
       DB_PORT: "5432"
       S3_ENDPOINT: http://minio:9000
+      USER_GRPC_PORT: user:50051
+      PAYMENT_GRPC_PORT: payment:50053
     depends_on:
       postgres:
         condition: service_healthy
       minio:
         condition: service_healthy
+      user:
+        condition: service_started
+      payment:
+        condition: service_started
 
   payment:
     build:
@@ -168,9 +174,12 @@ services:
     environment:
       DB_HOST: postgres
       DB_PORT: "5432"
+      USER_GRPC_PORT: user:50051
     depends_on:
       postgres:
         condition: service_healthy
+      user:
+        condition: service_started
 
   gateway:
     build:

@@ -19,14 +19,14 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	LedgerService_CreateLedgerRequest_FullMethodName       = "/payment.v1.LedgerService/CreateLedgerRequest"
-	LedgerService_GetLedgerRequest_FullMethodName          = "/payment.v1.LedgerService/GetLedgerRequest"
-	LedgerService_GetLedgerRequestByKey_FullMethodName     = "/payment.v1.LedgerService/GetLedgerRequestByKey"
-	LedgerService_ListLedgerRequests_FullMethodName        = "/payment.v1.LedgerService/ListLedgerRequests"
-	LedgerService_UpdateLedgerRequestStatus_FullMethodName = "/payment.v1.LedgerService/UpdateLedgerRequestStatus"
-	LedgerService_ApproveLedgerRequest_FullMethodName      = "/payment.v1.LedgerService/ApproveLedgerRequest"
-	LedgerService_RejectLedgerRequest_FullMethodName       = "/payment.v1.LedgerService/RejectLedgerRequest"
-	LedgerService_ListLedgerLines_FullMethodName           = "/payment.v1.LedgerService/ListLedgerLines"
+	LedgerService_CreateLedgerRequest_FullMethodName         = "/payment.v1.LedgerService/CreateLedgerRequest"
+	LedgerService_GetLedgerRequest_FullMethodName            = "/payment.v1.LedgerService/GetLedgerRequest"
+	LedgerService_GetLedgerRequestByReference_FullMethodName = "/payment.v1.LedgerService/GetLedgerRequestByReference"
+	LedgerService_ListLedgerRequests_FullMethodName          = "/payment.v1.LedgerService/ListLedgerRequests"
+	LedgerService_UpdateLedgerRequestStatus_FullMethodName   = "/payment.v1.LedgerService/UpdateLedgerRequestStatus"
+	LedgerService_ApproveLedgerRequest_FullMethodName        = "/payment.v1.LedgerService/ApproveLedgerRequest"
+	LedgerService_RejectLedgerRequest_FullMethodName         = "/payment.v1.LedgerService/RejectLedgerRequest"
+	LedgerService_ListLedgerLines_FullMethodName             = "/payment.v1.LedgerService/ListLedgerLines"
 )
 
 // LedgerServiceClient is the client API for LedgerService service.
@@ -41,12 +41,13 @@ const (
 type LedgerServiceClient interface {
 	// An outflow reserves its amount on creation (held += amount) behind
 	// the feasibility guards — insufficient funds fail HERE, never at
-	// approval. idempotency_key is required; a duplicate is AlreadyExists
-	// and the caller re-reads with GetRequestByKey.
+	// approval. A referenced create replays safely: the entity already
+	// having a live-or-settled request is AlreadyExists and the caller
+	// re-reads with GetLedgerRequestByReference.
 	CreateLedgerRequest(ctx context.Context, in *CreateLedgerRequestRequest, opts ...grpc.CallOption) (*LedgerRequest, error)
 	GetLedgerRequest(ctx context.Context, in *GetLedgerRequestRequest, opts ...grpc.CallOption) (*LedgerRequest, error)
-	// The replay/linkage lookup (e.g. by enrollment id).
-	GetLedgerRequestByKey(ctx context.Context, in *GetLedgerRequestByKeyRequest, opts ...grpc.CallOption) (*LedgerRequest, error)
+	// The replay/linkage lookup (e.g. the enrollment guarantee).
+	GetLedgerRequestByReference(ctx context.Context, in *GetLedgerRequestByReferenceRequest, opts ...grpc.CallOption) (*LedgerRequest, error)
 	ListLedgerRequests(ctx context.Context, in *ListLedgerRequestsRequest, opts ...grpc.CallOption) (*ListLedgerRequestsResponse, error)
 	// Forward-only between the pending states; attaches the proof.
 	UpdateLedgerRequestStatus(ctx context.Context, in *UpdateLedgerRequestStatusRequest, opts ...grpc.CallOption) (*LedgerRequest, error)
@@ -86,10 +87,10 @@ func (c *ledgerServiceClient) GetLedgerRequest(ctx context.Context, in *GetLedge
 	return out, nil
 }
 
-func (c *ledgerServiceClient) GetLedgerRequestByKey(ctx context.Context, in *GetLedgerRequestByKeyRequest, opts ...grpc.CallOption) (*LedgerRequest, error) {
+func (c *ledgerServiceClient) GetLedgerRequestByReference(ctx context.Context, in *GetLedgerRequestByReferenceRequest, opts ...grpc.CallOption) (*LedgerRequest, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(LedgerRequest)
-	err := c.cc.Invoke(ctx, LedgerService_GetLedgerRequestByKey_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, LedgerService_GetLedgerRequestByReference_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -158,12 +159,13 @@ func (c *ledgerServiceClient) ListLedgerLines(ctx context.Context, in *ListLedge
 type LedgerServiceServer interface {
 	// An outflow reserves its amount on creation (held += amount) behind
 	// the feasibility guards — insufficient funds fail HERE, never at
-	// approval. idempotency_key is required; a duplicate is AlreadyExists
-	// and the caller re-reads with GetRequestByKey.
+	// approval. A referenced create replays safely: the entity already
+	// having a live-or-settled request is AlreadyExists and the caller
+	// re-reads with GetLedgerRequestByReference.
 	CreateLedgerRequest(context.Context, *CreateLedgerRequestRequest) (*LedgerRequest, error)
 	GetLedgerRequest(context.Context, *GetLedgerRequestRequest) (*LedgerRequest, error)
-	// The replay/linkage lookup (e.g. by enrollment id).
-	GetLedgerRequestByKey(context.Context, *GetLedgerRequestByKeyRequest) (*LedgerRequest, error)
+	// The replay/linkage lookup (e.g. the enrollment guarantee).
+	GetLedgerRequestByReference(context.Context, *GetLedgerRequestByReferenceRequest) (*LedgerRequest, error)
 	ListLedgerRequests(context.Context, *ListLedgerRequestsRequest) (*ListLedgerRequestsResponse, error)
 	// Forward-only between the pending states; attaches the proof.
 	UpdateLedgerRequestStatus(context.Context, *UpdateLedgerRequestStatusRequest) (*LedgerRequest, error)
@@ -189,8 +191,8 @@ func (UnimplementedLedgerServiceServer) CreateLedgerRequest(context.Context, *Cr
 func (UnimplementedLedgerServiceServer) GetLedgerRequest(context.Context, *GetLedgerRequestRequest) (*LedgerRequest, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetLedgerRequest not implemented")
 }
-func (UnimplementedLedgerServiceServer) GetLedgerRequestByKey(context.Context, *GetLedgerRequestByKeyRequest) (*LedgerRequest, error) {
-	return nil, status.Error(codes.Unimplemented, "method GetLedgerRequestByKey not implemented")
+func (UnimplementedLedgerServiceServer) GetLedgerRequestByReference(context.Context, *GetLedgerRequestByReferenceRequest) (*LedgerRequest, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetLedgerRequestByReference not implemented")
 }
 func (UnimplementedLedgerServiceServer) ListLedgerRequests(context.Context, *ListLedgerRequestsRequest) (*ListLedgerRequestsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListLedgerRequests not implemented")
@@ -264,20 +266,20 @@ func _LedgerService_GetLedgerRequest_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
-func _LedgerService_GetLedgerRequestByKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetLedgerRequestByKeyRequest)
+func _LedgerService_GetLedgerRequestByReference_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetLedgerRequestByReferenceRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(LedgerServiceServer).GetLedgerRequestByKey(ctx, in)
+		return srv.(LedgerServiceServer).GetLedgerRequestByReference(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: LedgerService_GetLedgerRequestByKey_FullMethodName,
+		FullMethod: LedgerService_GetLedgerRequestByReference_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(LedgerServiceServer).GetLedgerRequestByKey(ctx, req.(*GetLedgerRequestByKeyRequest))
+		return srv.(LedgerServiceServer).GetLedgerRequestByReference(ctx, req.(*GetLedgerRequestByReferenceRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -388,8 +390,8 @@ var LedgerService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _LedgerService_GetLedgerRequest_Handler,
 		},
 		{
-			MethodName: "GetLedgerRequestByKey",
-			Handler:    _LedgerService_GetLedgerRequestByKey_Handler,
+			MethodName: "GetLedgerRequestByReference",
+			Handler:    _LedgerService_GetLedgerRequestByReference_Handler,
 		},
 		{
 			MethodName: "ListLedgerRequests",

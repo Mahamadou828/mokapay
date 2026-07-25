@@ -52,6 +52,19 @@ func (s Store) Add(ctx context.Context, accountID, invitedBy string) (enrollment
 	return toDomain(row)
 }
 
+// Get returns the request with the given id.
+func (s Store) Get(ctx context.Context, id string) (enrollment.Enrollment, error) {
+	row, err := s.sqlc.GetEnrollment(ctx, id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return enrollment.Enrollment{}, enrollment.ErrEnrollmentNotFound
+		}
+		return enrollment.Enrollment{}, fmt.Errorf("getting enrollment %s: %w", id, err)
+	}
+
+	return viewToDomain(row)
+}
+
 // GetLatestByAccount returns the account's most recent request, whatever
 // its status.
 func (s Store) GetLatestByAccount(ctx context.Context, accountID string) (enrollment.Enrollment, error) {

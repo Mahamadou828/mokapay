@@ -99,8 +99,21 @@ func Run() error {
 	notificationUC := notificationuc.New(log, pg, pusher, cfg.Push.VapidPublicKey)
 
 	// The enrollment workflow notifies candidates through the notification
-	// usecase directly — same service, no gRPC hop.
-	enrollmentUC := enrollmentuc.New(log, pg, notificationUC, cfg.Enrollment.TOSVersion)
+	// usecase directly (same service, no gRPC hop) and reaches the payment
+	// service for the guarantee/profile side of the flow.
+	moka, err := client.NewMokaClient(client.Config{
+		PaymentServiceAddr: cfg.Client.PaymentGRPCPort,
+	}, map[client.Connection]bool{client.ConnectionPayment: true})
+	if err != nil {
+		log.Error(ctx, "startup", "failed to init moka client", "error", err)
+		return err
+	}
+	defer func() {
+		if err := moka.Close(ctx); err != nil {
+			log.Error(ctx, "shutdown", "failed to close moka client", "error", err)
+		}
+	}()
+	enrollmentUC := enrollmentuc.New(log, pg, notificationUC, moka, cfg.Enrollment.TOSVersion)
 
 	// -------------------------------------------------------------------------
 	// Init gRPC server & register services. The client interceptor rebuilds

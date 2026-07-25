@@ -80,12 +80,10 @@ func activeProfile(ctx context.Context, t *testing.T, requests repo.Store, profi
 func fund(ctx context.Context, t *testing.T, requests repo.Store, profileID uuid.UUID, amount int64) ledger.LedgerRequest {
 	t.Helper()
 
-	req, err := requests.Add(ctx, ledger.NewRequest{
+	req, err := requests.Add(ctx, ledger.StatusInitiated, ledger.DirectionInflow, uuid.New(), ledger.NewRequest{
 		AgentProfileID: profileID,
 		Type:           ledger.TypeFunding,
-		Direction:      ledger.DirectionInflow,
 		Amount:         amount,
-		IdempotencyKey: uuid.NewString(),
 	})
 	if err != nil {
 		t.Fatalf("creating funding request: %v", err)
@@ -121,14 +119,12 @@ func TestLedgerFundingLifecycle(t *testing.T) {
 
 	// Funding (inflow) works on a PENDING profile — the enrollment
 	// guarantee funds a not-yet-active agent.
-	enrollment := uuid.New()
-	req, err := requests.Add(ctx, ledger.NewRequest{
+	ref := ledger.Reference{Type: ledger.ReferenceEnrollment, ID: uuid.New()}
+	req, err := requests.Add(ctx, ledger.StatusInitiated, ledger.DirectionInflow, uuid.New(), ledger.NewRequest{
 		AgentProfileID: p.ID,
 		Type:           ledger.TypeFunding,
-		Direction:      ledger.DirectionInflow,
 		Amount:         2000,
-		IdempotencyKey: enrollment.String(),
-		EnrollmentID:   new(enrollment),
+		Reference:      new(ref),
 	})
 	if err != nil {
 		t.Fatalf("Add funding request: %v", err)
@@ -136,21 +132,23 @@ func TestLedgerFundingLifecycle(t *testing.T) {
 	if req.Status != ledger.StatusInitiated {
 		t.Fatalf("new request status = %q", req.Status)
 	}
+	if req.Reference == nil || req.Reference.ID != ref.ID || req.Reference.Type != ledger.ReferenceEnrollment {
+		t.Fatalf("reference round-trip = %+v", req.Reference)
+	}
 
-	// Idempotency: same key → ErrDuplicateKey, and GetByKey finds the
-	// original (no reservation side effects for inflows anyway).
-	if _, err := requests.Add(ctx, ledger.NewRequest{
+	// Replay: the entity already has a live request → ErrReferenceInUse,
+	// and GetByReference finds the original.
+	if _, err := requests.Add(ctx, ledger.StatusInitiated, ledger.DirectionInflow, uuid.New(), ledger.NewRequest{
 		AgentProfileID: p.ID,
 		Type:           ledger.TypeFunding,
-		Direction:      ledger.DirectionInflow,
 		Amount:         2000,
-		IdempotencyKey: enrollment.String(),
-	}); !errors.Is(err, ledger.ErrDuplicateKey) {
-		t.Errorf("duplicate key error = %v, want ErrDuplicateKey", err)
+		Reference:      new(ref),
+	}); !errors.Is(err, ledger.ErrReferenceInUse) {
+		t.Errorf("replayed create error = %v, want ErrReferenceInUse", err)
 	}
-	byKey, err := requests.GetByKey(ctx, enrollment.String())
-	if err != nil || byKey.ID != req.ID {
-		t.Fatalf("GetByKey = %+v, %v", byKey, err)
+	byRef, err := requests.GetByReference(ctx, ref)
+	if err != nil || byRef.ID != req.ID {
+		t.Fatalf("GetByReference = %+v, %v", byRef, err)
 	}
 
 	// Proof attach + forward; a repeated (redelivered) update is a no-op
@@ -163,8 +161,17 @@ func TestLedgerFundingLifecycle(t *testing.T) {
 	if forwarded.ProofFileID == nil || *forwarded.ProofFileID != proof {
 		t.Fatalf("proof not attached: %+v", forwarded)
 	}
-	if _, err := requests.UpdateStatus(ctx, req.ID.String(), ledger.StatusPendingAgentAction, nil); !errors.Is(err, ledger.ErrRequestNotFound) {
-		t.Errorf("backward move error = %v, want ErrRequestNotFound", err)
+	// The admin can send it back for a better proof, and the agent can
+	// re-forward it — the send-back loop of the state machine.
+	if _, err := requests.UpdateStatus(ctx, req.ID.String(), ledger.StatusPendingAgentAction, nil); err != nil {
+		t.Fatalf("send-back move: %v", err)
+	}
+	if _, err := requests.UpdateStatus(ctx, req.ID.String(), ledger.StatusPendingAdminApproval, nil); err != nil {
+		t.Fatalf("re-forward move: %v", err)
+	}
+	// Closing states remain unreachable through UpdateStatus.
+	if _, err := requests.UpdateStatus(ctx, req.ID.String(), ledger.StatusDone, nil); !errors.Is(err, ledger.ErrRequestNotFound) {
+		t.Errorf("UpdateStatus to done error = %v, want ErrRequestNotFound", err)
 	}
 
 	// Approve settles: balance moves, one line with balance_after.
@@ -216,32 +223,26 @@ func TestLedgerReservationSemantics(t *testing.T) {
 	p := activeProfile(ctx, t, requests, profiles, 5000, 2000)
 
 	// "Withdraw 100 with 20 on the books": infeasible on the spot.
-	if _, err := requests.Add(ctx, ledger.NewRequest{
+	if _, err := requests.Add(ctx, ledger.StatusInitiated, ledger.DirectionOutflow, uuid.New(), ledger.NewRequest{
 		AgentProfileID: p.ID,
 		Type:           ledger.TypeWithdrawal,
-		Direction:      ledger.DirectionOutflow,
 		Amount:         10_000,
-		IdempotencyKey: uuid.NewString(),
 	}); !errors.Is(err, ledger.ErrNotFeasible) {
 		t.Fatalf("oversized withdrawal error = %v, want ErrNotFeasible", err)
 	}
 
 	// The guarantee floor is not withdrawable: 3001 fails, 3000 passes.
-	if _, err := requests.Add(ctx, ledger.NewRequest{
+	if _, err := requests.Add(ctx, ledger.StatusInitiated, ledger.DirectionOutflow, uuid.New(), ledger.NewRequest{
 		AgentProfileID: p.ID,
 		Type:           ledger.TypeWithdrawal,
-		Direction:      ledger.DirectionOutflow,
 		Amount:         3001,
-		IdempotencyKey: uuid.NewString(),
 	}); !errors.Is(err, ledger.ErrNotFeasible) {
 		t.Fatalf("floor-busting withdrawal error = %v, want ErrNotFeasible", err)
 	}
-	wd, err := requests.Add(ctx, ledger.NewRequest{
+	wd, err := requests.Add(ctx, ledger.StatusInitiated, ledger.DirectionOutflow, uuid.New(), ledger.NewRequest{
 		AgentProfileID: p.ID,
 		Type:           ledger.TypeWithdrawal,
-		Direction:      ledger.DirectionOutflow,
 		Amount:         3000,
-		IdempotencyKey: uuid.NewString(),
 	})
 	if err != nil {
 		t.Fatalf("withdrawal create: %v", err)
@@ -263,12 +264,10 @@ func TestLedgerReservationSemantics(t *testing.T) {
 	}
 
 	// Same withdrawal again, approved this time: the crossover.
-	wd2, err := requests.Add(ctx, ledger.NewRequest{
+	wd2, err := requests.Add(ctx, ledger.StatusInitiated, ledger.DirectionOutflow, uuid.New(), ledger.NewRequest{
 		AgentProfileID: p.ID,
 		Type:           ledger.TypeWithdrawal,
-		Direction:      ledger.DirectionOutflow,
 		Amount:         3000,
-		IdempotencyKey: uuid.NewString(),
 	})
 	if err != nil {
 		t.Fatalf("withdrawal re-create: %v", err)
@@ -294,12 +293,10 @@ func TestLedgerReservationSemantics(t *testing.T) {
 	if err != nil {
 		t.Fatalf("pending profile: %v", err)
 	}
-	if _, err := requests.Add(ctx, ledger.NewRequest{
+	if _, err := requests.Add(ctx, ledger.StatusInitiated, ledger.DirectionOutflow, uuid.New(), ledger.NewRequest{
 		AgentProfileID: pending.ID,
 		Type:           ledger.TypeWithdrawal,
-		Direction:      ledger.DirectionOutflow,
 		Amount:         1,
-		IdempotencyKey: uuid.NewString(),
 	}); !errors.Is(err, ledger.ErrNotFeasible) {
 		t.Errorf("outflow on pending error = %v, want ErrNotFeasible", err)
 	}
@@ -314,12 +311,10 @@ func TestConcurrentApproves(t *testing.T) {
 	defer cancel()
 
 	p := activeProfile(ctx, t, requests, profiles, 0, 0)
-	req, err := requests.Add(ctx, ledger.NewRequest{
+	req, err := requests.Add(ctx, ledger.StatusInitiated, ledger.DirectionInflow, uuid.New(), ledger.NewRequest{
 		AgentProfileID: p.ID,
 		Type:           ledger.TypeFunding,
-		Direction:      ledger.DirectionInflow,
 		Amount:         1000,
-		IdempotencyKey: uuid.NewString(),
 	})
 	if err != nil {
 		t.Fatalf("Add: %v", err)
@@ -374,12 +369,10 @@ func TestConcurrentCreates(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			if _, err := requests.Add(ctx, ledger.NewRequest{
+			if _, err := requests.Add(ctx, ledger.StatusInitiated, ledger.DirectionOutflow, uuid.New(), ledger.NewRequest{
 				AgentProfileID: p.ID,
 				Type:           ledger.TypeWithdrawal,
-				Direction:      ledger.DirectionOutflow,
 				Amount:         300,
-				IdempotencyKey: uuid.NewString(),
 			}); err == nil {
 				wins <- struct{}{}
 			}
@@ -394,5 +387,110 @@ func TestConcurrentCreates(t *testing.T) {
 	after, _ := profiles.Get(ctx, p.ID.String())
 	if after.Held != 900 || after.Available != 100 {
 		t.Fatalf("after race: held %d available %d, want 900/100", after.Held, after.Available)
+	}
+}
+
+// TestReferenceSlotFreedByRejection proves the partial unique index: a
+// rejected request frees the entity's slot (a rejected guarantee deposit
+// must be retryable), while done keeps blocking.
+func TestReferenceSlotFreedByRejection(t *testing.T) {
+	requests, profiles := newTestStores(t)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	p, err := profiles.Add(ctx, agentprofile.NewAgentProfile{AccountID: uuid.New()})
+	if err != nil {
+		t.Fatalf("profile: %v", err)
+	}
+	ref := ledger.Reference{Type: ledger.ReferenceEnrollment, ID: uuid.New()}
+	nr := ledger.NewRequest{
+		AgentProfileID: p.ID,
+		Type:           ledger.TypeFunding,
+		Amount:         2000,
+		Reference:      new(ref),
+	}
+
+	first, err := requests.Add(ctx, ledger.StatusInitiated, ledger.DirectionInflow, uuid.New(), nr)
+	if err != nil {
+		t.Fatalf("Add: %v", err)
+	}
+
+	// Rejecting frees the slot…
+	if _, err := requests.Reject(ctx, first.ID.String(), uuid.NewString(), new("bad proof")); err != nil {
+		t.Fatalf("Reject: %v", err)
+	}
+	second, err := requests.Add(ctx, ledger.StatusInitiated, ledger.DirectionInflow, uuid.New(), nr)
+	if err != nil {
+		t.Fatalf("Add after reject: %v", err)
+	}
+	// …and GetByReference now resolves to the live retry, not the corpse.
+	byRef, err := requests.GetByReference(ctx, ref)
+	if err != nil || byRef.ID != second.ID {
+		t.Fatalf("GetByReference after reject = %+v, %v", byRef, err)
+	}
+
+	// Settling the retry blocks the slot for good.
+	if _, err := requests.UpdateStatus(ctx, second.ID.String(), ledger.StatusPendingAdminApproval, nil); err != nil {
+		t.Fatalf("forward: %v", err)
+	}
+	if _, err := requests.Approve(ctx, second.ID.String(), uuid.NewString()); err != nil {
+		t.Fatalf("Approve: %v", err)
+	}
+	if _, err := requests.Add(ctx, ledger.StatusInitiated, ledger.DirectionInflow, uuid.New(), nr); !errors.Is(err, ledger.ErrReferenceInUse) {
+		t.Errorf("Add after done error = %v, want ErrReferenceInUse", err)
+	}
+}
+
+// TestCreateLandingStatus proves a request lands with its next actor and
+// that closing statuses can never be creation inputs (bypassing
+// settlement is structurally impossible).
+func TestCreateLandingStatus(t *testing.T) {
+	requests, profiles := newTestStores(t)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	p, err := profiles.Add(ctx, agentprofile.NewAgentProfile{AccountID: uuid.New()})
+	if err != nil {
+		t.Fatalf("profile: %v", err)
+	}
+
+	// Admin-created funding: the agent acts next.
+	req, err := requests.Add(ctx, ledger.StatusPendingAgentAction, ledger.DirectionInflow, uuid.New(), ledger.NewRequest{
+		AgentProfileID: p.ID,
+		Type:           ledger.TypeFunding,
+		Amount:         2000,
+	})
+	if err != nil {
+		t.Fatalf("Add at pending_agent_action: %v", err)
+	}
+	if req.Status != ledger.StatusPendingAgentAction {
+		t.Fatalf("landing status = %q, want pending_agent_action", req.Status)
+	}
+	// The proof path continues forward from there as usual.
+	if _, err := requests.UpdateStatus(ctx, req.ID.String(), ledger.StatusPendingAdminApproval, nil); err != nil {
+		t.Fatalf("forward from landing status: %v", err)
+	}
+
+	// Creating directly in a closing status is impossible.
+	for _, closed := range []ledger.Status{ledger.StatusDone, ledger.StatusRejected} {
+		if _, err := requests.Add(ctx, closed, ledger.DirectionInflow, uuid.New(), ledger.NewRequest{
+			AgentProfileID: p.ID,
+			Type:           ledger.TypeFunding,
+			Amount:         100,
+		}); !errors.Is(err, ledger.ErrNotFeasible) {
+			t.Errorf("Add at %s error = %v, want ErrNotFeasible", closed, err)
+		}
+	}
+
+	// The empty status still defaults to initiated.
+	free, err := requests.Add(ctx, "", ledger.DirectionInflow, uuid.New(), ledger.NewRequest{
+		AgentProfileID: p.ID,
+		Type:           ledger.TypeFunding,
+		Amount:         100,
+	})
+	if err != nil || free.Status != ledger.StatusInitiated {
+		t.Fatalf("default status = %+v, %v", free.Status, err)
 	}
 }

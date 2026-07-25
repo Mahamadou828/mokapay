@@ -31,6 +31,7 @@ func Reset() error {
 		"DROP TABLE IF EXISTS ledger_lines",
 		"DROP TABLE IF EXISTS ledger_requests",
 		"DROP TABLE IF EXISTS agent_profiles",
+		"DROP TYPE IF EXISTS ledger_reference_type",
 		"DROP TYPE IF EXISTS ledger_direction",
 		"DROP TYPE IF EXISTS ledger_request_status",
 		"DROP TYPE IF EXISTS ledger_request_type",

@@ -4,3 +4,6 @@
 [submodule "app/template"]
 	path = app/template
 	url = https://github.com/Mahamadou828/template.git
+[submodule "app/ui/mokapay-admin"]
+	path = app/ui/mokapay-admin
+	url = https://github.com/Mahamadou828/mokapay-admin.git

@@ -29,6 +29,10 @@ type Config struct {
 	Server struct {
 		MaxEventWorkers int
 	}
+	Client struct {
+		UserGRPCPort    string
+		PaymentGRPCPort string
+	}
 }
 
 // newConfig resolves the whole service config from the environment. Defaults
@@ -66,6 +70,9 @@ func newConfig() Config {
 	cfg.Upload.MaxSizeBytes = int64(config.GetEnvAsInt("MAX_FILE_SIZE_BYTES", 10*1024*1024))
 
 	cfg.Server.MaxEventWorkers = config.GetEnvAsInt("MAX_EVENT_WORKERS", 10)
+
+	cfg.Client.UserGRPCPort = config.GetEnv("USER_GRPC_PORT", "localhost:50051")
+	cfg.Client.PaymentGRPCPort = config.GetEnv("PAYMENT_GRPC_PORT", "localhost:50053")
 
 	return cfg
 }

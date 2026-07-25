@@ -32,27 +32,48 @@ func (s Store) WithTx(tx pgx.Tx) Store {
 	return Store{sqlc: s.sqlc.WithTx(tx)}
 }
 
-// Add creates the request; an outflow reserves its amount (held +=) in the
-// same statement. ledger.ErrNotFeasible = insufficient funds or ineligible
-// profile; ledger.ErrDuplicateKey = producer retry (read back with
-// GetByKey — the reservation of the failed insert rolled back with it).
-func (s Store) Add(ctx context.Context, nr ledger.NewRequest) (ledger.LedgerRequest, error) {
-	row, err := s.sqlc.AddLedgerRequest(ctx, sqlc.AddLedgerRequestParams{
-		AgentProfileID: nr.AgentProfileID.String(),
-		Type:           sqlc.LedgerRequestType(nr.Type),
-		Direction:      sqlc.LedgerDirection(nr.Direction),
-		Amount:         nr.Amount,
-		IdempotencyKey: nr.IdempotencyKey,
-		EnrollmentNk:   toNullUUID(nr.EnrollmentID),
-		Reason:         toText(nr.Reason),
-	})
+// Add creates the request; an outflow reserves its amount (held +=) in
+// the same statement. Status and direction are the usecase's calls, never
+// the API caller's: the request lands with its next actor (admin-created
+// funding → pending_agent_action, agent withdrawal →
+// pending_admin_approval; zero value = initiated), and the direction is
+// derived from the type. A closing status is rejected by the store —
+// creation can never bypass settlement. ledger.ErrNotFeasible =
+// insufficient funds, ineligible profile, or a closing status;
+// ledger.ErrReferenceInUse = the referenced entity already has a
+// live-or-settled request (read back with GetByReference — the
+// reservation of the failed insert rolled back with it).
+// createdBy is an explicit parameter on purpose: silently populating it
+// on the payload would let a caller forget it exists.
+func (s Store) Add(ctx context.Context, status ledger.Status, d ledger.Direction, createdBy uuid.UUID, data ledger.NewRequest) (ledger.LedgerRequest, error) {
+	if status == "" {
+		status = ledger.StatusInitiated
+	}
+	params := sqlc.AddLedgerRequestParams{
+		AgentProfileID: data.AgentProfileID.String(),
+		Type:           sqlc.LedgerRequestType(data.Type),
+		Direction:      sqlc.LedgerDirection(d),
+		Amount:         data.Amount,
+		CreatedBy:      createdBy.String(),
+		Status:         sqlc.LedgerRequestStatus(status),
+		Reason:         toText(data.Reason),
+	}
+	if data.Reference != nil {
+		params.ReferenceEntityType = sqlc.NullLedgerReferenceType{
+			LedgerReferenceType: sqlc.LedgerReferenceType(data.Reference.Type),
+			Valid:               true,
+		}
+		params.ReferenceEntityID = uuid.NullUUID{UUID: data.Reference.ID, Valid: true}
+	}
+
+	row, err := s.sqlc.AddLedgerRequest(ctx, params)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ledger.LedgerRequest{}, ledger.ErrNotFeasible
 		}
 		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" && pgErr.ConstraintName == "ledger_requests_idempotency_uq" {
-			return ledger.LedgerRequest{}, ledger.ErrDuplicateKey
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" && pgErr.ConstraintName == "ledger_requests_reference_uq" {
+			return ledger.LedgerRequest{}, ledger.ErrReferenceInUse
 		}
 		return ledger.LedgerRequest{}, fmt.Errorf("adding ledger request: %w", err)
 	}
@@ -73,15 +94,19 @@ func (s Store) Get(ctx context.Context, id string) (ledger.LedgerRequest, error)
 	return viewToDomain(row)
 }
 
-// GetByKey returns the request carrying the idempotency key — the replay
-// lookup after ErrDuplicateKey, and the enrollment→request resolution.
-func (s Store) GetByKey(ctx context.Context, idempotencyKey string) (ledger.LedgerRequest, error) {
-	row, err := s.sqlc.GetLedgerRequestByKey(ctx, idempotencyKey)
+// GetByReference returns the entity's live-or-settled request — the
+// replay lookup after ErrReferenceInUse, and the enrollment→request
+// resolution (rejected requests don't count; the slot is free again).
+func (s Store) GetByReference(ctx context.Context, ref ledger.Reference) (ledger.LedgerRequest, error) {
+	row, err := s.sqlc.GetLedgerRequestByReference(ctx, sqlc.GetLedgerRequestByReferenceParams{
+		ReferenceEntityType: sqlc.LedgerReferenceType(ref.Type),
+		ReferenceEntityID:   ref.ID.String(),
+	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ledger.LedgerRequest{}, ledger.ErrRequestNotFound
 		}
-		return ledger.LedgerRequest{}, fmt.Errorf("getting ledger request by key: %w", err)
+		return ledger.LedgerRequest{}, fmt.Errorf("getting ledger request by reference: %w", err)
 	}
 
 	return viewToDomain(row)
@@ -176,21 +201,22 @@ func transitionResult(verb, id string, row sqlc.LedgerRequest, err error) (ledge
 
 func toDomain(r sqlc.LedgerRequest) (ledger.LedgerRequest, error) {
 	return build(r.ID, r.AgentProfileFk, r.Type, r.Direction, r.Amount, r.Status,
-		r.EnrollmentNk, r.ProofFileNk, r.Reason, r.IdempotencyKey,
-		r.DecidedBy, r.DecidedAt, r.CreatedAt, r.UpdatedAt)
+		r.ReferenceEntityType, r.ReferenceEntityID, r.ProofFileNk, r.Reason,
+		r.CreatedBy, r.DecidedBy, r.DecidedAt, r.CreatedAt, r.UpdatedAt)
 }
 
 func viewToDomain(r sqlc.PaymentsExtLedgerRequest) (ledger.LedgerRequest, error) {
 	return build(r.ID, r.AgentProfileFk, r.Type, r.Direction, r.Amount, r.Status,
-		r.EnrollmentNk, r.ProofFileNk, r.Reason, r.IdempotencyKey,
-		r.DecidedBy, r.DecidedAt, r.CreatedAt, r.UpdatedAt)
+		r.ReferenceEntityType, r.ReferenceEntityID, r.ProofFileNk, r.Reason,
+		r.CreatedBy, r.DecidedBy, r.DecidedAt, r.CreatedAt, r.UpdatedAt)
 }
 
 func build(
 	id, profileFk string, typ sqlc.LedgerRequestType, direction sqlc.LedgerDirection,
 	amount int64, status sqlc.LedgerRequestStatus,
-	enrollmentNk, proofFileNk uuid.NullUUID, reason pgtype.Text, idempotencyKey string,
-	decidedBy uuid.NullUUID, decidedAt pgtype.Timestamptz,
+	refType sqlc.NullLedgerReferenceType, refID uuid.NullUUID,
+	proofFileNk uuid.NullUUID, reason pgtype.Text,
+	createdBy string, decidedBy uuid.NullUUID, decidedAt pgtype.Timestamptz,
 	createdAt, updatedAt time.Time,
 ) (ledger.LedgerRequest, error) {
 	rid, err := uuid.Parse(id)
@@ -201,6 +227,10 @@ func build(
 	if err != nil {
 		return ledger.LedgerRequest{}, fmt.Errorf("parsing agent profile id %q: %w", profileFk, err)
 	}
+	creator, err := uuid.Parse(createdBy)
+	if err != nil {
+		return ledger.LedgerRequest{}, fmt.Errorf("parsing creator id %q: %w", createdBy, err)
+	}
 
 	out := ledger.LedgerRequest{
 		ID:             rid,
@@ -209,12 +239,15 @@ func build(
 		Direction:      ledger.Direction(direction),
 		Amount:         amount,
 		Status:         ledger.Status(status),
-		IdempotencyKey: idempotencyKey,
+		CreatedBy:      creator,
 		CreatedAt:      createdAt,
 		UpdatedAt:      updatedAt,
 	}
-	if enrollmentNk.Valid {
-		out.EnrollmentID = new(enrollmentNk.UUID)
+	if refType.Valid && refID.Valid {
+		out.Reference = new(ledger.Reference{
+			Type: ledger.ReferenceType(refType.LedgerReferenceType),
+			ID:   refID.UUID,
+		})
 	}
 	if proofFileNk.Valid {
 		out.ProofFileID = new(proofFileNk.UUID)

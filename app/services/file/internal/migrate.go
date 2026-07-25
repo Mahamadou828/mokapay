@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/riverqueue/river/riverdriver/riverpgxv5"
+	"github.com/riverqueue/river/rivermigrate"
 	migrate "github.com/rubenv/sql-migrate"
 	filedb "mokapay.app/app/services/file/internal/db"
 	"mokapay.app/core/db"
@@ -40,6 +42,20 @@ func Migrate() error {
 	n, err := migrate.Exec(pg.Pool, "postgres", migrations, migrate.Up)
 	if err != nil {
 		err = fmt.Errorf("applying migrations: %w", err)
+		log.Error(ctx, "migrate", "error", err)
+		return err
+	}
+
+	// River owns its own schema (river_job, …) — applied idempotently on
+	// every run, like our views/procedures.
+	riverMigrator, err := rivermigrate.New(riverpgxv5.New(pg.PgxPool), nil)
+	if err != nil {
+		err = fmt.Errorf("initializing river migrator: %w", err)
+		log.Error(ctx, "migrate", "error", err)
+		return err
+	}
+	if _, err := riverMigrator.Migrate(ctx, rivermigrate.DirectionUp, nil); err != nil {
+		err = fmt.Errorf("applying river migrations: %w", err)
 		log.Error(ctx, "migrate", "error", err)
 		return err
 	}

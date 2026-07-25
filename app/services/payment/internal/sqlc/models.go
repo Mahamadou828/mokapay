@@ -142,6 +142,48 @@ func (ns NullLedgerDirection) Value() (driver.Value, error) {
 	return string(ns.LedgerDirection), nil
 }
 
+type LedgerReferenceType string
+
+const (
+	LedgerReferenceTypeEnrollment LedgerReferenceType = "enrollment"
+	LedgerReferenceTypeTransfer   LedgerReferenceType = "transfer"
+)
+
+func (e *LedgerReferenceType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = LedgerReferenceType(s)
+	case string:
+		*e = LedgerReferenceType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for LedgerReferenceType: %T", src)
+	}
+	return nil
+}
+
+type NullLedgerReferenceType struct {
+	LedgerReferenceType LedgerReferenceType
+	Valid               bool // Valid is true if LedgerReferenceType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullLedgerReferenceType) Scan(value interface{}) error {
+	if value == nil {
+		ns.LedgerReferenceType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.LedgerReferenceType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullLedgerReferenceType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.LedgerReferenceType), nil
+}
+
 type LedgerRequestStatus string
 
 const (
@@ -258,20 +300,21 @@ type LedgerLine struct {
 }
 
 type LedgerRequest struct {
-	ID             string
-	AgentProfileFk string
-	Type           LedgerRequestType
-	Direction      LedgerDirection
-	Amount         int64
-	Status         LedgerRequestStatus
-	EnrollmentNk   uuid.NullUUID
-	ProofFileNk    uuid.NullUUID
-	Reason         pgtype.Text
-	IdempotencyKey string
-	DecidedBy      uuid.NullUUID
-	DecidedAt      pgtype.Timestamptz
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	ID                  string
+	AgentProfileFk      string
+	Type                LedgerRequestType
+	Direction           LedgerDirection
+	Amount              int64
+	Status              LedgerRequestStatus
+	ReferenceEntityType NullLedgerReferenceType
+	ReferenceEntityID   uuid.NullUUID
+	ProofFileNk         uuid.NullUUID
+	Reason              pgtype.Text
+	CreatedBy           string
+	DecidedBy           uuid.NullUUID
+	DecidedAt           pgtype.Timestamptz
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
 }
 
 type PaymentsExtAgentProfile struct {
@@ -299,18 +342,19 @@ type PaymentsExtLedgerLine struct {
 }
 
 type PaymentsExtLedgerRequest struct {
-	ID             string
-	AgentProfileFk string
-	Type           LedgerRequestType
-	Direction      LedgerDirection
-	Amount         int64
-	Status         LedgerRequestStatus
-	EnrollmentNk   uuid.NullUUID
-	ProofFileNk    uuid.NullUUID
-	Reason         pgtype.Text
-	IdempotencyKey string
-	DecidedBy      uuid.NullUUID
-	DecidedAt      pgtype.Timestamptz
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	ID                  string
+	AgentProfileFk      string
+	Type                LedgerRequestType
+	Direction           LedgerDirection
+	Amount              int64
+	Status              LedgerRequestStatus
+	ReferenceEntityType NullLedgerReferenceType
+	ReferenceEntityID   uuid.NullUUID
+	ProofFileNk         uuid.NullUUID
+	Reason              pgtype.Text
+	CreatedBy           string
+	DecidedBy           uuid.NullUUID
+	DecidedAt           pgtype.Timestamptz
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
 }

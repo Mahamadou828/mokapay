@@ -6,6 +6,11 @@ SELECT * FROM users_ext.add_enrollment(
     sqlc.arg(invited_by)::uuid
 );
 
+-- name: GetEnrollment :one
+SELECT id, account_fk, invited_by, status, tos_version, tos_accepted_at, decided_by, decided_at, created_at, updated_at
+FROM users_ext.enrollment_requests
+WHERE id = sqlc.arg(id)::uuid;
+
 -- name: GetLatestEnrollmentByAccount :one
 -- The account's most recent request, whatever its status — what the
 -- client renders (invitation banner, TOS gate, or history).

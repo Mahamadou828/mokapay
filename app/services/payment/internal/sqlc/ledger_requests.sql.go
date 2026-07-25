@@ -13,38 +13,45 @@ import (
 )
 
 const addLedgerRequest = `-- name: AddLedgerRequest :one
-SELECT id, agent_profile_fk, type, direction, amount, status, enrollment_nk, proof_file_nk, reason, idempotency_key, decided_by, decided_at, created_at, updated_at FROM payments_ext.add_ledger_request(
+SELECT id, agent_profile_fk, type, direction, amount, status, reference_entity_type, reference_entity_id, proof_file_nk, reason, created_by, decided_by, decided_at, created_at, updated_at FROM payments_ext.add_ledger_request(
     $1::uuid,
     $2::ledger_request_type,
     $3::ledger_direction,
     $4,
-    $5,
-    $6::uuid,
-    $7
+    $5::uuid,
+    $6::ledger_request_status,
+    $7::ledger_reference_type,
+    $8::uuid,
+    $9
 )
 `
 
 type AddLedgerRequestParams struct {
-	AgentProfileID string
-	Type           LedgerRequestType
-	Direction      LedgerDirection
-	Amount         int64
-	IdempotencyKey string
-	EnrollmentNk   uuid.NullUUID
-	Reason         pgtype.Text
+	AgentProfileID      string
+	Type                LedgerRequestType
+	Direction           LedgerDirection
+	Amount              int64
+	CreatedBy           string
+	Status              LedgerRequestStatus
+	ReferenceEntityType NullLedgerReferenceType
+	ReferenceEntityID   uuid.NullUUID
+	Reason              pgtype.Text
 }
 
 // Zero rows = infeasible (insufficient available funds, guarantee floor,
-// or ineligible/unknown profile). 23505 on the idempotency index =
-// producer retry; re-read with GetLedgerRequestByKey.
+// or ineligible/unknown profile). 23505 on the reference index = the
+// entity already has a live-or-settled request; re-read with
+// GetLedgerRequestByReference.
 func (q *Queries) AddLedgerRequest(ctx context.Context, arg AddLedgerRequestParams) (LedgerRequest, error) {
 	row := q.db.QueryRow(ctx, addLedgerRequest,
 		arg.AgentProfileID,
 		arg.Type,
 		arg.Direction,
 		arg.Amount,
-		arg.IdempotencyKey,
-		arg.EnrollmentNk,
+		arg.CreatedBy,
+		arg.Status,
+		arg.ReferenceEntityType,
+		arg.ReferenceEntityID,
 		arg.Reason,
 	)
 	var i LedgerRequest
@@ -55,10 +62,11 @@ func (q *Queries) AddLedgerRequest(ctx context.Context, arg AddLedgerRequestPara
 		&i.Direction,
 		&i.Amount,
 		&i.Status,
-		&i.EnrollmentNk,
+		&i.ReferenceEntityType,
+		&i.ReferenceEntityID,
 		&i.ProofFileNk,
 		&i.Reason,
-		&i.IdempotencyKey,
+		&i.CreatedBy,
 		&i.DecidedBy,
 		&i.DecidedAt,
 		&i.CreatedAt,
@@ -68,7 +76,7 @@ func (q *Queries) AddLedgerRequest(ctx context.Context, arg AddLedgerRequestPara
 }
 
 const approveLedgerRequest = `-- name: ApproveLedgerRequest :one
-SELECT id, agent_profile_fk, type, direction, amount, status, enrollment_nk, proof_file_nk, reason, idempotency_key, decided_by, decided_at, created_at, updated_at FROM payments_ext.approve_ledger_request(
+SELECT id, agent_profile_fk, type, direction, amount, status, reference_entity_type, reference_entity_id, proof_file_nk, reason, created_by, decided_by, decided_at, created_at, updated_at FROM payments_ext.approve_ledger_request(
     $1::uuid,
     $2::uuid
 )
@@ -91,10 +99,11 @@ func (q *Queries) ApproveLedgerRequest(ctx context.Context, arg ApproveLedgerReq
 		&i.Direction,
 		&i.Amount,
 		&i.Status,
-		&i.EnrollmentNk,
+		&i.ReferenceEntityType,
+		&i.ReferenceEntityID,
 		&i.ProofFileNk,
 		&i.Reason,
-		&i.IdempotencyKey,
+		&i.CreatedBy,
 		&i.DecidedBy,
 		&i.DecidedAt,
 		&i.CreatedAt,
@@ -104,7 +113,7 @@ func (q *Queries) ApproveLedgerRequest(ctx context.Context, arg ApproveLedgerReq
 }
 
 const getLedgerRequest = `-- name: GetLedgerRequest :one
-SELECT id, agent_profile_fk, type, direction, amount, status, enrollment_nk, proof_file_nk, reason, idempotency_key, decided_by, decided_at, created_at, updated_at
+SELECT id, agent_profile_fk, type, direction, amount, status, reference_entity_type, reference_entity_id, proof_file_nk, reason, created_by, decided_by, decided_at, created_at, updated_at
 FROM payments_ext.ledger_requests
 WHERE id = $1::uuid
 `
@@ -119,10 +128,11 @@ func (q *Queries) GetLedgerRequest(ctx context.Context, id string) (PaymentsExtL
 		&i.Direction,
 		&i.Amount,
 		&i.Status,
-		&i.EnrollmentNk,
+		&i.ReferenceEntityType,
+		&i.ReferenceEntityID,
 		&i.ProofFileNk,
 		&i.Reason,
-		&i.IdempotencyKey,
+		&i.CreatedBy,
 		&i.DecidedBy,
 		&i.DecidedAt,
 		&i.CreatedAt,
@@ -131,14 +141,23 @@ func (q *Queries) GetLedgerRequest(ctx context.Context, id string) (PaymentsExtL
 	return i, err
 }
 
-const getLedgerRequestByKey = `-- name: GetLedgerRequestByKey :one
-SELECT id, agent_profile_fk, type, direction, amount, status, enrollment_nk, proof_file_nk, reason, idempotency_key, decided_by, decided_at, created_at, updated_at
+const getLedgerRequestByReference = `-- name: GetLedgerRequestByReference :one
+SELECT id, agent_profile_fk, type, direction, amount, status, reference_entity_type, reference_entity_id, proof_file_nk, reason, created_by, decided_by, decided_at, created_at, updated_at
 FROM payments_ext.ledger_requests
-WHERE idempotency_key = $1
+WHERE reference_entity_type = $1::ledger_reference_type
+  AND reference_entity_id = $2::uuid
+  AND status <> 'rejected'
 `
 
-func (q *Queries) GetLedgerRequestByKey(ctx context.Context, idempotencyKey string) (PaymentsExtLedgerRequest, error) {
-	row := q.db.QueryRow(ctx, getLedgerRequestByKey, idempotencyKey)
+type GetLedgerRequestByReferenceParams struct {
+	ReferenceEntityType LedgerReferenceType
+	ReferenceEntityID   string
+}
+
+// The enrollment/transfer linkage lookup: the live-or-settled request of
+// the entity (rejected ones don't count — the slot is free again).
+func (q *Queries) GetLedgerRequestByReference(ctx context.Context, arg GetLedgerRequestByReferenceParams) (PaymentsExtLedgerRequest, error) {
+	row := q.db.QueryRow(ctx, getLedgerRequestByReference, arg.ReferenceEntityType, arg.ReferenceEntityID)
 	var i PaymentsExtLedgerRequest
 	err := row.Scan(
 		&i.ID,
@@ -147,10 +166,11 @@ func (q *Queries) GetLedgerRequestByKey(ctx context.Context, idempotencyKey stri
 		&i.Direction,
 		&i.Amount,
 		&i.Status,
-		&i.EnrollmentNk,
+		&i.ReferenceEntityType,
+		&i.ReferenceEntityID,
 		&i.ProofFileNk,
 		&i.Reason,
-		&i.IdempotencyKey,
+		&i.CreatedBy,
 		&i.DecidedBy,
 		&i.DecidedAt,
 		&i.CreatedAt,
@@ -201,7 +221,7 @@ func (q *Queries) ListLedgerLines(ctx context.Context, arg ListLedgerLinesParams
 }
 
 const listLedgerRequests = `-- name: ListLedgerRequests :many
-SELECT id, agent_profile_fk, type, direction, amount, status, enrollment_nk, proof_file_nk, reason, idempotency_key, decided_by, decided_at, created_at, updated_at
+SELECT id, agent_profile_fk, type, direction, amount, status, reference_entity_type, reference_entity_id, proof_file_nk, reason, created_by, decided_by, decided_at, created_at, updated_at
 FROM payments_ext.ledger_requests
 WHERE ($1::ledger_request_status IS NULL OR status = $1::ledger_request_status)
   AND ($2::ledger_request_type IS NULL OR type = $2::ledger_request_type)
@@ -232,10 +252,11 @@ func (q *Queries) ListLedgerRequests(ctx context.Context, arg ListLedgerRequests
 			&i.Direction,
 			&i.Amount,
 			&i.Status,
-			&i.EnrollmentNk,
+			&i.ReferenceEntityType,
+			&i.ReferenceEntityID,
 			&i.ProofFileNk,
 			&i.Reason,
-			&i.IdempotencyKey,
+			&i.CreatedBy,
 			&i.DecidedBy,
 			&i.DecidedAt,
 			&i.CreatedAt,
@@ -252,7 +273,7 @@ func (q *Queries) ListLedgerRequests(ctx context.Context, arg ListLedgerRequests
 }
 
 const rejectLedgerRequest = `-- name: RejectLedgerRequest :one
-SELECT id, agent_profile_fk, type, direction, amount, status, enrollment_nk, proof_file_nk, reason, idempotency_key, decided_by, decided_at, created_at, updated_at FROM payments_ext.reject_ledger_request(
+SELECT id, agent_profile_fk, type, direction, amount, status, reference_entity_type, reference_entity_id, proof_file_nk, reason, created_by, decided_by, decided_at, created_at, updated_at FROM payments_ext.reject_ledger_request(
     $1::uuid,
     $2::uuid,
     $3
@@ -276,10 +297,11 @@ func (q *Queries) RejectLedgerRequest(ctx context.Context, arg RejectLedgerReque
 		&i.Direction,
 		&i.Amount,
 		&i.Status,
-		&i.EnrollmentNk,
+		&i.ReferenceEntityType,
+		&i.ReferenceEntityID,
 		&i.ProofFileNk,
 		&i.Reason,
-		&i.IdempotencyKey,
+		&i.CreatedBy,
 		&i.DecidedBy,
 		&i.DecidedAt,
 		&i.CreatedAt,
@@ -289,7 +311,7 @@ func (q *Queries) RejectLedgerRequest(ctx context.Context, arg RejectLedgerReque
 }
 
 const updateLedgerRequestStatus = `-- name: UpdateLedgerRequestStatus :one
-SELECT id, agent_profile_fk, type, direction, amount, status, enrollment_nk, proof_file_nk, reason, idempotency_key, decided_by, decided_at, created_at, updated_at FROM payments_ext.update_ledger_request_status(
+SELECT id, agent_profile_fk, type, direction, amount, status, reference_entity_type, reference_entity_id, proof_file_nk, reason, created_by, decided_by, decided_at, created_at, updated_at FROM payments_ext.update_ledger_request_status(
     $1::uuid,
     $2::ledger_request_status,
     $3::uuid
@@ -313,10 +335,11 @@ func (q *Queries) UpdateLedgerRequestStatus(ctx context.Context, arg UpdateLedge
 		&i.Direction,
 		&i.Amount,
 		&i.Status,
-		&i.EnrollmentNk,
+		&i.ReferenceEntityType,
+		&i.ReferenceEntityID,
 		&i.ProofFileNk,
 		&i.Reason,
-		&i.IdempotencyKey,
+		&i.CreatedBy,
 		&i.DecidedBy,
 		&i.DecidedAt,
 		&i.CreatedAt,

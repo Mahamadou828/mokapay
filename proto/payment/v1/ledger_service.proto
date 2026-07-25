@@ -12,12 +12,13 @@ import "payment/v1/shared_message.proto";
 service LedgerService {
   // An outflow reserves its amount on creation (held += amount) behind
   // the feasibility guards — insufficient funds fail HERE, never at
-  // approval. idempotency_key is required; a duplicate is AlreadyExists
-  // and the caller re-reads with GetRequestByKey.
+  // approval. A referenced create replays safely: the entity already
+  // having a live-or-settled request is AlreadyExists and the caller
+  // re-reads with GetLedgerRequestByReference.
   rpc CreateLedgerRequest(CreateLedgerRequestRequest) returns (LedgerRequest);
   rpc GetLedgerRequest(GetLedgerRequestRequest) returns (LedgerRequest);
-  // The replay/linkage lookup (e.g. by enrollment id).
-  rpc GetLedgerRequestByKey(GetLedgerRequestByKeyRequest) returns (LedgerRequest);
+  // The replay/linkage lookup (e.g. the enrollment guarantee).
+  rpc GetLedgerRequestByReference(GetLedgerRequestByReferenceRequest) returns (LedgerRequest);
   rpc ListLedgerRequests(ListLedgerRequestsRequest) returns (ListLedgerRequestsResponse);
   // Forward-only between the pending states; attaches the proof.
   rpc UpdateLedgerRequestStatus(UpdateLedgerRequestStatusRequest) returns (LedgerRequest);
@@ -32,10 +33,13 @@ service LedgerService {
 message CreateLedgerRequestRequest {
   string agent_profile_id = 1;
   LedgerRequestType type = 2;
-  LedgerDirection direction = 3;
+  // No direction and no status: both are engine derivations (from the
+  // type and the caller's role), never wire input.
+  reserved 3;
   int64 amount = 4;  // minor units, positive
-  string idempotency_key = 5;
-  optional string enrollment_id = 6;
+  // Optional typed reference — both fields or neither.
+  optional LedgerReferenceType reference_entity_type = 5;
+  optional string reference_entity_id = 6;
   optional string reason = 7;
 }
 
@@ -43,8 +47,9 @@ message GetLedgerRequestRequest {
   string id = 1;
 }
 
-message GetLedgerRequestByKeyRequest {
-  string idempotency_key = 1;
+message GetLedgerRequestByReferenceRequest {
+  LedgerReferenceType reference_entity_type = 1;
+  string reference_entity_id = 2;
 }
 
 message ListLedgerRequestsRequest {

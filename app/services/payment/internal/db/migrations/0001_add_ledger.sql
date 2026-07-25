@@ -42,6 +42,9 @@ CREATE TYPE ledger_request_status AS ENUM
 -- credit/debit: double-entry vocabulary flips meaning with the point of
 -- view; inflow/outflow answers the only question this column has.
 CREATE TYPE ledger_direction AS ENUM ('inflow', 'outflow');
+-- What a referenced request settles (guarantee -> enrollment, capture ->
+-- transfer, later).
+CREATE TYPE ledger_reference_type AS ENUM ('enrollment', 'transfer');
 
 -- The mutable workflow object; the ONLY path to a balance change.
 CREATE TABLE ledger_requests (
@@ -51,10 +54,13 @@ CREATE TABLE ledger_requests (
     direction        ledger_direction NOT NULL,
     amount           BIGINT NOT NULL,             -- always positive; sign lives in direction
     status           ledger_request_status NOT NULL DEFAULT 'initiated',
-    enrollment_nk    UUID,          -- guarantee-funding linkage (user service)
+    -- The entity this request settles. Both NULL for free-standing
+    -- requests (agent deposits, withdrawals). NK-style: no DB FK.
+    reference_entity_type ledger_reference_type,
+    reference_entity_id   UUID,
     proof_file_nk    UUID,          -- attached by UpdateStatus (file service)
     reason           TEXT,          -- human context: deduction cause, reject reason
-    idempotency_key  TEXT NOT NULL, -- producer-supplied (e.g. enrollment id)
+    created_by       UUID NOT NULL, -- account_nk of the originator (candidate/agent/admin)
     decided_by       UUID,          -- account_nk of the approving/rejecting admin
     decided_at       TIMESTAMPTZ,
     created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -68,11 +74,18 @@ CREATE TABLE ledger_requests (
         (type IN ('funding', 'commission') AND direction = 'inflow')
         OR (type IN ('withdrawal', 'deduction') AND direction = 'outflow')
         OR type = 'refund'
+    ),
+    -- The reference pair moves together.
+    CONSTRAINT ledger_requests_reference_ck CHECK (
+        (reference_entity_type IS NULL) = (reference_entity_id IS NULL)
     )
 );
 
-CREATE UNIQUE INDEX ledger_requests_idempotency_uq
-    ON ledger_requests (idempotency_key);
+-- One live-or-settled request per referenced entity; a rejected one
+-- frees the slot (a rejected guarantee deposit must be retryable).
+CREATE UNIQUE INDEX ledger_requests_reference_uq
+    ON ledger_requests (reference_entity_type, reference_entity_id)
+    WHERE reference_entity_id IS NOT NULL AND status <> 'rejected';
 -- The admin worklist ("what awaits approval?").
 CREATE INDEX ledger_requests_worklist_idx
     ON ledger_requests (status, created_at DESC);
@@ -105,6 +118,7 @@ CREATE INDEX ledger_lines_statement_idx
 DROP TABLE ledger_lines;
 DROP TABLE ledger_requests;
 DROP TABLE agent_profiles;
+DROP TYPE ledger_reference_type;
 DROP TYPE ledger_direction;
 DROP TYPE ledger_request_status;
 DROP TYPE ledger_request_type;

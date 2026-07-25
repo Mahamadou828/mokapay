@@ -44,7 +44,8 @@ func Map(err error) error {
 		return status.Error(codes.AlreadyExists, err.Error())
 
 	case errors.Is(err, enrollment.ErrNotEligible),
-		errors.Is(err, enrollment.ErrTOSVersionMismatch):
+		errors.Is(err, enrollment.ErrTOSVersionMismatch),
+		errors.Is(err, enrollment.ErrGuaranteeNotSettled):
 		return status.Error(codes.FailedPrecondition, err.Error())
 
 	case errors.Is(err, auth.ErrTooManyAttempts),

@@ -299,6 +299,58 @@ func (LedgerDirection) EnumDescriptor() ([]byte, []int) {
 	return file_payment_v1_shared_message_proto_rawDescGZIP(), []int{4}
 }
 
+// What a referenced request settles. At most one live-or-settled request
+// per entity (rejected ones free the slot); free-standing requests carry
+// no reference.
+type LedgerReferenceType int32
+
+const (
+	LedgerReferenceType_LEDGER_REFERENCE_TYPE_UNSPECIFIED LedgerReferenceType = 0
+	LedgerReferenceType_LEDGER_REFERENCE_TYPE_ENROLLMENT  LedgerReferenceType = 1
+	LedgerReferenceType_LEDGER_REFERENCE_TYPE_TRANSFER    LedgerReferenceType = 2
+)
+
+// Enum value maps for LedgerReferenceType.
+var (
+	LedgerReferenceType_name = map[int32]string{
+		0: "LEDGER_REFERENCE_TYPE_UNSPECIFIED",
+		1: "LEDGER_REFERENCE_TYPE_ENROLLMENT",
+		2: "LEDGER_REFERENCE_TYPE_TRANSFER",
+	}
+	LedgerReferenceType_value = map[string]int32{
+		"LEDGER_REFERENCE_TYPE_UNSPECIFIED": 0,
+		"LEDGER_REFERENCE_TYPE_ENROLLMENT":  1,
+		"LEDGER_REFERENCE_TYPE_TRANSFER":    2,
+	}
+)
+
+func (x LedgerReferenceType) Enum() *LedgerReferenceType {
+	p := new(LedgerReferenceType)
+	*p = x
+	return p
+}
+
+func (x LedgerReferenceType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (LedgerReferenceType) Descriptor() protoreflect.EnumDescriptor {
+	return file_payment_v1_shared_message_proto_enumTypes[5].Descriptor()
+}
+
+func (LedgerReferenceType) Type() protoreflect.EnumType {
+	return &file_payment_v1_shared_message_proto_enumTypes[5]
+}
+
+func (x LedgerReferenceType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use LedgerReferenceType.Descriptor instead.
+func (LedgerReferenceType) EnumDescriptor() ([]byte, []int) {
+	return file_payment_v1_shared_message_proto_rawDescGZIP(), []int{5}
+}
+
 // The agent's money account. balance moves only through the ledger;
 // available = balance − held is derived, never stored.
 type AgentProfile struct {
@@ -436,23 +488,23 @@ func (x *AgentProfile) GetUpdatedAt() *timestamppb.Timestamp {
 // The mutable workflow object — the only path to a balance change. An
 // open outflow request IS a reservation on the profile's held.
 type LedgerRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	AgentProfileId string                 `protobuf:"bytes,2,opt,name=agent_profile_id,json=agentProfileId,proto3" json:"agent_profile_id,omitempty"`
-	Type           LedgerRequestType      `protobuf:"varint,3,opt,name=type,proto3,enum=payment.v1.LedgerRequestType" json:"type,omitempty"`
-	Direction      LedgerDirection        `protobuf:"varint,4,opt,name=direction,proto3,enum=payment.v1.LedgerDirection" json:"direction,omitempty"`
-	Amount         int64                  `protobuf:"varint,5,opt,name=amount,proto3" json:"amount,omitempty"` // minor units, always positive; sign lives in direction
-	Status         LedgerRequestStatus    `protobuf:"varint,6,opt,name=status,proto3,enum=payment.v1.LedgerRequestStatus" json:"status,omitempty"`
-	EnrollmentId   *string                `protobuf:"bytes,7,opt,name=enrollment_id,json=enrollmentId,proto3,oneof" json:"enrollment_id,omitempty"` // guarantee-funding linkage
-	ProofFileId    *string                `protobuf:"bytes,8,opt,name=proof_file_id,json=proofFileId,proto3,oneof" json:"proof_file_id,omitempty"`  // file-service NK
-	Reason         *string                `protobuf:"bytes,9,opt,name=reason,proto3,oneof" json:"reason,omitempty"`
-	IdempotencyKey string                 `protobuf:"bytes,10,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
-	DecidedBy      *string                `protobuf:"bytes,11,opt,name=decided_by,json=decidedBy,proto3,oneof" json:"decided_by,omitempty"` // deciding admin's account id
-	DecidedAt      *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=decided_at,json=decidedAt,proto3,oneof" json:"decided_at,omitempty"`
-	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt      *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	Id                  string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	AgentProfileId      string                 `protobuf:"bytes,2,opt,name=agent_profile_id,json=agentProfileId,proto3" json:"agent_profile_id,omitempty"`
+	Type                LedgerRequestType      `protobuf:"varint,3,opt,name=type,proto3,enum=payment.v1.LedgerRequestType" json:"type,omitempty"`
+	Direction           LedgerDirection        `protobuf:"varint,4,opt,name=direction,proto3,enum=payment.v1.LedgerDirection" json:"direction,omitempty"`
+	Amount              int64                  `protobuf:"varint,5,opt,name=amount,proto3" json:"amount,omitempty"` // minor units, always positive; sign lives in direction
+	Status              LedgerRequestStatus    `protobuf:"varint,6,opt,name=status,proto3,enum=payment.v1.LedgerRequestStatus" json:"status,omitempty"`
+	ReferenceEntityType *LedgerReferenceType   `protobuf:"varint,7,opt,name=reference_entity_type,json=referenceEntityType,proto3,enum=payment.v1.LedgerReferenceType,oneof" json:"reference_entity_type,omitempty"` // with reference_entity_id or not at all
+	ReferenceEntityId   *string                `protobuf:"bytes,8,opt,name=reference_entity_id,json=referenceEntityId,proto3,oneof" json:"reference_entity_id,omitempty"`
+	ProofFileId         *string                `protobuf:"bytes,9,opt,name=proof_file_id,json=proofFileId,proto3,oneof" json:"proof_file_id,omitempty"` // file-service NK
+	Reason              *string                `protobuf:"bytes,10,opt,name=reason,proto3,oneof" json:"reason,omitempty"`
+	DecidedBy           *string                `protobuf:"bytes,11,opt,name=decided_by,json=decidedBy,proto3,oneof" json:"decided_by,omitempty"` // deciding admin's account id
+	DecidedAt           *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=decided_at,json=decidedAt,proto3,oneof" json:"decided_at,omitempty"`
+	CreatedAt           *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt           *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *LedgerRequest) Reset() {
@@ -527,9 +579,16 @@ func (x *LedgerRequest) GetStatus() LedgerRequestStatus {
 	return LedgerRequestStatus_LEDGER_REQUEST_STATUS_UNSPECIFIED
 }
 
-func (x *LedgerRequest) GetEnrollmentId() string {
-	if x != nil && x.EnrollmentId != nil {
-		return *x.EnrollmentId
+func (x *LedgerRequest) GetReferenceEntityType() LedgerReferenceType {
+	if x != nil && x.ReferenceEntityType != nil {
+		return *x.ReferenceEntityType
+	}
+	return LedgerReferenceType_LEDGER_REFERENCE_TYPE_UNSPECIFIED
+}
+
+func (x *LedgerRequest) GetReferenceEntityId() string {
+	if x != nil && x.ReferenceEntityId != nil {
+		return *x.ReferenceEntityId
 	}
 	return ""
 }
@@ -544,13 +603,6 @@ func (x *LedgerRequest) GetProofFileId() string {
 func (x *LedgerRequest) GetReason() string {
 	if x != nil && x.Reason != nil {
 		return *x.Reason
-	}
-	return ""
-}
-
-func (x *LedgerRequest) GetIdempotencyKey() string {
-	if x != nil {
-		return x.IdempotencyKey
 	}
 	return ""
 }
@@ -691,28 +743,29 @@ const file_payment_v1_shared_message_proto_rawDesc = "" +
 	"created_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\a\n" +
-	"\x05_city\"\xc8\x05\n" +
+	"\x05_city\"\xa4\x06\n" +
 	"\rLedgerRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12(\n" +
 	"\x10agent_profile_id\x18\x02 \x01(\tR\x0eagentProfileId\x121\n" +
 	"\x04type\x18\x03 \x01(\x0e2\x1d.payment.v1.LedgerRequestTypeR\x04type\x129\n" +
 	"\tdirection\x18\x04 \x01(\x0e2\x1b.payment.v1.LedgerDirectionR\tdirection\x12\x16\n" +
 	"\x06amount\x18\x05 \x01(\x03R\x06amount\x127\n" +
-	"\x06status\x18\x06 \x01(\x0e2\x1f.payment.v1.LedgerRequestStatusR\x06status\x12(\n" +
-	"\renrollment_id\x18\a \x01(\tH\x00R\fenrollmentId\x88\x01\x01\x12'\n" +
-	"\rproof_file_id\x18\b \x01(\tH\x01R\vproofFileId\x88\x01\x01\x12\x1b\n" +
-	"\x06reason\x18\t \x01(\tH\x02R\x06reason\x88\x01\x01\x12'\n" +
-	"\x0fidempotency_key\x18\n" +
-	" \x01(\tR\x0eidempotencyKey\x12\"\n" +
+	"\x06status\x18\x06 \x01(\x0e2\x1f.payment.v1.LedgerRequestStatusR\x06status\x12X\n" +
+	"\x15reference_entity_type\x18\a \x01(\x0e2\x1f.payment.v1.LedgerReferenceTypeH\x00R\x13referenceEntityType\x88\x01\x01\x123\n" +
+	"\x13reference_entity_id\x18\b \x01(\tH\x01R\x11referenceEntityId\x88\x01\x01\x12'\n" +
+	"\rproof_file_id\x18\t \x01(\tH\x02R\vproofFileId\x88\x01\x01\x12\x1b\n" +
+	"\x06reason\x18\n" +
+	" \x01(\tH\x03R\x06reason\x88\x01\x01\x12\"\n" +
 	"\n" +
-	"decided_by\x18\v \x01(\tH\x03R\tdecidedBy\x88\x01\x01\x12>\n" +
+	"decided_by\x18\v \x01(\tH\x04R\tdecidedBy\x88\x01\x01\x12>\n" +
 	"\n" +
-	"decided_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampH\x04R\tdecidedAt\x88\x01\x01\x129\n" +
+	"decided_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampH\x05R\tdecidedAt\x88\x01\x01\x129\n" +
 	"\n" +
 	"created_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x10\n" +
-	"\x0e_enrollment_idB\x10\n" +
+	"updated_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x18\n" +
+	"\x16_reference_entity_typeB\x16\n" +
+	"\x14_reference_entity_idB\x10\n" +
 	"\x0e_proof_file_idB\t\n" +
 	"\a_reasonB\r\n" +
 	"\v_decided_byB\r\n" +
@@ -756,7 +809,11 @@ const file_payment_v1_shared_message_proto_rawDesc = "" +
 	"\x0fLedgerDirection\x12 \n" +
 	"\x1cLEDGER_DIRECTION_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17LEDGER_DIRECTION_INFLOW\x10\x01\x12\x1c\n" +
-	"\x18LEDGER_DIRECTION_OUTFLOW\x10\x02B\x9e\x01\n" +
+	"\x18LEDGER_DIRECTION_OUTFLOW\x10\x02*\x86\x01\n" +
+	"\x13LedgerReferenceType\x12%\n" +
+	"!LEDGER_REFERENCE_TYPE_UNSPECIFIED\x10\x00\x12$\n" +
+	" LEDGER_REFERENCE_TYPE_ENROLLMENT\x10\x01\x12\"\n" +
+	"\x1eLEDGER_REFERENCE_TYPE_TRANSFER\x10\x02B\x9e\x01\n" +
 	"\x0ecom.payment.v1B\x12SharedMessageProtoP\x01Z/mokapay.app/proto/codebase/payment/v1;paymentv1\xa2\x02\x03PXX\xaa\x02\n" +
 	"Payment.V1\xca\x02\n" +
 	"Payment\\V1\xe2\x02\x16Payment\\V1\\GPBMetadata\xea\x02\vPayment::V1b\x06proto3"
@@ -773,7 +830,7 @@ func file_payment_v1_shared_message_proto_rawDescGZIP() []byte {
 	return file_payment_v1_shared_message_proto_rawDescData
 }
 
-var file_payment_v1_shared_message_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
+var file_payment_v1_shared_message_proto_enumTypes = make([]protoimpl.EnumInfo, 6)
 var file_payment_v1_shared_message_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_payment_v1_shared_message_proto_goTypes = []any{
 	(AgentProfileStatus)(0),       // 0: payment.v1.AgentProfileStatus
@@ -781,28 +838,30 @@ var file_payment_v1_shared_message_proto_goTypes = []any{
 	(LedgerRequestType)(0),        // 2: payment.v1.LedgerRequestType
 	(LedgerRequestStatus)(0),      // 3: payment.v1.LedgerRequestStatus
 	(LedgerDirection)(0),          // 4: payment.v1.LedgerDirection
-	(*AgentProfile)(nil),          // 5: payment.v1.AgentProfile
-	(*LedgerRequest)(nil),         // 6: payment.v1.LedgerRequest
-	(*LedgerLine)(nil),            // 7: payment.v1.LedgerLine
-	(*timestamppb.Timestamp)(nil), // 8: google.protobuf.Timestamp
+	(LedgerReferenceType)(0),      // 5: payment.v1.LedgerReferenceType
+	(*AgentProfile)(nil),          // 6: payment.v1.AgentProfile
+	(*LedgerRequest)(nil),         // 7: payment.v1.LedgerRequest
+	(*LedgerLine)(nil),            // 8: payment.v1.LedgerLine
+	(*timestamppb.Timestamp)(nil), // 9: google.protobuf.Timestamp
 }
 var file_payment_v1_shared_message_proto_depIdxs = []int32{
 	0,  // 0: payment.v1.AgentProfile.status:type_name -> payment.v1.AgentProfileStatus
 	1,  // 1: payment.v1.AgentProfile.level:type_name -> payment.v1.AgentLevel
-	8,  // 2: payment.v1.AgentProfile.created_at:type_name -> google.protobuf.Timestamp
-	8,  // 3: payment.v1.AgentProfile.updated_at:type_name -> google.protobuf.Timestamp
+	9,  // 2: payment.v1.AgentProfile.created_at:type_name -> google.protobuf.Timestamp
+	9,  // 3: payment.v1.AgentProfile.updated_at:type_name -> google.protobuf.Timestamp
 	2,  // 4: payment.v1.LedgerRequest.type:type_name -> payment.v1.LedgerRequestType
 	4,  // 5: payment.v1.LedgerRequest.direction:type_name -> payment.v1.LedgerDirection
 	3,  // 6: payment.v1.LedgerRequest.status:type_name -> payment.v1.LedgerRequestStatus
-	8,  // 7: payment.v1.LedgerRequest.decided_at:type_name -> google.protobuf.Timestamp
-	8,  // 8: payment.v1.LedgerRequest.created_at:type_name -> google.protobuf.Timestamp
-	8,  // 9: payment.v1.LedgerRequest.updated_at:type_name -> google.protobuf.Timestamp
-	8,  // 10: payment.v1.LedgerLine.created_at:type_name -> google.protobuf.Timestamp
-	11, // [11:11] is the sub-list for method output_type
-	11, // [11:11] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	5,  // 7: payment.v1.LedgerRequest.reference_entity_type:type_name -> payment.v1.LedgerReferenceType
+	9,  // 8: payment.v1.LedgerRequest.decided_at:type_name -> google.protobuf.Timestamp
+	9,  // 9: payment.v1.LedgerRequest.created_at:type_name -> google.protobuf.Timestamp
+	9,  // 10: payment.v1.LedgerRequest.updated_at:type_name -> google.protobuf.Timestamp
+	9,  // 11: payment.v1.LedgerLine.created_at:type_name -> google.protobuf.Timestamp
+	12, // [12:12] is the sub-list for method output_type
+	12, // [12:12] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_payment_v1_shared_message_proto_init() }
@@ -817,7 +876,7 @@ func file_payment_v1_shared_message_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_payment_v1_shared_message_proto_rawDesc), len(file_payment_v1_shared_message_proto_rawDesc)),
-			NumEnums:      5,
+			NumEnums:      6,
 			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,

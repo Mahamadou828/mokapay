@@ -14,8 +14,11 @@ import (
 	"mokapay.app/app/services/user/internal/business/enrollment"
 	"mokapay.app/app/services/user/internal/business/enrollment/usecase"
 	"mokapay.app/app/services/user/internal/business/notification"
+	"mokapay.app/core/client"
 	coredb "mokapay.app/core/db"
 	"mokapay.app/core/logger"
+	"mokapay.app/core/passport"
+	paymentv1 "mokapay.app/proto/codebase/payment/v1"
 )
 
 const tosVersion = "2026-07-25"
@@ -30,16 +33,19 @@ func (f *fakeNotifier) Push(_ context.Context, nn notification.NewNotification) 
 	return notification.Notification{}, nil
 }
 
-// Integration tests: need a migrated users database (0003). Skipped unless
-// TEST_DB_PORT is set:
+// Cross-service integration tests: need a migrated users database (0003)
+// AND a running payment service (the enrollment flow calls it through the
+// Moka client — no fakes by design). Skipped unless both are set:
 //
-//	TEST_DB_PORT=5433 go test ./internal/business/enrollment/usecase/
-func newTestUseCase(t *testing.T) (usecase.UseCase, *fakeNotifier, authrepo.Store) {
+//	TEST_DB_PORT=5433 TEST_PAYMENT_GRPC_PORT=50053 \
+//	  go test ./internal/business/enrollment/usecase/
+func newTestUseCase(t *testing.T) (usecase.UseCase, *fakeNotifier, authrepo.Store, *client.MokaClient) {
 	t.Helper()
 
 	port := os.Getenv("TEST_DB_PORT")
-	if port == "" {
-		t.Skip("TEST_DB_PORT not set; integration test needs a migrated users DB")
+	payPort := os.Getenv("TEST_PAYMENT_GRPC_PORT")
+	if port == "" || payPort == "" {
+		t.Skip("TEST_DB_PORT/TEST_PAYMENT_GRPC_PORT not set; integration test needs a migrated users DB and a running payment service")
 	}
 
 	db := coredb.New(coredb.PostgresConfig{
@@ -54,9 +60,62 @@ func newTestUseCase(t *testing.T) (usecase.UseCase, *fakeNotifier, authrepo.Stor
 	}
 	t.Cleanup(func() { _ = db.Close() })
 
+	moka, err := client.NewMokaClient(client.Config{
+		PaymentServiceAddr: "localhost:" + payPort,
+	}, map[client.Connection]bool{client.ConnectionPayment: true})
+	if err != nil {
+		t.Fatalf("building moka client: %v", err)
+	}
+	t.Cleanup(func() { _ = moka.Close(context.Background()) })
+
 	notifier := &fakeNotifier{}
 	log := logger.New(os.Stderr, logger.LevelInfo, "test", nil)
-	return usecase.New(log, db, notifier, tosVersion), notifier, authrepo.New(db)
+	return usecase.New(log, db, notifier, moka, tosVersion), notifier, authrepo.New(db), moka
+}
+
+// opsCtx fabricates the ops passport an approving admin carries — the
+// payment service trusts forwarded passports (internal network).
+func opsCtx(ctx context.Context, adminID uuid.UUID) context.Context {
+	return passport.AddToContext(ctx, &passport.Passport{
+		User: passport.User{ID: adminID.String(), Role: "ops"},
+		Type: passport.TypeUser,
+	})
+}
+
+// fundGuarantee drives the payment side to the approvable state the way
+// production does: the admin creates the funding request (lands
+// pending_agent_action), the proof path forwards it (system).
+func fundGuarantee(ctx context.Context, t *testing.T, moka *client.MokaClient, adminID, accountID, enrollmentID uuid.UUID) {
+	t.Helper()
+
+	octx := opsCtx(ctx, adminID)
+	profile, err := moka.Payment.Admin.GetAgentProfile(octx, &paymentv1.GetAgentProfileRequest{
+		Selector: &paymentv1.GetAgentProfileRequest_AccountId{AccountId: accountID.String()},
+	})
+	if err != nil {
+		t.Fatalf("resolving agent profile: %v", err)
+	}
+
+	refType := paymentv1.LedgerReferenceType_LEDGER_REFERENCE_TYPE_ENROLLMENT
+	refID := enrollmentID.String()
+	req, err := moka.Payment.Ledger.CreateLedgerRequest(octx, &paymentv1.CreateLedgerRequestRequest{
+		AgentProfileId:      profile.Id,
+		Type:                paymentv1.LedgerRequestType_LEDGER_REQUEST_TYPE_FUNDING,
+		Amount:              2000,
+		ReferenceEntityType: &refType,
+		ReferenceEntityId:   &refID,
+	})
+	if err != nil {
+		t.Fatalf("creating guarantee request: %v", err)
+	}
+
+	sctx := passport.AddToContext(ctx, passport.SystemPassport())
+	if _, err := moka.Payment.Ledger.UpdateLedgerRequestStatus(sctx, &paymentv1.UpdateLedgerRequestStatusRequest{
+		Id:     req.Id,
+		Status: paymentv1.LedgerRequestStatus_LEDGER_REQUEST_STATUS_PENDING_ADMIN_APPROVAL,
+	}); err != nil {
+		t.Fatalf("forwarding guarantee request: %v", err)
+	}
 }
 
 func getenv(key, fallback string) string {
@@ -91,7 +150,7 @@ func role(ctx context.Context, t *testing.T, accounts authrepo.Store, id uuid.UU
 }
 
 func TestEnrollmentUseCaseFullFlow(t *testing.T) {
-	uc, notifier, accounts := newTestUseCase(t)
+	uc, notifier, accounts, moka := newTestUseCase(t)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -129,12 +188,21 @@ func TestEnrollmentUseCaseFullFlow(t *testing.T) {
 		t.Fatalf("accepted = %+v", accepted)
 	}
 
+	// Approving before the guarantee is even requested fails cleanly.
+	if _, err := uc.Approve(opsCtx(ctx, admin), admin, invited.ID); !errors.Is(err, enrollment.ErrGuaranteeNotSettled) {
+		t.Fatalf("approve-without-guarantee error = %v, want ErrGuaranteeNotSettled", err)
+	}
+
+	// Fund the guarantee the way production does (admin creates, proof
+	// path forwards).
+	fundGuarantee(ctx, t, moka, admin, candidate, invited.ID)
+
 	// Approve of a suspended account rolls the whole transition back.
 	suspended := auth.AccountStatusSuspended
 	if _, err := accounts.UpdateAccount(ctx, auth.UpdateAccount{ID: candidate, Status: new(suspended)}); err != nil {
 		t.Fatalf("suspending candidate: %v", err)
 	}
-	if _, err := uc.Approve(ctx, admin, invited.ID); !errors.Is(err, enrollment.ErrNotEligible) {
+	if _, err := uc.Approve(opsCtx(ctx, admin), admin, invited.ID); !errors.Is(err, enrollment.ErrNotEligible) {
 		t.Fatalf("approve-suspended error = %v, want ErrNotEligible", err)
 	}
 	still, err := uc.MyEnrollment(ctx, candidate)
@@ -150,7 +218,7 @@ func TestEnrollmentUseCaseFullFlow(t *testing.T) {
 	if _, err := accounts.UpdateAccount(ctx, auth.UpdateAccount{ID: candidate, Status: new(active)}); err != nil {
 		t.Fatalf("reactivating candidate: %v", err)
 	}
-	approved, err := uc.Approve(ctx, admin, invited.ID)
+	approved, err := uc.Approve(opsCtx(ctx, admin), admin, invited.ID)
 	if err != nil {
 		t.Fatalf("Approve: %v", err)
 	}
@@ -166,7 +234,7 @@ func TestEnrollmentUseCaseFullFlow(t *testing.T) {
 }
 
 func TestEnrollmentUseCaseDeclineAndCancel(t *testing.T) {
-	uc, _, accounts := newTestUseCase(t)
+	uc, _, accounts, _ := newTestUseCase(t)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()

@@ -74,9 +74,32 @@ func Run() error {
 	}
 
 	// -------------------------------------------------------------------------
+	// Init the Moka client: the upload worker fans the file.upload event
+	// out to its consumers (payment proof gating, user notifications).
+	moka, err := client.NewMokaClient(client.Config{
+		UserServiceAddr:    cfg.Client.UserGRPCPort,
+		PaymentServiceAddr: cfg.Client.PaymentGRPCPort,
+	}, map[client.Connection]bool{
+		client.ConnectionUser:    true,
+		client.ConnectionPayment: true,
+	})
+	if err != nil {
+		log.Error(ctx, "startup", "failed to init moka client", "error", err)
+		return err
+	}
+	defer func() {
+		if err := moka.Close(ctx); err != nil {
+			log.Error(ctx, "shutdown", "failed to close moka client", "error", err)
+		}
+	}()
+
+	// -------------------------------------------------------------------------
 	// register river workers
 	workers := river.NewWorkers()
-	river.AddWorker(workers, &events.UploadWorker{})
+	river.AddWorker(workers, &events.UploadWorker{
+		Moka:   *moka,
+		Logger: log,
+	})
 
 	// init river client
 	riverClient, err := river.NewClient(riverpgxv5.New(pg.PgxPool), &river.Config{
@@ -89,8 +112,18 @@ func Run() error {
 		log.Error(ctx, "startup", "failed to init river client", "error", err)
 		return err
 	}
+	// Without Start the workers never pick jobs up — inserts alone only
+	// queue them.
+	if err := riverClient.Start(ctx); err != nil {
+		log.Error(ctx, "startup", "failed to start river client", "error", err)
+		return err
+	}
+	defer func() {
+		if err := riverClient.Stop(ctx); err != nil {
+			log.Error(ctx, "shutdown", "failed to stop river client", "error", err)
+		}
+	}()
 
-	// -------------------------------------------------------------------------
 	// -------------------------------------------------------------------------
 	// Init usecase
 	event := events.NewPublisher(riverClient)
@@ -103,8 +136,8 @@ func Run() error {
 
 	// Init gRPC server & register services. The client interceptor rebuilds
 	// the gateway-forwarded passport into the request context.
-	// TODO(Mahamadou): start the River workers here (DeliverEvent, orphan
-	// sweep via uc.SweepExpired).
+	// TODO(Mahamadou): a River periodic job for the orphan sweep
+	// (uc.SweepExpired).
 	srv := grpc.NewServer(grpc.ChainUnaryInterceptor(
 		middleware.PanicUnaryServerInterceptor(log.Error),
 		middleware.LoggerUnaryServerInterceptor(log.Info),
@@ -135,11 +168,6 @@ func Run() error {
 	go func() {
 		log.Info(ctx, "startup", "status", "grpc server started", "host", cfg.GRPC.Port)
 		serverErrors <- srv.Serve(lis)
-	}()
-
-	// start river client
-	go func() {
-		serverErrors <- riverClient.Start(ctx)
 	}()
 
 	// listen

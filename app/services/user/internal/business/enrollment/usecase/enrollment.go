@@ -8,16 +8,22 @@ package usecase
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"mokapay.app/app/services/user/internal/business/auth"
 	authrepo "mokapay.app/app/services/user/internal/business/auth/repo"
 	"mokapay.app/app/services/user/internal/business/enrollment"
 	"mokapay.app/app/services/user/internal/business/enrollment/repo"
 	"mokapay.app/app/services/user/internal/business/notification"
+	"mokapay.app/core/client"
 	coredb "mokapay.app/core/db"
 	"mokapay.app/core/logger"
+	"mokapay.app/core/passport"
+	paymentv1 "mokapay.app/proto/codebase/payment/v1"
 )
 
 // Notifier announces enrollment transitions to the candidate (satisfied by
@@ -33,16 +39,18 @@ type UseCase struct {
 	repo       repo.Store
 	accounts   authrepo.Store
 	notifier   Notifier
+	moka       *client.MokaClient
 	tosVersion string
 }
 
-func New(l *logger.Logger, db *coredb.Postgres, notifier Notifier, tosVersion string) UseCase {
+func New(l *logger.Logger, db *coredb.Postgres, notifier Notifier, moka *client.MokaClient, tosVersion string) UseCase {
 	return UseCase{
 		logger:     l,
 		db:         db,
 		repo:       repo.New(db),
 		accounts:   authrepo.New(db),
 		notifier:   notifier,
+		moka:       moka,
 		tosVersion: tosVersion,
 	}
 }
@@ -96,6 +104,21 @@ func (u UseCase) Accept(ctx context.Context, accountID, id uuid.UUID, tosVersion
 		return enrollment.Enrollment{}, enrollment.ErrTOSVersionMismatch
 	}
 
+	// The money account exists BEFORE the terms stamp: profile creation
+	// is idempotent (AlreadyExists = success), so if the accept below
+	// fails the candidate simply retries — nothing dangles. The guarantee
+	// funding request itself is admin-created (payment engine policy),
+	// targeting this profile. System passport: the caller is the
+	// candidate, and the payment service only accepts creation from
+	// system or ops.
+	sysCtx := passport.AddToContext(ctx, passport.SystemPassport())
+	if _, err := u.moka.Payment.Admin.CreateAgentProfile(sysCtx, &paymentv1.CreateAgentProfileRequest{
+		AccountId: accountID.String(),
+	}); err != nil && status.Code(err) != codes.AlreadyExists {
+		u.logger.Error(ctx, "Enrollment.Accept: failed to ensure agent profile", "err", err)
+		return enrollment.Enrollment{}, fmt.Errorf("creating agent profile: %w", err)
+	}
+
 	accepted, err := u.repo.Accept(ctx, id.String(), accountID.String(), tosVersion)
 	if err != nil {
 		if !errors.Is(err, enrollment.ErrEnrollmentNotFound) {
@@ -103,12 +126,6 @@ func (u UseCase) Accept(ctx context.Context, accountID, id uuid.UUID, tosVersion
 		}
 		return enrollment.Enrollment{}, err
 	}
-
-	// TODO(Mahamadou): payment.AgentService.CreateProfile — create the
-	// (inactive) agent profile the guarantee deposit will target.
-	// TODO(Mahamadou): payment.LedgerService.CreateRequest — the 20 USD
-	// guarantee FUNDING ledger_request, carrying this enrollment's id as
-	// enrollment_nk. Its settlement is what the approving admin checks.
 
 	return accepted, nil
 }
@@ -159,11 +176,35 @@ func (u UseCase) Cancel(ctx context.Context, decidedBy, id uuid.UUID) (enrollmen
 // after re-checking the account is still active (moderation can strike
 // mid-flow) — then notifies them.
 func (u UseCase) Approve(ctx context.Context, decidedBy, id uuid.UUID) (enrollment.Enrollment, error) {
+	current, err := u.repo.Get(ctx, id.String())
+	if err != nil {
+		return enrollment.Enrollment{}, err
+	}
+	// A retried approval after a partial failure: the payment side is
+	// already settled, the local transition already committed.
+	if current.Status == enrollment.StatusApproved {
+		return current, nil
+	}
+
+	// Remote side FIRST, outside any transaction (a remote call must
+	// never hold row locks open). Both calls are idempotent: if the local
+	// tx below fails, the admin just retries. They run under the CALLER's
+	// passport on purpose — settlement needs an accountable human, and
+	// the approving admin becomes the ledger's decided_by.
+	if err := u.settleGuarantee(ctx, id); err != nil {
+		if !errors.Is(err, enrollment.ErrGuaranteeNotSettled) {
+			u.logger.Error(ctx, "Enrollment.Approve: failed to settle guarantee", "err", err)
+		}
+		return enrollment.Enrollment{}, err
+	}
+	if err := u.activateAgentProfile(ctx, current.AccountID); err != nil {
+		u.logger.Error(ctx, "Enrollment.Approve: failed to activate agent profile", "err", err)
+		return enrollment.Enrollment{}, err
+	}
+
 	var approved enrollment.Enrollment
 	if err := u.db.BeginPgx(ctx, func(tx pgx.Tx) error {
 		var err error
-
-		// TODO: APPROVE THE LEDGER REQUEST
 		approved, err = u.repo.WithTx(tx).Approve(ctx, id.String(), decidedBy.String())
 		if err != nil {
 			return err
@@ -190,6 +231,56 @@ func (u UseCase) Approve(ctx context.Context, decidedBy, id uuid.UUID) (enrollme
 		"Your enrollment has been approved. Welcome aboard!")
 
 	return approved, nil
+}
+
+// settleGuarantee approves the enrollment's guarantee funding request on
+// the payment side; enrollment.ErrGuaranteeNotSettled when it is missing
+// or not yet approvable (no proof uploaded, sent back, rejected…).
+func (u UseCase) settleGuarantee(ctx context.Context, enrollmentID uuid.UUID) error {
+	req, err := u.moka.Payment.Ledger.GetLedgerRequestByReference(ctx, &paymentv1.GetLedgerRequestByReferenceRequest{
+		ReferenceEntityType: paymentv1.LedgerReferenceType_LEDGER_REFERENCE_TYPE_ENROLLMENT,
+		ReferenceEntityId:   enrollmentID.String(),
+	})
+	if err != nil {
+		if status.Code(err) == codes.NotFound {
+			return enrollment.ErrGuaranteeNotSettled
+		}
+		return fmt.Errorf("resolving guarantee request: %w", err)
+	}
+
+	if _, err := u.moka.Payment.Ledger.ApproveLedgerRequest(ctx, &paymentv1.ApproveLedgerRequestRequest{
+		Id: req.Id,
+	}); err != nil {
+		// The payment engine treats an already-done request as success,
+		// so a retry never errors on the done case.
+		if status.Code(err) == codes.FailedPrecondition || status.Code(err) == codes.NotFound {
+			return enrollment.ErrGuaranteeNotSettled
+		}
+		return fmt.Errorf("approving guarantee request: %w", err)
+	}
+
+	return nil
+}
+
+// activateAgentProfile flips the money account live (idempotent
+// payment-side, so approve retries pass).
+func (u UseCase) activateAgentProfile(ctx context.Context, accountID uuid.UUID) error {
+	profile, err := u.moka.Payment.Admin.GetAgentProfile(ctx, &paymentv1.GetAgentProfileRequest{
+		Selector: &paymentv1.GetAgentProfileRequest_AccountId{AccountId: accountID.String()},
+	})
+	if err != nil {
+		if status.Code(err) == codes.NotFound {
+			return enrollment.ErrGuaranteeNotSettled
+		}
+		return fmt.Errorf("resolving agent profile: %w", err)
+	}
+
+	if _, err := u.moka.Payment.Admin.ActivateAgentProfile(ctx, &paymentv1.ActivateAgentProfileRequest{
+		Id: profile.Id,
+	}); err != nil {
+		return fmt.Errorf("activating agent profile: %w", err)
+	}
+	return nil
 }
 
 func (u UseCase) setRole(ctx context.Context, tx pgx.Tx, accountID uuid.UUID, role auth.AccountRole) error {

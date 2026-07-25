@@ -32,13 +32,21 @@ func Map(err error) error {
 		return status.Error(codes.NotFound, err.Error())
 
 	case errors.Is(err, agentprofile.ErrProfileExists),
-		errors.Is(err, ledger.ErrDuplicateKey):
+		errors.Is(err, ledger.ErrReferenceInUse):
 		return status.Error(codes.AlreadyExists, err.Error())
 
 	case errors.Is(err, agentprofile.ErrProfileHasFunds),
 		errors.Is(err, agentprofile.ErrInvalidTransition),
-		errors.Is(err, ledger.ErrNotFeasible):
+		errors.Is(err, ledger.ErrNotFeasible),
+		errors.Is(err, ledger.ErrLedgerStatusClose),
+		errors.Is(err, ledger.ErrInvalidStatusMove):
 		return status.Error(codes.FailedPrecondition, err.Error())
+
+	case errors.Is(err, ledger.ErrInvalidType):
+		return status.Error(codes.InvalidArgument, err.Error())
+
+	case errors.Is(err, ledger.ErrNotAllowed):
+		return status.Error(codes.PermissionDenied, err.Error())
 	}
 
 	// Unknown failure: don't leak internals on the wire — the usecase

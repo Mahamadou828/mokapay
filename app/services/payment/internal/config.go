@@ -18,7 +18,13 @@ type Config struct {
 		DebugPort       string
 		ShutdownTimeout time.Duration
 	}
-	DB db.PostgresConfig
+	DB     db.PostgresConfig
+	Server struct {
+		MaxEventWorkers int
+	}
+	Client struct {
+		UserGRPCPort string
+	}
 }
 
 // newConfig resolves the whole service config from the environment. Defaults
@@ -38,6 +44,10 @@ func newConfig() Config {
 		Password: config.GetEnv("DB_PASSWORD", "mokapay"),
 		Database: config.GetEnv("DB_NAME", "payments"),
 	}
+
+	cfg.Server.MaxEventWorkers = config.GetEnvAsInt("MAX_EVENT_WORKERS", 10)
+
+	cfg.Client.UserGRPCPort = config.GetEnv("USER_GRPC_PORT", "localhost:50051")
 
 	return cfg
 }
