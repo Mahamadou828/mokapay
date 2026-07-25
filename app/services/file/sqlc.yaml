@@ -11,10 +11,22 @@ sql:
       go:
         package: "sqlc"
         out: "internal/sqlc"
-        sql_package: "database/sql"
+        sql_package: "pgx/v5"
         emit_pointers_for_null_types: false
         overrides:
           # IDs are plain strings at the repo edge; toDomain() parses them
           # into uuid.UUID (see .claude/rules/go-coding-style.md).
           - db_type: "uuid"
             go_type: "string"
+          - db_type: "uuid"
+            nullable: true
+            go_type:
+              import: "github.com/google/uuid"
+              type: "NullUUID"
+          # pgx scans time.Time natively; without this, NOT NULL timestamptz
+          # columns generate pgtype.Timestamptz. Nullable ones keep the
+          # pgtype default (same .Time/.Valid shape as sql.NullTime).
+          - db_type: "timestamptz"
+            go_type:
+              import: "time"
+              type: "Time"

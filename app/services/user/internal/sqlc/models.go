@@ -5,10 +5,11 @@
 package sqlc
 
 import (
-	"database/sql"
 	"database/sql/driver"
 	"fmt"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type AccountLanguage string
@@ -188,17 +189,17 @@ func (ns NullOtpPurpose) Value() (driver.Value, error) {
 type Account struct {
 	ID                string
 	PhoneNumber       string
-	CognitoSub        sql.NullString
+	CognitoSub        pgtype.Text
 	FirstName         string
 	LastName          string
-	Email             sql.NullString
+	Email             pgtype.Text
 	PreferredLanguage AccountLanguage
 	Role              AccountRole
 	Status            AccountStatus
-	LastLoginAt       sql.NullTime
+	LastLoginAt       pgtype.Timestamptz
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
-	DeletedAt         sql.NullTime
+	DeletedAt         pgtype.Timestamptz
 }
 
 type Otp struct {
@@ -208,23 +209,23 @@ type Otp struct {
 	Purpose     OtpPurpose
 	Attempts    int32
 	ExpiresAt   time.Time
-	ConsumedAt  sql.NullTime
+	ConsumedAt  pgtype.Timestamptz
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
-	DeletedAt   sql.NullTime
+	DeletedAt   pgtype.Timestamptz
 }
 
 type UsersExtAccount struct {
 	ID                string
 	PhoneNumber       string
-	CognitoSub        sql.NullString
+	CognitoSub        pgtype.Text
 	FirstName         string
 	LastName          string
-	Email             sql.NullString
+	Email             pgtype.Text
 	PreferredLanguage AccountLanguage
 	Role              AccountRole
 	Status            AccountStatus
-	LastLoginAt       sql.NullTime
+	LastLoginAt       pgtype.Timestamptz
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
 }

@@ -5,12 +5,12 @@
 package sqlc
 
 import (
-	"database/sql"
 	"database/sql/driver"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type FilePurpose string
@@ -106,34 +106,34 @@ type File struct {
 	ID          string
 	OwnerNk     string
 	Purpose     FilePurpose
-	RelatedType sql.NullString
+	RelatedType pgtype.Text
 	RelatedNk   uuid.NullUUID
 	Bucket      string
 	StorageKey  string
 	FileName    string
 	ContentType string
 	SizeBytes   int64
-	Sha256      sql.NullString
-	Etag        sql.NullString
+	Sha256      pgtype.Text
+	Etag        pgtype.Text
 	Status      FileStatus
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
-	DeletedAt   sql.NullTime
+	DeletedAt   pgtype.Timestamptz
 }
 
 type FilesExtFile struct {
 	ID          string
 	OwnerNk     string
 	Purpose     FilePurpose
-	RelatedType sql.NullString
+	RelatedType pgtype.Text
 	RelatedNk   uuid.NullUUID
 	Bucket      string
 	StorageKey  string
 	FileName    string
 	ContentType string
 	SizeBytes   int64
-	Sha256      sql.NullString
-	Etag        sql.NullString
+	Sha256      pgtype.Text
+	Etag        pgtype.Text
 	Status      FileStatus
 	CreatedAt   time.Time
 	UpdatedAt   time.Time

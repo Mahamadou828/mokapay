@@ -26,6 +26,9 @@ type Config struct {
 		DownloadTTL  time.Duration // presigned GET lifetime
 		MaxSizeBytes int64
 	}
+	Server struct {
+		MaxEventWorkers int
+	}
 }
 
 // newConfig resolves the whole service config from the environment. Defaults
@@ -61,6 +64,8 @@ func newConfig() Config {
 	cfg.Upload.URLTTL = config.GetEnvAsTimeDuration("UPLOAD_URL_TTL", 15*time.Minute)
 	cfg.Upload.DownloadTTL = config.GetEnvAsTimeDuration("DOWNLOAD_URL_TTL", time.Hour)
 	cfg.Upload.MaxSizeBytes = int64(config.GetEnvAsInt("MAX_FILE_SIZE_BYTES", 10*1024*1024))
+
+	cfg.Server.MaxEventWorkers = config.GetEnvAsInt("MAX_EVENT_WORKERS", 10)
 
 	return cfg
 }

@@ -27,7 +27,7 @@ type AddOtpParams struct {
 }
 
 func (q *Queries) AddOtp(ctx context.Context, arg AddOtpParams) (Otp, error) {
-	row := q.db.QueryRowContext(ctx, addOtp,
+	row := q.db.QueryRow(ctx, addOtp,
 		arg.PhoneNumber,
 		arg.CodeHash,
 		arg.Purpose,
@@ -54,7 +54,7 @@ SELECT id, phone_number, code_hash, purpose, attempts, expires_at, consumed_at, 
 `
 
 func (q *Queries) BumpOtpAttempts(ctx context.Context, id string) (Otp, error) {
-	row := q.db.QueryRowContext(ctx, bumpOtpAttempts, id)
+	row := q.db.QueryRow(ctx, bumpOtpAttempts, id)
 	var i Otp
 	err := row.Scan(
 		&i.ID,
@@ -77,7 +77,7 @@ SELECT id, phone_number, code_hash, purpose, attempts, expires_at, consumed_at, 
 
 // Zero rows (sql.ErrNoRows) = already consumed, expired, or lost the race.
 func (q *Queries) ConsumeOtp(ctx context.Context, id string) (Otp, error) {
-	row := q.db.QueryRowContext(ctx, consumeOtp, id)
+	row := q.db.QueryRow(ctx, consumeOtp, id)
 	var i Otp
 	err := row.Scan(
 		&i.ID,
@@ -110,7 +110,7 @@ type GetValidOtpParams struct {
 
 // Newest live (unconsumed, unexpired) code for the phone/purpose pair.
 func (q *Queries) GetValidOtp(ctx context.Context, arg GetValidOtpParams) (UsersExtOtp, error) {
-	row := q.db.QueryRowContext(ctx, getValidOtp, arg.PhoneNumber, arg.Purpose)
+	row := q.db.QueryRow(ctx, getValidOtp, arg.PhoneNumber, arg.Purpose)
 	var i UsersExtOtp
 	err := row.Scan(
 		&i.ID,
@@ -142,7 +142,7 @@ type RefreshOtpParams struct {
 // Resend: new code hash + expiry, counts the resend against attempts.
 // Zero rows (sql.ErrNoRows) = consumed or deleted meanwhile.
 func (q *Queries) RefreshOtp(ctx context.Context, arg RefreshOtpParams) (Otp, error) {
-	row := q.db.QueryRowContext(ctx, refreshOtp, arg.ID, arg.CodeHash, arg.ExpiresAt)
+	row := q.db.QueryRow(ctx, refreshOtp, arg.ID, arg.CodeHash, arg.ExpiresAt)
 	var i Otp
 	err := row.Scan(
 		&i.ID,

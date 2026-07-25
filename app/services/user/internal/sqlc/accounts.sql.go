@@ -7,7 +7,8 @@ package sqlc
 
 import (
 	"context"
-	"database/sql"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const addAccount = `-- name: AddAccount :one
@@ -27,15 +28,15 @@ type AddAccountParams struct {
 	PhoneNumber       string
 	FirstName         string
 	LastName          string
-	Email             sql.NullString
+	Email             pgtype.Text
 	PreferredLanguage NullAccountLanguage
 	Role              NullAccountRole
 	Status            NullAccountStatus
-	CognitoSub        sql.NullString
+	CognitoSub        pgtype.Text
 }
 
 func (q *Queries) AddAccount(ctx context.Context, arg AddAccountParams) (Account, error) {
-	row := q.db.QueryRowContext(ctx, addAccount,
+	row := q.db.QueryRow(ctx, addAccount,
 		arg.PhoneNumber,
 		arg.FirstName,
 		arg.LastName,
@@ -69,7 +70,7 @@ SELECT users_ext.delete_account($1::uuid)
 `
 
 func (q *Queries) DeleteAccount(ctx context.Context, id string) error {
-	_, err := q.db.ExecContext(ctx, deleteAccount, id)
+	_, err := q.db.Exec(ctx, deleteAccount, id)
 	return err
 }
 
@@ -81,7 +82,7 @@ WHERE id = $1::uuid
 `
 
 func (q *Queries) GetAccount(ctx context.Context, id string) (UsersExtAccount, error) {
-	row := q.db.QueryRowContext(ctx, getAccount, id)
+	row := q.db.QueryRow(ctx, getAccount, id)
 	var i UsersExtAccount
 	err := row.Scan(
 		&i.ID,
@@ -108,7 +109,7 @@ WHERE phone_number = $1
 `
 
 func (q *Queries) GetAccountByPhone(ctx context.Context, phoneNumber string) (UsersExtAccount, error) {
-	row := q.db.QueryRowContext(ctx, getAccountByPhone, phoneNumber)
+	row := q.db.QueryRow(ctx, getAccountByPhone, phoneNumber)
 	var i UsersExtAccount
 	err := row.Scan(
 		&i.ID,
@@ -134,8 +135,8 @@ FROM users_ext.accounts
 WHERE cognito_sub = $1
 `
 
-func (q *Queries) GetAccountBySub(ctx context.Context, cognitoSub sql.NullString) (UsersExtAccount, error) {
-	row := q.db.QueryRowContext(ctx, getAccountBySub, cognitoSub)
+func (q *Queries) GetAccountBySub(ctx context.Context, cognitoSub pgtype.Text) (UsersExtAccount, error) {
+	row := q.db.QueryRow(ctx, getAccountBySub, cognitoSub)
 	var i UsersExtAccount
 	err := row.Scan(
 		&i.ID,
@@ -167,12 +168,12 @@ ORDER BY created_at DESC
 type ListAccountsParams struct {
 	Role        NullAccountRole
 	Status      NullAccountStatus
-	PhoneNumber sql.NullString
+	PhoneNumber pgtype.Text
 }
 
 // Every filter is optional: a NULL value disables it.
 func (q *Queries) ListAccounts(ctx context.Context, arg ListAccountsParams) ([]UsersExtAccount, error) {
-	rows, err := q.db.QueryContext(ctx, listAccounts, arg.Role, arg.Status, arg.PhoneNumber)
+	rows, err := q.db.Query(ctx, listAccounts, arg.Role, arg.Status, arg.PhoneNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -198,9 +199,6 @@ func (q *Queries) ListAccounts(ctx context.Context, arg ListAccountsParams) ([]U
 		}
 		items = append(items, i)
 	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -223,18 +221,18 @@ SELECT id, phone_number, cognito_sub, first_name, last_name, email, preferred_la
 
 type UpdateAccountParams struct {
 	ID                string
-	FirstName         sql.NullString
-	LastName          sql.NullString
-	Email             sql.NullString
+	FirstName         pgtype.Text
+	LastName          pgtype.Text
+	Email             pgtype.Text
 	PreferredLanguage NullAccountLanguage
 	Role              NullAccountRole
 	Status            NullAccountStatus
-	LastLoginAt       sql.NullTime
-	CognitoSub        sql.NullString
+	LastLoginAt       pgtype.Timestamptz
+	CognitoSub        pgtype.Text
 }
 
 func (q *Queries) UpdateAccount(ctx context.Context, arg UpdateAccountParams) (Account, error) {
-	row := q.db.QueryRowContext(ctx, updateAccount,
+	row := q.db.QueryRow(ctx, updateAccount,
 		arg.ID,
 		arg.FirstName,
 		arg.LastName,

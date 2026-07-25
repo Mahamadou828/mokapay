@@ -2,13 +2,14 @@ package repo
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 	"mokapay.app/app/services/user/internal/business/auth"
 	"mokapay.app/app/services/user/internal/sqlc"
 )
@@ -18,9 +19,9 @@ import (
 // the payload are auth-flow fields and never reach the database. An empty
 // sub is stored as NULL (unprovisioned) so it never trips the sub unique index.
 func (s Store) AddAccount(ctx context.Context, na auth.NewAccount, sub string) (auth.Account, error) {
-	var subParam sql.NullString
+	var subParam pgtype.Text
 	if sub != "" {
-		subParam = sql.NullString{String: sub, Valid: true}
+		subParam = pgtype.Text{String: sub, Valid: true}
 	}
 
 	row, err := s.sqlc.AddAccount(ctx, sqlc.AddAccountParams{
@@ -44,9 +45,9 @@ func (s Store) AddAccount(ctx context.Context, na auth.NewAccount, sub string) (
 // GetAccountBySub returns the live account bound to the Cognito user
 // (unique among live provisioned rows).
 func (s Store) GetAccountBySub(ctx context.Context, cognitoSub string) (auth.Account, error) {
-	row, err := s.sqlc.GetAccountBySub(ctx, sql.NullString{String: cognitoSub, Valid: true})
+	row, err := s.sqlc.GetAccountBySub(ctx, pgtype.Text{String: cognitoSub, Valid: true})
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return auth.Account{}, auth.ErrAccountNotFound
 		}
 		return auth.Account{}, fmt.Errorf("getting account by sub: %w", err)
@@ -59,7 +60,7 @@ func (s Store) GetAccountBySub(ctx context.Context, cognitoSub string) (auth.Acc
 func (s Store) GetAccount(ctx context.Context, id string) (auth.Account, error) {
 	row, err := s.sqlc.GetAccount(ctx, id)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return auth.Account{}, auth.ErrAccountNotFound
 		}
 		return auth.Account{}, fmt.Errorf("getting account %s: %w", id, err)
@@ -73,7 +74,7 @@ func (s Store) GetAccount(ctx context.Context, id string) (auth.Account, error) 
 func (s Store) GetAccountByPhone(ctx context.Context, phoneNumber string) (auth.Account, error) {
 	row, err := s.sqlc.GetAccountByPhone(ctx, phoneNumber)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return auth.Account{}, auth.ErrAccountNotFound
 		}
 		return auth.Account{}, fmt.Errorf("getting account by phone: %w", err)
@@ -95,7 +96,7 @@ func (s Store) UpdateAccount(ctx context.Context, up auth.UpdateAccount) (auth.A
 		Status:            toNullStatus(up.Status),
 	})
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return auth.Account{}, auth.ErrAccountNotFound
 		}
 		return auth.Account{}, fmt.Errorf("updating account %s: %w", up.ID, err)
@@ -140,10 +141,10 @@ func (s Store) DeleteAccount(ctx context.Context, id string) error {
 func (s Store) SetLastLogin(ctx context.Context, id string, at time.Time) (auth.Account, error) {
 	row, err := s.sqlc.UpdateAccount(ctx, sqlc.UpdateAccountParams{
 		ID:          id,
-		LastLoginAt: sql.NullTime{Time: at, Valid: true},
+		LastLoginAt: pgtype.Timestamptz{Time: at, Valid: true},
 	})
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return auth.Account{}, auth.ErrAccountNotFound
 		}
 		return auth.Account{}, fmt.Errorf("setting last login on account %s: %w", id, err)
@@ -231,11 +232,11 @@ func uniqueViolationErr(err error) error {
 	return nil
 }
 
-func toNullString(s *string) sql.NullString {
+func toNullString(s *string) pgtype.Text {
 	if s == nil {
-		return sql.NullString{}
+		return pgtype.Text{}
 	}
-	return sql.NullString{String: *s, Valid: true}
+	return pgtype.Text{String: *s, Valid: true}
 }
 
 func toNullLanguage(l auth.Language) sqlc.NullAccountLanguage {

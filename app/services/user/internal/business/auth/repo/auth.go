@@ -5,12 +5,12 @@ package repo
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"mokapay.app/app/services/user/internal/business/auth"
 	"mokapay.app/app/services/user/internal/sqlc"
 	coredb "mokapay.app/core/db"
@@ -21,7 +21,7 @@ type Store struct {
 }
 
 func New(db *coredb.Postgres) Store {
-	return Store{sqlc: sqlc.New(db.Pool)}
+	return Store{sqlc: sqlc.New(db.PgxPool)}
 }
 
 // GetValidOtp returns the newest live (unconsumed, unexpired) code for the
@@ -32,7 +32,7 @@ func (s Store) GetValidOtp(ctx context.Context, phoneNumber string, purpose auth
 		Purpose:     sqlc.OtpPurpose(purpose),
 	})
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return auth.Otp{}, auth.ErrOtpNotFound
 		}
 		return auth.Otp{}, fmt.Errorf("getting valid otp: %w", err)
@@ -62,7 +62,7 @@ func (s Store) AddOtp(ctx context.Context, no auth.NewOtp) (auth.Otp, error) {
 func (s Store) ConsumeOtp(ctx context.Context, id string) (auth.Otp, error) {
 	row, err := s.sqlc.ConsumeOtp(ctx, id)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return auth.Otp{}, auth.ErrOtpNotFound
 		}
 		return auth.Otp{}, fmt.Errorf("consuming otp %s: %w", id, err)
@@ -82,7 +82,7 @@ func (s Store) RefreshOtp(ctx context.Context, id, codeHash string, expiresAt ti
 		ExpiresAt: expiresAt,
 	})
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return auth.Otp{}, auth.ErrOtpNotFound
 		}
 		return auth.Otp{}, fmt.Errorf("refreshing otp %s: %w", id, err)
@@ -95,7 +95,7 @@ func (s Store) RefreshOtp(ctx context.Context, id, codeHash string, expiresAt ti
 func (s Store) BumpOtpAttempts(ctx context.Context, id string) (auth.Otp, error) {
 	row, err := s.sqlc.BumpOtpAttempts(ctx, id)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return auth.Otp{}, auth.ErrOtpNotFound
 		}
 		return auth.Otp{}, fmt.Errorf("bumping otp attempts %s: %w", id, err)

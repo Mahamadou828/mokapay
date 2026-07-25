@@ -52,21 +52,21 @@ const (
 // File is the read entity: metadata only — the bytes live in object storage
 // and are reachable exclusively through presigned URLs.
 type File struct {
-	ID          uuid.UUID
-	OwnerID     uuid.UUID
-	Purpose     Purpose
-	RelatedType *string    // nil when the file is unattached
-	RelatedID   *uuid.UUID // id owned by another service; loose reference
-	Bucket      string
-	StorageKey  string
-	FileName    string
-	ContentType string
-	SizeBytes   int64
-	SHA256      *string // set once stored
-	ETag        *string
-	Status      Status
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID          uuid.UUID  `json:"ID,omitempty"`
+	OwnerID     uuid.UUID  `json:"ownerID,omitempty"`
+	Purpose     Purpose    `json:"purpose,omitempty"`
+	RelatedType *string    `json:"relatedType,omitempty"` // nil when the file is unattached
+	RelatedID   *uuid.UUID `json:"relatedID,omitempty"`   // id owned by another service; loose reference
+	Bucket      string     `json:"bucket,omitempty"`
+	StorageKey  string     `json:"storageKey,omitempty"`
+	FileName    string     `json:"fileName,omitempty"`
+	ContentType string     `json:"contentType,omitempty"`
+	SizeBytes   int64      `json:"sizeBytes,omitempty"`
+	SHA256      *string    `json:"SHA256,omitempty"` // set once stored
+	ETag        *string    `json:"ETag,omitempty"`
+	Status      Status     `json:"status,omitempty"`
+	CreatedAt   time.Time  `json:"createdAt"`
+	UpdatedAt   time.Time  `json:"updatedAt"`
 }
 
 // NewFile carries everything the caller declares about an upload; the

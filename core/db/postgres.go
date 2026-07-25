@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"io/fs"
 
-	// pgx in database/sql-compatibility mode: repos and sqlc stay on
-	// database/sql; pgx-native consumers (River) share the same DSN.
-	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/stdlib"
 )
 
 type PostgresConfig struct {
@@ -20,9 +20,13 @@ type PostgresConfig struct {
 	Database string
 }
 
+// Postgres owns a single pgx connection pool exposed through two interfaces:
+// PgxPool for pgx-native consumers (River) and Pool, a database/sql facade
+// over the same pool, for repos and sqlc.
 type Postgres struct {
-	Pool   *sql.DB
-	config PostgresConfig
+	Pool    *sql.DB
+	PgxPool *pgxpool.Pool
+	config  PostgresConfig
 }
 
 func New(config PostgresConfig) *Postgres {
@@ -39,18 +43,32 @@ func (d *Postgres) Open() error {
 		d.config.Database,
 	)
 
-	db, err := sql.Open("pgx", conn)
+	// The pool connects lazily; Open keeps its no-context signature and the
+	// Ping below is what actually reaches the server.
+	pool, err := pgxpool.New(context.Background(), conn)
 	if err != nil {
 		return err
 	}
 
+	db := stdlib.OpenDBFromPool(pool)
 	if err := db.Ping(); err != nil {
+		_ = db.Close() // best-effort teardown of the facade before the pool
+		pool.Close()
 		return err
 	}
-	d.Pool = db
+
+	d.Pool, d.PgxPool = db, pool
 	return nil
 }
 
+// BeginPgx runs f inside a pgx-native transaction — the repo/usecase path
+// (sqlc pgx/v5, River InsertTx). Commit on nil, rollback on error or panic.
+func (d *Postgres) BeginPgx(ctx context.Context, f func(tx pgx.Tx) error) error {
+	return pgx.BeginFunc(ctx, d.PgxPool, f)
+}
+
+// Begin is the database/sql twin, kept for the migration path
+// (ExecFolderWithTX over the stdlib facade).
 func (d *Postgres) Begin(ctx context.Context, f func(tx *sql.Tx) error) error {
 	tx, err := d.Pool.BeginTx(ctx, nil)
 	if err != nil {
@@ -64,7 +82,11 @@ func (d *Postgres) Begin(ctx context.Context, f func(tx *sql.Tx) error) error {
 }
 
 func (d *Postgres) Close() error {
-	return d.Pool.Close()
+	// The database/sql facade must be closed before the pgx pool it borrows
+	// its connections from.
+	err := d.Pool.Close()
+	d.PgxPool.Close()
+	return err
 }
 
 func (d *Postgres) ExecContextWithTX() {

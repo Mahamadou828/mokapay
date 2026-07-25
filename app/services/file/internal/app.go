@@ -9,11 +9,13 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/riverqueue/river"
+	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	fileapi "mokapay.app/app/services/file/internal/api/file"
+	"mokapay.app/app/services/file/internal/business/file/events"
 	"mokapay.app/app/services/file/internal/business/file/usecase"
-	"mokapay.app/app/services/file/internal/integration/events"
 	"mokapay.app/core/aws"
 	"mokapay.app/core/client"
 	"mokapay.app/core/db"
@@ -70,18 +72,35 @@ func Run() error {
 		log.Error(ctx, "startup", "failed to init s3 client", "error", err)
 		return err
 	}
-	publisher := events.NewLog(log)
 
 	// -------------------------------------------------------------------------
+	// register river workers
+	workers := river.NewWorkers()
+	river.AddWorker(workers, &events.UploadWorker{})
+
+	// init river client
+	riverClient, err := river.NewClient(riverpgxv5.New(pg.PgxPool), &river.Config{
+		Queues: map[string]river.QueueConfig{
+			river.QueueDefault: {MaxWorkers: cfg.Server.MaxEventWorkers},
+		},
+		Workers: workers,
+	})
+	if err != nil {
+		log.Error(ctx, "startup", "failed to init river client", "error", err)
+		return err
+	}
+
+	// -------------------------------------------------------------------------
+	// -------------------------------------------------------------------------
 	// Init usecase
-	uc := usecase.New(log, pg, storage, publisher, usecase.Config{
+	event := events.NewPublisher(riverClient)
+	uc := usecase.New(log, pg, storage, event, usecase.Config{
 		Bucket:       cfg.S3.Bucket,
 		UploadTTL:    cfg.Upload.URLTTL,
 		DownloadTTL:  cfg.Upload.DownloadTTL,
 		MaxSizeBytes: cfg.Upload.MaxSizeBytes,
 	})
 
-	// -------------------------------------------------------------------------
 	// Init gRPC server & register services. The client interceptor rebuilds
 	// the gateway-forwarded passport into the request context.
 	// TODO(Mahamadou): start the River workers here (DeliverEvent, orphan
@@ -118,6 +137,11 @@ func Run() error {
 		serverErrors <- srv.Serve(lis)
 	}()
 
+	// start river client
+	go func() {
+		serverErrors <- riverClient.Start(ctx)
+	}()
+
 	// listen
 	select {
 	case err := <-serverErrors:
@@ -144,6 +168,10 @@ func Run() error {
 
 		if err := debug.Shutdown(ctx); err != nil {
 			log.Error(ctx, "failed to gracefully shutdown debug server", "error", err)
+		}
+
+		if err := riverClient.Stop(ctx); err != nil {
+			log.Error(ctx, "failed to gracefully stop river client", "error", err)
 		}
 	}
 

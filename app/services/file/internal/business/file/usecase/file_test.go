@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
-	"database/sql"
 	"encoding/hex"
 	"errors"
+	"github.com/jackc/pgx/v5"
 	"net/http"
 	"os"
 	"testing"
@@ -27,7 +27,7 @@ type captor struct {
 	sawTx  bool
 }
 
-func (c *captor) FileUploaded(_ context.Context, tx *sql.Tx, f file.File) error {
+func (c *captor) FileUploaded(_ context.Context, tx pgx.Tx, f file.File) error {
 	c.sawTx = c.sawTx || tx != nil
 	c.events = append(c.events, f)
 	return nil

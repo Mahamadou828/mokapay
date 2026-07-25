@@ -3,7 +3,6 @@ package usecase
 import (
 	"context"
 	"crypto/sha256"
-	"database/sql"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -11,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"mokapay.app/app/services/file/internal/business/file"
 	"mokapay.app/app/services/file/internal/business/file/repo"
 	coreaws "mokapay.app/core/aws"
@@ -32,7 +32,7 @@ type Storage interface {
 // transaction: implementations must enlist in it (River InsertTx) so the
 // status flip and the event commit or roll back together.
 type Publisher interface {
-	FileUploaded(ctx context.Context, tx *sql.Tx, f file.File) error
+	FileUploaded(ctx context.Context, tx pgx.Tx, f file.File) error
 }
 
 // Config carries the upload policy knobs.
@@ -132,7 +132,8 @@ func (u UseCase) ConfirmUpload(ctx context.Context, id uuid.UUID) (file.File, er
 	}
 
 	var confirmed file.File
-	if err := u.db.Begin(ctx, func(tx *sql.Tx) error {
+
+	if err := u.db.BeginPgx(ctx, func(tx pgx.Tx) error {
 		confirmed, err = u.repo.WithTx(tx).ConfirmFile(ctx, id.String(), hash, etag)
 		if err != nil {
 			return err

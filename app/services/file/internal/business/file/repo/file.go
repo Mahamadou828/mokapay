@@ -5,12 +5,13 @@ package repo
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"mokapay.app/app/services/file/internal/business/file"
 	"mokapay.app/app/services/file/internal/sqlc"
 	coredb "mokapay.app/core/db"
@@ -21,12 +22,12 @@ type Store struct {
 }
 
 func New(db *coredb.Postgres) Store {
-	return Store{sqlc: sqlc.New(db.Pool)}
+	return Store{sqlc: sqlc.New(db.PgxPool)}
 }
 
 // WithTx returns a Store running on the given transaction — used to commit
 // the confirm status flip atomically with the event enqueue.
-func (s Store) WithTx(tx *sql.Tx) Store {
+func (s Store) WithTx(tx pgx.Tx) Store {
 	return Store{sqlc: s.sqlc.WithTx(tx)}
 }
 
@@ -55,7 +56,7 @@ func (s Store) AddFile(ctx context.Context, nf file.NewFile, bucket, storageKey 
 func (s Store) GetFile(ctx context.Context, id string) (file.File, error) {
 	row, err := s.sqlc.GetFile(ctx, id)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return file.File{}, file.ErrFileNotFound
 		}
 		return file.File{}, fmt.Errorf("getting file %s: %w", id, err)
@@ -69,7 +70,7 @@ func (s Store) ListFiles(ctx context.Context, f file.Filter) ([]file.File, error
 	rows, err := s.sqlc.ListFiles(ctx, sqlc.ListFilesParams{
 		// The column is nullable so sqlc types the arg as a null-string;
 		// the filter itself is always set.
-		RelatedType: sql.NullString{String: f.RelatedType, Valid: true},
+		RelatedType: pgtype.Text{String: f.RelatedType, Valid: true},
 		RelatedNk:   f.RelatedID.String(),
 		Purpose:     toNullPurpose(f.Purpose),
 	})
@@ -122,7 +123,7 @@ func (s Store) ConfirmFile(ctx context.Context, id, sha256, etag string) (file.F
 		Etag:   etag,
 	})
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return file.File{}, file.ErrNotPending
 		}
 		return file.File{}, fmt.Errorf("confirming file %s: %w", id, err)
@@ -135,7 +136,7 @@ func (s Store) ConfirmFile(ctx context.Context, id, sha256, etag string) (file.F
 func (s Store) RejectFile(ctx context.Context, id string) (file.File, error) {
 	row, err := s.sqlc.RejectFile(ctx, id)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return file.File{}, file.ErrNotStored
 		}
 		return file.File{}, fmt.Errorf("rejecting file %s: %w", id, err)
@@ -169,9 +170,9 @@ func viewFileToDomain(f sqlc.FilesExtFile) (file.File, error) {
 
 func toDomain(
 	id, ownerNk string, purpose sqlc.FilePurpose,
-	relatedType sql.NullString, relatedNk uuid.NullUUID,
+	relatedType pgtype.Text, relatedNk uuid.NullUUID,
 	bucket, storageKey, fileName, contentType string, sizeBytes int64,
-	sha256, etag sql.NullString, status sqlc.FileStatus,
+	sha256, etag pgtype.Text, status sqlc.FileStatus,
 	createdAt, updatedAt time.Time,
 ) (file.File, error) {
 	fid, err := uuid.Parse(id)
@@ -212,11 +213,11 @@ func toDomain(
 	return out, nil
 }
 
-func toNullString(s *string) sql.NullString {
+func toNullString(s *string) pgtype.Text {
 	if s == nil {
-		return sql.NullString{}
+		return pgtype.Text{}
 	}
-	return sql.NullString{String: *s, Valid: true}
+	return pgtype.Text{String: *s, Valid: true}
 }
 
 func toNullUUID(id *uuid.UUID) uuid.NullUUID {

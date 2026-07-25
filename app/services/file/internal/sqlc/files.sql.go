@@ -7,10 +7,10 @@ package sqlc
 
 import (
 	"context"
-	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const addFile = `-- name: AddFile :one
@@ -35,12 +35,12 @@ type AddFileParams struct {
 	FileName    string
 	ContentType string
 	SizeBytes   int64
-	RelatedType sql.NullString
+	RelatedType pgtype.Text
 	RelatedNk   uuid.NullUUID
 }
 
 func (q *Queries) AddFile(ctx context.Context, arg AddFileParams) (File, error) {
-	row := q.db.QueryRowContext(ctx, addFile,
+	row := q.db.QueryRow(ctx, addFile,
 		arg.OwnerNk,
 		arg.Purpose,
 		arg.Bucket,
@@ -90,7 +90,7 @@ type ConfirmFileParams struct {
 // Zero rows (sql.ErrNoRows) = not pending anymore (double confirm, rejected,
 // or swept).
 func (q *Queries) ConfirmFile(ctx context.Context, arg ConfirmFileParams) (File, error) {
-	row := q.db.QueryRowContext(ctx, confirmFile, arg.ID, arg.Sha256, arg.Etag)
+	row := q.db.QueryRow(ctx, confirmFile, arg.ID, arg.Sha256, arg.Etag)
 	var i File
 	err := row.Scan(
 		&i.ID,
@@ -118,7 +118,7 @@ SELECT files_ext.delete_file($1::uuid)
 `
 
 func (q *Queries) DeleteFile(ctx context.Context, id string) error {
-	_, err := q.db.ExecContext(ctx, deleteFile, id)
+	_, err := q.db.Exec(ctx, deleteFile, id)
 	return err
 }
 
@@ -131,7 +131,7 @@ WHERE id = $1::uuid
 `
 
 func (q *Queries) GetFile(ctx context.Context, id string) (FilesExtFile, error) {
-	row := q.db.QueryRowContext(ctx, getFile, id)
+	row := q.db.QueryRow(ctx, getFile, id)
 	var i FilesExtFile
 	err := row.Scan(
 		&i.ID,
@@ -171,7 +171,7 @@ type ListExpiredPendingFilesParams struct {
 
 // The orphan sweep: pending uploads created before the cutoff.
 func (q *Queries) ListExpiredPendingFiles(ctx context.Context, arg ListExpiredPendingFilesParams) ([]FilesExtFile, error) {
-	rows, err := q.db.QueryContext(ctx, listExpiredPendingFiles, arg.Before, arg.MaxRows)
+	rows, err := q.db.Query(ctx, listExpiredPendingFiles, arg.Before, arg.MaxRows)
 	if err != nil {
 		return nil, err
 	}
@@ -199,9 +199,6 @@ func (q *Queries) ListExpiredPendingFiles(ctx context.Context, arg ListExpiredPe
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -221,14 +218,14 @@ ORDER BY created_at DESC
 `
 
 type ListFilesParams struct {
-	RelatedType sql.NullString
+	RelatedType pgtype.Text
 	RelatedNk   string
 	Purpose     NullFilePurpose
 }
 
 // The purpose filter is optional: a NULL value disables it.
 func (q *Queries) ListFiles(ctx context.Context, arg ListFilesParams) ([]FilesExtFile, error) {
-	rows, err := q.db.QueryContext(ctx, listFiles, arg.RelatedType, arg.RelatedNk, arg.Purpose)
+	rows, err := q.db.Query(ctx, listFiles, arg.RelatedType, arg.RelatedNk, arg.Purpose)
 	if err != nil {
 		return nil, err
 	}
@@ -257,9 +254,6 @@ func (q *Queries) ListFiles(ctx context.Context, arg ListFilesParams) ([]FilesEx
 		}
 		items = append(items, i)
 	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -272,7 +266,7 @@ SELECT id, owner_nk, purpose, related_type, related_nk, bucket, storage_key, fil
 
 // Zero rows (sql.ErrNoRows) = not currently stored.
 func (q *Queries) RejectFile(ctx context.Context, id string) (File, error) {
-	row := q.db.QueryRowContext(ctx, rejectFile, id)
+	row := q.db.QueryRow(ctx, rejectFile, id)
 	var i File
 	err := row.Scan(
 		&i.ID,
