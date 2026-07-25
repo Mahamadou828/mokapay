@@ -121,6 +121,49 @@ POST {{host}}/v1/auth/logout
 Authorization: Bearer {{access_token}}
 
 ###############################################################################
+# Notifications — authed tier (vapid-key is public)
+###############################################################################
+
+### VAPID public key (public — feed to PushManager.subscribe())
+GET {{host}}/v1/push/vapid-key
+
+### My notifications (full inbox, newest first)
+GET {{host}}/v1/notifications
+Authorization: Bearer {{access_token}}
+
+### My unread notifications only
+GET {{host}}/v1/notifications?status=NOTIFICATION_STATUS_UNREAD&limit=20
+Authorization: Bearer {{access_token}}
+
+### Mark one notification read (idempotent)
+POST {{host}}/v1/notifications/{{notification_id}}/read
+Authorization: Bearer {{access_token}}
+
+### Mark everything read → 204
+POST {{host}}/v1/notifications/read-all
+Authorization: Bearer {{access_token}}
+
+### Register this device for web push (body = PushManager.subscribe() result) → 204
+POST {{host}}/v1/push/subscriptions
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+
+{
+  "endpoint": "https://push.example.com/reg/manual-test",
+  "p256dh": "test-p256dh-key",
+  "auth": "test-auth-secret"
+}
+
+### Unregister this device → 204
+DELETE {{host}}/v1/push/subscriptions
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+
+{
+  "endpoint": "https://push.example.com/reg/manual-test"
+}
+
+###############################################################################
 # Admin — ops tier (Bearer token with ops/admin role)
 ###############################################################################
 

@@ -22,6 +22,8 @@ tags:
     description: Anonymous authentication flows (Cognito-backed, SMS-OTP second factor)
   - name: Account
     description: Self-service account routes — the caller is the token's identity
+  - name: Notifications
+    description: In-app inbox + web-push subscription management (self-service)
   - name: Admin
     description: Account moderation — requires the ops or admin role
 
@@ -225,6 +227,152 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Account"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/PermissionDenied"
+
+  /v1/push/vapid-key:
+    get:
+      tags: [Notifications]
+      summary: VAPID public key
+      description: >
+        The application server key the frontend passes to
+        PushManager.subscribe(). Empty when the backend runs without VAPID
+        keys (dev mode — pushes are logged, not delivered).
+      operationId: getVapidPublicKey
+      responses:
+        "200":
+          description: The key
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  public_key:
+                    type: string
+
+  /v1/notifications:
+    get:
+      tags: [Notifications]
+      summary: List my notifications
+      description: The caller's inbox, newest first.
+      operationId: listNotifications
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/NotificationStatus"
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            description: Max rows (default 50, cap 200)
+      responses:
+        "200":
+          description: The inbox slice
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  notifications:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Notification"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/PermissionDenied"
+
+  /v1/notifications/{id}/read:
+    post:
+      tags: [Notifications]
+      summary: Mark one notification read
+      description: Idempotent — re-reading keeps the original read timestamp.
+      operationId: markNotificationRead
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: The updated notification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notification"
+        "403":
+          $ref: "#/components/responses/PermissionDenied"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/notifications/read-all:
+    post:
+      tags: [Notifications]
+      summary: Mark all my notifications read
+      operationId: markAllNotificationsRead
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Backlog cleared
+        "403":
+          $ref: "#/components/responses/PermissionDenied"
+
+  /v1/push/subscriptions:
+    post:
+      tags: [Notifications]
+      summary: Register this device for web push
+      description: >
+        Body is the flattened PushSubscription from PushManager.subscribe().
+        Re-subscribing the same endpoint refreshes the keys (upsert). The
+        device hint is taken from the User-Agent header.
+      operationId: subscribePush
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubscribePushRequest"
+      responses:
+        "204":
+          description: Subscribed
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/PermissionDenied"
+    delete:
+      tags: [Notifications]
+      summary: Unregister this device
+      description: Unknown endpoints no-op (unsubscribe is idempotent).
+      operationId: unsubscribePush
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                endpoint:
+                  type: string
+              required: [endpoint]
+      responses:
+        "204":
+          description: Unsubscribed
         "400":
           $ref: "#/components/responses/BadRequest"
         "403":
@@ -589,6 +737,62 @@ components:
           $ref: "#/components/schemas/AccountRole"
         status:
           $ref: "#/components/schemas/AccountStatus"
+
+    NotificationStatus:
+      type: string
+      enum:
+        - NOTIFICATION_STATUS_UNREAD
+        - NOTIFICATION_STATUS_READ
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        account_id:
+          type: string
+          format: uuid
+        event_type:
+          type: string
+          description: Producer-owned vocabulary (transfer.offered, file.rejected, …)
+          example: transfer.offered
+        title:
+          type: string
+        body:
+          type: string
+        data:
+          type: string
+          description: >
+            JSON payload for deep links, opaque to the backend. JSONB
+            canonicalizes formatting — do not byte-compare.
+        status:
+          $ref: "#/components/schemas/NotificationStatus"
+        read_at:
+          type: string
+          format: date-time
+          description: Absent while unread.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    SubscribePushRequest:
+      type: object
+      description: The PushSubscription object from PushManager.subscribe(), flattened.
+      properties:
+        endpoint:
+          type: string
+          example: "https://fcm.googleapis.com/fcm/send/…"
+        p256dh:
+          type: string
+          description: Client public key (subscription.getKey('p256dh'), base64url)
+        auth:
+          type: string
+          description: Client auth secret (subscription.getKey('auth'), base64url)
+      required: [endpoint, p256dh, auth]
 
     ListAccountsResponse:
       type: object

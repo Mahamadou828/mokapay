@@ -22,10 +22,11 @@ type Config struct {
 }
 
 type User struct {
-	conn  *grpc.ClientConn
-	Auth  userv1.AuthServiceClient
-	Admin userv1.AdminServiceClient
-	User  userv1.UserServiceClient
+	conn         *grpc.ClientConn
+	Auth         userv1.AuthServiceClient
+	Admin        userv1.AdminServiceClient
+	User         userv1.UserServiceClient
+	Notification userv1.NotificationServiceClient
 }
 
 type MokaClient struct {
@@ -46,10 +47,11 @@ func NewMokaClient(config Config, requiredConnection map[Connection]bool) (*Moka
 			return nil, err
 		}
 		u = &User{
-			conn:  conn,
-			Auth:  userv1.NewAuthServiceClient(conn),
-			Admin: userv1.NewAdminServiceClient(conn),
-			User:  userv1.NewUserServiceClient(conn),
+			conn:         conn,
+			Auth:         userv1.NewAuthServiceClient(conn),
+			Admin:        userv1.NewAdminServiceClient(conn),
+			User:         userv1.NewUserServiceClient(conn),
+			Notification: userv1.NewNotificationServiceClient(conn),
 		}
 	}
 

@@ -4,7 +4,7 @@
 package account
 
 import (
-	"mokapay.app/app/services/user/internal/business/auth/usecase"
+	usecase "mokapay.app/app/services/user/internal/business/auth/usecase/account"
 	"mokapay.app/core/logger"
 	userv1 "mokapay.app/proto/codebase/user/v1"
 )

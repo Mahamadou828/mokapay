@@ -5,7 +5,7 @@
 package admin
 
 import (
-	"mokapay.app/app/services/user/internal/business/auth/usecase"
+	usecase "mokapay.app/app/services/user/internal/business/auth/usecase/admin"
 	"mokapay.app/core/logger"
 	userv1 "mokapay.app/proto/codebase/user/v1"
 )
@@ -14,10 +14,10 @@ type Handler struct {
 	userv1.UnimplementedAdminServiceServer
 
 	logger *logger.Logger
-	uc     usecase.Account
+	uc     usecase.Admin
 }
 
-func NewHandler(logger *logger.Logger, uc usecase.Account) Handler {
+func NewHandler(logger *logger.Logger, uc usecase.Admin) Handler {
 	return Handler{
 		logger: logger,
 		uc:     uc,

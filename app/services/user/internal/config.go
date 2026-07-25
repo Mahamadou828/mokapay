@@ -36,6 +36,12 @@ type Config struct {
 		PoolID       string
 		Region       string
 	}
+	Push struct {
+		VapidPublicKey  string
+		VapidPrivateKey string
+		Subscriber      string        // mailto: contact, VAPID sub claim
+		TTL             time.Duration // how long the push service holds an undelivered message
+	}
 	Seed struct {
 		OpsPhone string
 	}
@@ -66,6 +72,12 @@ func newConfig() Config {
 	cfg.Auth.OtpMaxAttempts = config.GetEnvAsInt("OTP_MAX_ATTEMPTS", 3)
 	cfg.Auth.OtpSendCooldown = config.GetEnvAsTimeDuration("OTP_SEND_COOLDOWN", time.Minute)
 	cfg.Auth.OtpHourlyLimit = config.GetEnvAsInt("OTP_HOURLY_LIMIT", 5)
+
+	// Empty VAPID keys switch the service to the logging push sender.
+	cfg.Push.VapidPublicKey = config.GetEnv("VAPID_PUBLIC_KEY", "")
+	cfg.Push.VapidPrivateKey = config.GetEnv("VAPID_PRIVATE_KEY", "")
+	cfg.Push.Subscriber = config.GetEnv("VAPID_SUBSCRIBER", "")
+	cfg.Push.TTL = config.GetEnvAsTimeDuration("PUSH_TTL", 30*time.Second)
 
 	cfg.Cognito.ClientID = config.GetEnv("COGNITO_CLIENT_ID", "")
 	cfg.Cognito.ClientSecret = config.GetEnv("COGNITO_CLIENT_SECRET", "")

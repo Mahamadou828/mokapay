@@ -16,9 +16,16 @@ func (h Handler) Routes(public, authed, ops *core.Group) {
 	public.RegisterHandler(http.MethodPost, "/auth/refresh", h.refreshToken)
 	public.RegisterHandler(http.MethodPost, "/auth/password", h.changePassword)
 
+	public.RegisterHandler(http.MethodGet, "/push/vapid-key", h.getVapidPublicKey)
+
 	authed.RegisterHandler(http.MethodPost, "/auth/logout", h.logout)
 	authed.RegisterHandler(http.MethodGet, "/me", h.me)
 	authed.RegisterHandler(http.MethodPatch, "/me", h.updateMe)
+	authed.RegisterHandler(http.MethodGet, "/notifications", h.listNotifications)
+	authed.RegisterHandler(http.MethodPost, "/notifications/{id}/read", h.markNotificationRead)
+	authed.RegisterHandler(http.MethodPost, "/notifications/read-all", h.markAllNotificationsRead)
+	authed.RegisterHandler(http.MethodPost, "/push/subscriptions", h.subscribePush)
+	authed.RegisterHandler(http.MethodDelete, "/push/subscriptions", h.unsubscribePush)
 
 	ops.RegisterHandler(http.MethodGet, "/accounts", h.listAccounts)
 	ops.RegisterHandler(http.MethodGet, "/accounts/{id}", h.getAccount)

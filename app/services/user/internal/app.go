@@ -14,8 +14,13 @@ import (
 	accountapi "mokapay.app/app/services/user/internal/api/account"
 	adminapi "mokapay.app/app/services/user/internal/api/admin"
 	authapi "mokapay.app/app/services/user/internal/api/auth"
-	"mokapay.app/app/services/user/internal/business/auth/usecase"
+	notificationapi "mokapay.app/app/services/user/internal/api/notification"
+	accountUC "mokapay.app/app/services/user/internal/business/auth/usecase/account"
+	adminUC "mokapay.app/app/services/user/internal/business/auth/usecase/admin"
+	authUC "mokapay.app/app/services/user/internal/business/auth/usecase/auth"
+	notificationuc "mokapay.app/app/services/user/internal/business/notification/usecase"
 	"mokapay.app/app/services/user/internal/integration/sms"
+	"mokapay.app/app/services/user/internal/integration/webpush"
 	"mokapay.app/core/aws"
 	"mokapay.app/core/client"
 	"mokapay.app/core/db"
@@ -76,12 +81,21 @@ func Run() error {
 
 	// -------------------------------------------------------------------------
 	// Init usecases
-	authUC, err := usecase.New(log, pg, sender, cognito, cfg.Auth.OtpPepper)
+	authUsecase, err := authUC.New(log, pg, sender, cognito, cfg.Auth.OtpPepper)
 	if err != nil {
 		log.Error(ctx, "startup", "failed to init auth usecase", "error", err)
 		return err
 	}
-	accountUC := usecase.NewAccount(log, pg, cognito)
+	accountUsecase := accountUC.New(log, pg)
+	adminUsecase := adminUC.New(log, pg, cognito)
+
+	// Push sender: real web push with VAPID keys, logging stand-in without
+	// (local dev needs no keys).
+	var pusher notificationuc.PushSender = webpush.NewLog(log)
+	if cfg.Push.VapidPublicKey != "" && cfg.Push.VapidPrivateKey != "" {
+		pusher = webpush.NewSender(cfg.Push.VapidPublicKey, cfg.Push.VapidPrivateKey, cfg.Push.Subscriber, cfg.Push.TTL)
+	}
+	notificationUC := notificationuc.New(log, pg, pusher, cfg.Push.VapidPublicKey)
 
 	// -------------------------------------------------------------------------
 	// Init gRPC server & register services. The client interceptor rebuilds
@@ -94,9 +108,10 @@ func Run() error {
 	))
 	reflection.Register(srv)
 
-	userv1.RegisterAuthServiceServer(srv, authapi.NewHandler(log, authUC))
-	userv1.RegisterUserServiceServer(srv, accountapi.NewUserHandler(log, accountUC))
-	userv1.RegisterAdminServiceServer(srv, adminapi.NewHandler(log, accountUC))
+	userv1.RegisterAuthServiceServer(srv, authapi.NewHandler(log, authUsecase))
+	userv1.RegisterUserServiceServer(srv, accountapi.NewUserHandler(log, accountUsecase))
+	userv1.RegisterAdminServiceServer(srv, adminapi.NewHandler(log, adminUsecase))
+	userv1.RegisterNotificationServiceServer(srv, notificationapi.NewHandler(log, notificationUC))
 
 	lis, err := net.Listen("tcp", cfg.GRPC.Port)
 	if err != nil {

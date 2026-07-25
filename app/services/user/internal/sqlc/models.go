@@ -143,6 +143,48 @@ func (ns NullAccountStatus) Value() (driver.Value, error) {
 	return string(ns.AccountStatus), nil
 }
 
+type NotificationStatus string
+
+const (
+	NotificationStatusUnread NotificationStatus = "unread"
+	NotificationStatusRead   NotificationStatus = "read"
+)
+
+func (e *NotificationStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = NotificationStatus(s)
+	case string:
+		*e = NotificationStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for NotificationStatus: %T", src)
+	}
+	return nil
+}
+
+type NullNotificationStatus struct {
+	NotificationStatus NotificationStatus
+	Valid              bool // Valid is true if NotificationStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullNotificationStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.NotificationStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.NotificationStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullNotificationStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.NotificationStatus), nil
+}
+
 type OtpPurpose string
 
 const (
@@ -202,6 +244,20 @@ type Account struct {
 	DeletedAt         pgtype.Timestamptz
 }
 
+type Notification struct {
+	ID        string
+	AccountFk string
+	EventType string
+	Title     string
+	Body      string
+	Data      []byte
+	Status    NotificationStatus
+	ReadAt    pgtype.Timestamptz
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt pgtype.Timestamptz
+}
+
 type Otp struct {
 	ID          string
 	PhoneNumber string
@@ -230,6 +286,19 @@ type UsersExtAccount struct {
 	UpdatedAt         time.Time
 }
 
+type UsersExtNotification struct {
+	ID        string
+	AccountFk string
+	EventType string
+	Title     string
+	Body      string
+	Data      []byte
+	Status    NotificationStatus
+	ReadAt    pgtype.Timestamptz
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
 type UsersExtOtp struct {
 	ID          string
 	PhoneNumber string
@@ -239,4 +308,27 @@ type UsersExtOtp struct {
 	ExpiresAt   time.Time
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
+}
+
+type UsersExtWebpushSubscription struct {
+	ID        string
+	AccountFk string
+	Endpoint  string
+	P256dh    string
+	Auth      string
+	UserAgent pgtype.Text
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type WebpushSubscription struct {
+	ID        string
+	AccountFk string
+	Endpoint  string
+	P256dh    string
+	Auth      string
+	UserAgent pgtype.Text
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt pgtype.Timestamptz
 }

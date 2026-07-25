@@ -3,7 +3,7 @@
 package auth
 
 import (
-	"mokapay.app/app/services/user/internal/business/auth/usecase"
+	usecase "mokapay.app/app/services/user/internal/business/auth/usecase/auth"
 	"mokapay.app/core/logger"
 	userv1 "mokapay.app/proto/codebase/user/v1"
 )

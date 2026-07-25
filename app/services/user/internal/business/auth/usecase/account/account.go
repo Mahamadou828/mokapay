@@ -1,37 +1,26 @@
-package usecase
+package account
 
 import (
 	"context"
 
-	"github.com/google/uuid"
 	"mokapay.app/app/services/user/internal/business/auth"
 	"mokapay.app/app/services/user/internal/business/auth/repo"
 	coredb "mokapay.app/core/db"
 	"mokapay.app/core/logger"
 )
 
-// AccountProvider is the narrow slice of the auth provider the account
-// domain needs: revoking sessions on moderation and removing the identity
-// on delete.
-type AccountProvider interface {
-	Logout(ctx context.Context, username string) error
-	AdminDelete(ctx context.Context, username string) error
-}
-
 // Account covers profile self-service (Me / UpdateOwnAccount) and the
 // OPS/ADMIN moderation surface. Authorization is the api layer's job — the
 // self path never sets Role/Status on the payload.
 type Account struct {
-	logger   *logger.Logger
-	repo     repo.Store
-	provider AccountProvider
+	logger *logger.Logger
+	repo   repo.Store
 }
 
-func NewAccount(l *logger.Logger, db *coredb.Postgres, p AccountProvider) Account {
+func New(l *logger.Logger, db *coredb.Postgres) Account {
 	return Account{
-		logger:   l,
-		repo:     repo.New(db),
-		provider: p,
+		logger: l,
+		repo:   repo.New(db),
 	}
 }
 
@@ -64,12 +53,4 @@ func (a Account) UpdateOwnAccount(ctx context.Context, sub string, up auth.Updat
 	}
 
 	return updated, nil
-}
-
-func (a Account) GetAccount(ctx context.Context, id uuid.UUID) (auth.Account, error) {
-	return a.repo.GetAccount(ctx, id.String())
-}
-
-func (a Account) ListAccounts(ctx context.Context, f auth.AccountFilter) ([]auth.Account, error) {
-	return a.repo.ListAccounts(ctx, f)
 }

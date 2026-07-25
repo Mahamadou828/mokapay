@@ -1,0 +1,90 @@
+syntax = "proto3";
+
+package user.v1;
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+// In-app inbox + web-push delivery. The notification row is the source of
+// truth; the push is best-effort on top (failures never surface to the
+// producer). Self-service RPCs resolve the caller from the
+// gateway-forwarded passport.
+service NotificationService {
+  // Internal: other services (system passport) notify an account. Never
+  // exposed as a REST route (same policy as GetAccountBySub).
+  rpc PushNotification(PushNotificationRequest) returns (Notification);
+
+  // Self-service.
+  rpc ListNotifications(ListNotificationsRequest) returns (ListNotificationsResponse);
+  rpc MarkNotificationRead(MarkNotificationReadRequest) returns (Notification);
+  rpc MarkAllNotificationsRead(MarkAllNotificationsReadRequest) returns (google.protobuf.Empty);
+  rpc SubscribePush(SubscribePushRequest) returns (google.protobuf.Empty);
+  rpc UnsubscribePush(UnsubscribePushRequest) returns (google.protobuf.Empty);
+
+  // Public: the client needs the key to call PushManager.subscribe().
+  rpc GetVapidPublicKey(GetVapidPublicKeyRequest) returns (GetVapidPublicKeyResponse);
+}
+
+// Values mirror the users DB notification_status enum.
+enum NotificationStatus {
+  NOTIFICATION_STATUS_UNSPECIFIED = 0;
+  NOTIFICATION_STATUS_UNREAD = 1;
+  NOTIFICATION_STATUS_READ = 2;
+}
+
+// One inbox row.
+message Notification {
+  string id = 1;
+  string account_id = 2;
+  string event_type = 3;
+  string title = 4;
+  string body = 5;
+  optional string data = 6;  // JSON payload, opaque to the user service
+  NotificationStatus status = 7;
+  optional google.protobuf.Timestamp read_at = 8;  // absent while unread
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}
+
+message PushNotificationRequest {
+  string account_id = 1;  // the recipient
+  string event_type = 2;  // producer-owned vocabulary (transfer.offered, …)
+  string title = 3;
+  string body = 4;
+  optional string data = 5;  // JSON string, stored as JSONB, forwarded to the client
+}
+
+message ListNotificationsRequest {
+  // Optional status filter; absent = the whole inbox.
+  optional NotificationStatus status = 1;
+  // Rows to return, newest first. 0 = server default.
+  int32 limit = 2;
+}
+
+message ListNotificationsResponse {
+  repeated Notification notifications = 1;
+}
+
+message MarkNotificationReadRequest {
+  string id = 1;
+}
+
+message MarkAllNotificationsReadRequest {}
+
+// The PushSubscription object from PushManager.subscribe(), flattened.
+message SubscribePushRequest {
+  string endpoint = 1;
+  string p256dh = 2;
+  string auth = 3;
+  optional string user_agent = 4;  // device hint for a future "manage devices"
+}
+
+message UnsubscribePushRequest {
+  string endpoint = 1;
+}
+
+message GetVapidPublicKeyRequest {}
+
+message GetVapidPublicKeyResponse {
+  string public_key = 1;
+}
