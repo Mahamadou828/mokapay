@@ -13,7 +13,7 @@ import (
 )
 
 const addLedgerRequest = `-- name: AddLedgerRequest :one
-SELECT id, agent_profile_fk, type, direction, amount, status, reference_entity_type, reference_entity_id, proof_file_nk, reason, created_by, decided_by, decided_at, created_at, updated_at FROM payments_ext.add_ledger_request(
+SELECT id, agent_profile_fk, type, direction, amount, status, reference_entity_type, reference_entity_id, proof_file_nk, reason, created_by, decided_by, decided_at, created_at, updated_at, ref FROM payments_ext.add_ledger_request(
     $1::uuid,
     $2::ledger_request_type,
     $3::ledger_direction,
@@ -71,12 +71,13 @@ func (q *Queries) AddLedgerRequest(ctx context.Context, arg AddLedgerRequestPara
 		&i.DecidedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Ref,
 	)
 	return i, err
 }
 
 const approveLedgerRequest = `-- name: ApproveLedgerRequest :one
-SELECT id, agent_profile_fk, type, direction, amount, status, reference_entity_type, reference_entity_id, proof_file_nk, reason, created_by, decided_by, decided_at, created_at, updated_at FROM payments_ext.approve_ledger_request(
+SELECT id, agent_profile_fk, type, direction, amount, status, reference_entity_type, reference_entity_id, proof_file_nk, reason, created_by, decided_by, decided_at, created_at, updated_at, ref FROM payments_ext.approve_ledger_request(
     $1::uuid,
     $2::uuid
 )
@@ -108,12 +109,13 @@ func (q *Queries) ApproveLedgerRequest(ctx context.Context, arg ApproveLedgerReq
 		&i.DecidedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Ref,
 	)
 	return i, err
 }
 
 const getLedgerRequest = `-- name: GetLedgerRequest :one
-SELECT id, agent_profile_fk, type, direction, amount, status, reference_entity_type, reference_entity_id, proof_file_nk, reason, created_by, decided_by, decided_at, created_at, updated_at
+SELECT id, ref, agent_profile_fk, type, direction, amount, status, reference_entity_type, reference_entity_id, proof_file_nk, reason, created_by, decided_by, decided_at, created_at, updated_at
 FROM payments_ext.ledger_requests
 WHERE id = $1::uuid
 `
@@ -123,6 +125,7 @@ func (q *Queries) GetLedgerRequest(ctx context.Context, id string) (PaymentsExtL
 	var i PaymentsExtLedgerRequest
 	err := row.Scan(
 		&i.ID,
+		&i.Ref,
 		&i.AgentProfileFk,
 		&i.Type,
 		&i.Direction,
@@ -142,7 +145,7 @@ func (q *Queries) GetLedgerRequest(ctx context.Context, id string) (PaymentsExtL
 }
 
 const getLedgerRequestByReference = `-- name: GetLedgerRequestByReference :one
-SELECT id, agent_profile_fk, type, direction, amount, status, reference_entity_type, reference_entity_id, proof_file_nk, reason, created_by, decided_by, decided_at, created_at, updated_at
+SELECT id, ref, agent_profile_fk, type, direction, amount, status, reference_entity_type, reference_entity_id, proof_file_nk, reason, created_by, decided_by, decided_at, created_at, updated_at
 FROM payments_ext.ledger_requests
 WHERE reference_entity_type = $1::ledger_reference_type
   AND reference_entity_id = $2::uuid
@@ -161,6 +164,7 @@ func (q *Queries) GetLedgerRequestByReference(ctx context.Context, arg GetLedger
 	var i PaymentsExtLedgerRequest
 	err := row.Scan(
 		&i.ID,
+		&i.Ref,
 		&i.AgentProfileFk,
 		&i.Type,
 		&i.Direction,
@@ -221,7 +225,7 @@ func (q *Queries) ListLedgerLines(ctx context.Context, arg ListLedgerLinesParams
 }
 
 const listLedgerRequests = `-- name: ListLedgerRequests :many
-SELECT id, agent_profile_fk, type, direction, amount, status, reference_entity_type, reference_entity_id, proof_file_nk, reason, created_by, decided_by, decided_at, created_at, updated_at
+SELECT id, ref, agent_profile_fk, type, direction, amount, status, reference_entity_type, reference_entity_id, proof_file_nk, reason, created_by, decided_by, decided_at, created_at, updated_at
 FROM payments_ext.ledger_requests
 WHERE ($1::ledger_request_status IS NULL OR status = $1::ledger_request_status)
   AND ($2::ledger_request_type IS NULL OR type = $2::ledger_request_type)
@@ -247,6 +251,7 @@ func (q *Queries) ListLedgerRequests(ctx context.Context, arg ListLedgerRequests
 		var i PaymentsExtLedgerRequest
 		if err := rows.Scan(
 			&i.ID,
+			&i.Ref,
 			&i.AgentProfileFk,
 			&i.Type,
 			&i.Direction,
@@ -273,7 +278,7 @@ func (q *Queries) ListLedgerRequests(ctx context.Context, arg ListLedgerRequests
 }
 
 const rejectLedgerRequest = `-- name: RejectLedgerRequest :one
-SELECT id, agent_profile_fk, type, direction, amount, status, reference_entity_type, reference_entity_id, proof_file_nk, reason, created_by, decided_by, decided_at, created_at, updated_at FROM payments_ext.reject_ledger_request(
+SELECT id, agent_profile_fk, type, direction, amount, status, reference_entity_type, reference_entity_id, proof_file_nk, reason, created_by, decided_by, decided_at, created_at, updated_at, ref FROM payments_ext.reject_ledger_request(
     $1::uuid,
     $2::uuid,
     $3
@@ -306,12 +311,13 @@ func (q *Queries) RejectLedgerRequest(ctx context.Context, arg RejectLedgerReque
 		&i.DecidedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Ref,
 	)
 	return i, err
 }
 
 const updateLedgerRequestStatus = `-- name: UpdateLedgerRequestStatus :one
-SELECT id, agent_profile_fk, type, direction, amount, status, reference_entity_type, reference_entity_id, proof_file_nk, reason, created_by, decided_by, decided_at, created_at, updated_at FROM payments_ext.update_ledger_request_status(
+SELECT id, agent_profile_fk, type, direction, amount, status, reference_entity_type, reference_entity_id, proof_file_nk, reason, created_by, decided_by, decided_at, created_at, updated_at, ref FROM payments_ext.update_ledger_request_status(
     $1::uuid,
     $2::ledger_request_status,
     $3::uuid
@@ -344,6 +350,7 @@ func (q *Queries) UpdateLedgerRequestStatus(ctx context.Context, arg UpdateLedge
 		&i.DecidedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Ref,
 	)
 	return i, err
 }

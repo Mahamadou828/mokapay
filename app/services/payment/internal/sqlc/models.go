@@ -517,6 +517,7 @@ type LedgerRequest struct {
 	DecidedAt           pgtype.Timestamptz
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
+	Ref                 string
 }
 
 type Offer struct {
@@ -610,6 +611,7 @@ type PaymentsExtLedgerLine struct {
 
 type PaymentsExtLedgerRequest struct {
 	ID                  string
+	Ref                 string
 	AgentProfileFk      string
 	Type                LedgerRequestType
 	Direction           LedgerDirection

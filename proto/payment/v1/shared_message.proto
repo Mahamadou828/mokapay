@@ -93,6 +93,9 @@ message LedgerRequest {
   optional google.protobuf.Timestamp decided_at = 12;
   google.protobuf.Timestamp created_at = 13;
   google.protobuf.Timestamp updated_at = 14;
+  // Human reference (DEP-2026-000042, prefix by type): what the agent
+  // copies as the motif of the off-platform payment.
+  string ref = 15;
 }
 
 // One immutable settlement record.

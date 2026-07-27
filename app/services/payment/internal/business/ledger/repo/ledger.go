@@ -200,19 +200,19 @@ func transitionResult(verb, id string, row sqlc.LedgerRequest, err error) (ledge
 }
 
 func toDomain(r sqlc.LedgerRequest) (ledger.LedgerRequest, error) {
-	return build(r.ID, r.AgentProfileFk, r.Type, r.Direction, r.Amount, r.Status,
+	return build(r.ID, r.Ref, r.AgentProfileFk, r.Type, r.Direction, r.Amount, r.Status,
 		r.ReferenceEntityType, r.ReferenceEntityID, r.ProofFileNk, r.Reason,
 		r.CreatedBy, r.DecidedBy, r.DecidedAt, r.CreatedAt, r.UpdatedAt)
 }
 
 func viewToDomain(r sqlc.PaymentsExtLedgerRequest) (ledger.LedgerRequest, error) {
-	return build(r.ID, r.AgentProfileFk, r.Type, r.Direction, r.Amount, r.Status,
+	return build(r.ID, r.Ref, r.AgentProfileFk, r.Type, r.Direction, r.Amount, r.Status,
 		r.ReferenceEntityType, r.ReferenceEntityID, r.ProofFileNk, r.Reason,
 		r.CreatedBy, r.DecidedBy, r.DecidedAt, r.CreatedAt, r.UpdatedAt)
 }
 
 func build(
-	id, profileFk string, typ sqlc.LedgerRequestType, direction sqlc.LedgerDirection,
+	id, ref, profileFk string, typ sqlc.LedgerRequestType, direction sqlc.LedgerDirection,
 	amount int64, status sqlc.LedgerRequestStatus,
 	refType sqlc.NullLedgerReferenceType, refID uuid.NullUUID,
 	proofFileNk uuid.NullUUID, reason pgtype.Text,
@@ -234,6 +234,7 @@ func build(
 
 	out := ledger.LedgerRequest{
 		ID:             rid,
+		Ref:            ref,
 		AgentProfileID: profile,
 		Type:           ledger.Type(typ),
 		Direction:      ledger.Direction(direction),

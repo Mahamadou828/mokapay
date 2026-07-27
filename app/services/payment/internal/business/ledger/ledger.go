@@ -4,7 +4,9 @@
 package ledger
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -91,6 +93,7 @@ type Reference struct {
 // until it settles or is rejected.
 type LedgerRequest struct {
 	ID             uuid.UUID
+	Ref            string // human reference (DEP-2026-000042): the motif of the off-platform payment
 	AgentProfileID uuid.UUID
 	Type           Type
 	Direction      Direction
@@ -122,6 +125,51 @@ type Filter struct {
 	Status         *Status
 	Type           *Type
 	AgentProfileID *uuid.UUID
+}
+
+// DepositChannel is one official platform receiving account: where an
+// agent sends a funding deposit off-platform (the G2/G12 catalogue). Ops
+// configuration served verbatim to the client — never persisted, never
+// hardcoded app-side, so an account number changes without a release.
+type DepositChannel struct {
+	Name          string // display label: "M-Pesa", "Rawbank"
+	Kind          string // "mobile_money" | "bank"
+	AccountName   string // e.g. "MOKA PAY SARL"
+	AccountNumber string // MSISDN or bank account number
+	Instructions  *string
+}
+
+// ParseDepositChannels decodes the DEPOSIT_CHANNELS JSON array. Every
+// entry needs name, kind, account_name and account_number — these strings
+// are where agents send real money, so a partial entry fails startup
+// instead of rendering blank.
+func ParseDepositChannels(raw string) ([]DepositChannel, error) {
+	var rows []struct {
+		Name          string  `json:"name"`
+		Kind          string  `json:"kind"`
+		AccountName   string  `json:"account_name"`
+		AccountNumber string  `json:"account_number"`
+		Instructions  *string `json:"instructions"`
+	}
+	if err := json.Unmarshal([]byte(raw), &rows); err != nil {
+		return nil, fmt.Errorf("parsing deposit channels: %w", err)
+	}
+
+	out := make([]DepositChannel, 0, len(rows))
+	for i, r := range rows {
+		if r.Name == "" || r.Kind == "" || r.AccountName == "" || r.AccountNumber == "" {
+			return nil, fmt.Errorf("deposit channel %d: name, kind, account_name and account_number are required", i)
+		}
+		out = append(out, DepositChannel{
+			Name:          r.Name,
+			Kind:          r.Kind,
+			AccountName:   r.AccountName,
+			AccountNumber: r.AccountNumber,
+			Instructions:  r.Instructions,
+		})
+	}
+
+	return out, nil
 }
 
 // Line is one immutable settlement record: signed amount (inflow +,

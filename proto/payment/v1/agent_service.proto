@@ -27,6 +27,11 @@ service AgentService {
   // {operator, currency} pair; remove then re-add to change the msisdn.
   rpc AddWallet(AddWalletRequest) returns (AgentWallet);
   rpc RemoveWallet(RemoveWalletRequest) returns (google.protobuf.Empty);
+  // The platform's official receiving accounts for deposits (G2 "fund
+  // your guarantee" / G12 deposits): server-owned config so an account
+  // number changes without an app release. The client renders exactly
+  // what this returns — nothing is hardcoded app-side.
+  rpc ListDepositChannels(ListDepositChannelsRequest) returns (ListDepositChannelsResponse);
 }
 
 message GetMyProfileRequest {}
@@ -67,4 +72,21 @@ message AddWalletRequest {
 
 message RemoveWalletRequest {
   string id = 1;
+}
+
+message ListDepositChannelsRequest {}
+
+// One official MOKA PAY receiving account. Free-form strings on purpose:
+// channels include banks (not in the Operator enum) and the set is ops
+// configuration, not a domain enum.
+message DepositChannel {
+  string name = 1;            // display label: "M-Pesa", "Rawbank"
+  string kind = 2;            // "mobile_money" | "bank"
+  string account_name = 3;    // e.g. "MOKA PAY SARL"
+  string account_number = 4;  // MSISDN or bank account number
+  optional string instructions = 5;  // extra guidance shown under the entry
+}
+
+message ListDepositChannelsResponse {
+  repeated DepositChannel channels = 1;
 }

@@ -2,6 +2,7 @@
 -- for read-model consistency: every read goes through payments_ext.
 CREATE OR REPLACE VIEW payments_ext.ledger_requests AS
 SELECT id,
+       ref,
        agent_profile_fk,
        type,
        direction,

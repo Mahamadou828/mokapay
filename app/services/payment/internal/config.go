@@ -47,6 +47,13 @@ type Config struct {
 		PaymentTimeout   time.Duration
 		AutoConfirmAfter time.Duration
 	}
+	Deposit struct {
+		// ChannelsJSON is the official receiving-account catalogue (JSON
+		// array), parsed at startup by ledger.ParseDepositChannels. These
+		// strings are where agents send real money — served from config,
+		// never hardcoded client-side.
+		ChannelsJSON string
+	}
 }
 
 // newConfig resolves the whole service config from the environment. Defaults
@@ -91,6 +98,12 @@ func newConfig() Config {
 	cfg.Transfer.MatchDeadline = config.GetEnvAsTimeDuration("MATCH_DEADLINE", 30*time.Minute)
 	cfg.Transfer.PaymentTimeout = config.GetEnvAsTimeDuration("PAYMENT_TIMEOUT", 24*time.Hour)
 	cfg.Transfer.AutoConfirmAfter = config.GetEnvAsTimeDuration("AUTO_CONFIRM_AFTER", 24*time.Hour)
+
+	// Default: the one account that exists today (design G2). Add entries
+	// as real receiving accounts open — the client renders whatever the
+	// list returns.
+	cfg.Deposit.ChannelsJSON = config.GetEnv("DEPOSIT_CHANNELS",
+		`[{"name":"M-Pesa","kind":"mobile_money","account_name":"MOKA PAY SARL","account_number":"+243815000000"}]`)
 
 	return cfg
 }

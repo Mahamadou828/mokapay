@@ -339,6 +339,11 @@ Authorization: Bearer {{access_token}}
 GET {{host}}/v1/agent/profile
 Authorization: Bearer {{access_token}}
 
+### Official deposit channels (where to send a funding deposit; also
+### available to pending agents funding the enrollment guarantee)
+GET {{host}}/v1/agent/deposit-channels
+Authorization: Bearer {{access_token}}
+
 ### My offer inbox (live offers, soonest-expiring first)
 GET {{host}}/v1/agent/offers
 Authorization: Bearer {{access_token}}

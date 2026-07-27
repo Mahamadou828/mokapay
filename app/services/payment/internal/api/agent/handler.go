@@ -10,17 +10,18 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
+	adminmapper "mokapay.app/app/services/payment/internal/api/admin/mapper"
 	transfermapper "mokapay.app/app/services/payment/internal/api/transfer/mapper"
 	profileuc "mokapay.app/app/services/payment/internal/business/agentprofile/usecase"
 	"mokapay.app/app/services/payment/internal/business/agentwallet"
 	walletuc "mokapay.app/app/services/payment/internal/business/agentwallet/usecase"
+	"mokapay.app/app/services/payment/internal/business/ledger"
 	"mokapay.app/app/services/payment/internal/business/matching"
 	matchinguc "mokapay.app/app/services/payment/internal/business/matching/usecase"
 	"mokapay.app/app/services/payment/internal/business/transfer"
 	transferuc "mokapay.app/app/services/payment/internal/business/transfer/usecase"
 	"mokapay.app/app/services/payment/internal/sdk/grpcerr"
 	"mokapay.app/app/services/payment/internal/sdk/identity"
-	adminmapper "mokapay.app/app/services/payment/internal/api/admin/mapper"
 	"mokapay.app/core/logger"
 	paymentv1 "mokapay.app/proto/codebase/payment/v1"
 )
@@ -33,15 +34,19 @@ type Handler struct {
 	matching  matchinguc.UseCase
 	transfers transferuc.UseCase
 	wallets   walletuc.UseCase
+	// The official receiving-account catalogue: startup configuration,
+	// no usecase behind it.
+	depositChannels []ledger.DepositChannel
 }
 
-func NewHandler(l *logger.Logger, profiles profileuc.UseCase, matching matchinguc.UseCase, transfers transferuc.UseCase, wallets walletuc.UseCase) *Handler {
+func NewHandler(l *logger.Logger, profiles profileuc.UseCase, matching matchinguc.UseCase, transfers transferuc.UseCase, wallets walletuc.UseCase, depositChannels []ledger.DepositChannel) *Handler {
 	return &Handler{
-		logger:    l,
-		profiles:  profiles,
-		matching:  matching,
-		transfers: transfers,
-		wallets:   wallets,
+		logger:          l,
+		profiles:        profiles,
+		matching:        matching,
+		transfers:       transfers,
+		wallets:         wallets,
+		depositChannels: depositChannels,
 	}
 }
 
@@ -207,6 +212,28 @@ func (h *Handler) RemoveWallet(ctx context.Context, req *paymentv1.RemoveWalletR
 	}
 
 	return &emptypb.Empty{}, nil
+}
+
+// ListDepositChannels serves the official receiving accounts for funding
+// deposits. pending_agent included: the guarantee (G2) is funded during
+// enrollment, before the role flips to agent.
+func (h *Handler) ListDepositChannels(ctx context.Context, _ *paymentv1.ListDepositChannelsRequest) (*paymentv1.ListDepositChannelsResponse, error) {
+	if _, err := identity.RequireRoles(ctx, "agent", "pending_agent"); err != nil {
+		return nil, err
+	}
+
+	out := make([]*paymentv1.DepositChannel, 0, len(h.depositChannels))
+	for _, c := range h.depositChannels {
+		out = append(out, &paymentv1.DepositChannel{
+			Name:          c.Name,
+			Kind:          c.Kind,
+			AccountName:   c.AccountName,
+			AccountNumber: c.AccountNumber,
+			Instructions:  c.Instructions,
+		})
+	}
+
+	return &paymentv1.ListDepositChannelsResponse{Channels: out}, nil
 }
 
 func statusFilter(s *paymentv1.TransferStatus) *transfer.Status {

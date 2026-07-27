@@ -33,6 +33,7 @@ func (h Handler) Routes(authed, agent, ops *core.Group) {
 
 	// The agent surface.
 	agent.RegisterHandler(http.MethodGet, "/agent/profile", h.getMyProfile)
+	agent.RegisterHandler(http.MethodGet, "/agent/deposit-channels", h.listDepositChannels)
 	agent.RegisterHandler(http.MethodGet, "/agent/ledger/requests", h.listMyLedgerRequests)
 	agent.RegisterHandler(http.MethodPost, "/agent/ledger/requests", h.createMyLedgerRequest)
 	agent.RegisterHandler(http.MethodGet, "/agent/ledger/lines", h.listMyLedgerLines)

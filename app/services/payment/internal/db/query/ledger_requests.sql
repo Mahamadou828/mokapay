@@ -16,14 +16,14 @@ SELECT * FROM payments_ext.add_ledger_request(
 );
 
 -- name: GetLedgerRequest :one
-SELECT id, agent_profile_fk, type, direction, amount, status, reference_entity_type, reference_entity_id, proof_file_nk, reason, created_by, decided_by, decided_at, created_at, updated_at
+SELECT id, ref, agent_profile_fk, type, direction, amount, status, reference_entity_type, reference_entity_id, proof_file_nk, reason, created_by, decided_by, decided_at, created_at, updated_at
 FROM payments_ext.ledger_requests
 WHERE id = sqlc.arg(id)::uuid;
 
 -- name: GetLedgerRequestByReference :one
 -- The enrollment/transfer linkage lookup: the live-or-settled request of
 -- the entity (rejected ones don't count — the slot is free again).
-SELECT id, agent_profile_fk, type, direction, amount, status, reference_entity_type, reference_entity_id, proof_file_nk, reason, created_by, decided_by, decided_at, created_at, updated_at
+SELECT id, ref, agent_profile_fk, type, direction, amount, status, reference_entity_type, reference_entity_id, proof_file_nk, reason, created_by, decided_by, decided_at, created_at, updated_at
 FROM payments_ext.ledger_requests
 WHERE reference_entity_type = sqlc.arg(reference_entity_type)::ledger_reference_type
   AND reference_entity_id = sqlc.arg(reference_entity_id)::uuid
@@ -31,7 +31,7 @@ WHERE reference_entity_type = sqlc.arg(reference_entity_type)::ledger_reference_
 
 -- name: ListLedgerRequests :many
 -- All filters optional: NULL disables each.
-SELECT id, agent_profile_fk, type, direction, amount, status, reference_entity_type, reference_entity_id, proof_file_nk, reason, created_by, decided_by, decided_at, created_at, updated_at
+SELECT id, ref, agent_profile_fk, type, direction, amount, status, reference_entity_type, reference_entity_id, proof_file_nk, reason, created_by, decided_by, decided_at, created_at, updated_at
 FROM payments_ext.ledger_requests
 WHERE (sqlc.narg(status)::ledger_request_status IS NULL OR status = sqlc.narg(status)::ledger_request_status)
   AND (sqlc.narg(type)::ledger_request_type IS NULL OR type = sqlc.narg(type)::ledger_request_type)

@@ -19,6 +19,7 @@ import (
 	transferapi "mokapay.app/app/services/payment/internal/api/transfer"
 	profileuc "mokapay.app/app/services/payment/internal/business/agentprofile/usecase"
 	walletuc "mokapay.app/app/services/payment/internal/business/agentwallet/usecase"
+	"mokapay.app/app/services/payment/internal/business/ledger"
 	"mokapay.app/app/services/payment/internal/business/ledger/events"
 	ledgeruc "mokapay.app/app/services/payment/internal/business/ledger/usecase"
 	matchinguc "mokapay.app/app/services/payment/internal/business/matching/usecase"
@@ -199,6 +200,16 @@ func Run() error {
 	}()
 
 	// -------------------------------------------------------------------------
+	// The deposit-channel catalogue: official receiving accounts, config
+	// only. A malformed entry fails startup — these strings are where
+	// agents send real money.
+	depositChannels, err := ledger.ParseDepositChannels(cfg.Deposit.ChannelsJSON)
+	if err != nil {
+		log.Error(ctx, "startup", "invalid DEPOSIT_CHANNELS", "error", err)
+		return err
+	}
+
+	// -------------------------------------------------------------------------
 	// Init gRPC server & register services. The client interceptor rebuilds
 	// the gateway-forwarded passport into the request context; handlers
 	// police it themselves (internal RPCs — no gateway tier in front).
@@ -212,7 +223,7 @@ func Run() error {
 	paymentv1.RegisterAdminServiceServer(srv, adminapi.NewHandler(log, profileUC, transferUC))
 	paymentv1.RegisterLedgerServiceServer(srv, ledgerapi.NewHandler(log, ledgerUC))
 	paymentv1.RegisterTransferServiceServer(srv, transferapi.NewHandler(log, transferUC))
-	paymentv1.RegisterAgentServiceServer(srv, agentapi.NewHandler(log, profileUC, matchingUC, transferUC, walletUC))
+	paymentv1.RegisterAgentServiceServer(srv, agentapi.NewHandler(log, profileUC, matchingUC, transferUC, walletUC, depositChannels))
 
 	lis, err := net.Listen("tcp", cfg.GRPC.Port)
 	if err != nil {

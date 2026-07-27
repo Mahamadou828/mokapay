@@ -1043,6 +1043,34 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/agent/deposit-channels:
+    get:
+      tags: [Agent]
+      summary: List the official deposit channels
+      description: >
+        The platform's official receiving accounts for funding deposits
+        (G2 "fund your guarantee" / deposits): server-owned configuration —
+        render exactly what this returns, never hardcode an account number
+        app-side. Available to agents and pending agents (the guarantee is
+        funded during enrollment).
+      operationId: listDepositChannels
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The catalogue
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  channels:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/DepositChannel"
+        "403":
+          $ref: "#/components/responses/PermissionDenied"
+
   /v1/agent/offers:
     get:
       tags: [Agent]
@@ -2521,6 +2549,28 @@ components:
           type: string
           format: date-time
 
+    DepositChannel:
+      type: object
+      description: One official MOKA PAY receiving account. Free-form strings — the set includes banks and is ops configuration, not a domain enum.
+      properties:
+        name:
+          type: string
+          description: Display label.
+          example: M-Pesa
+        kind:
+          type: string
+          enum: [mobile_money, bank]
+        account_name:
+          type: string
+          example: MOKA PAY SARL
+        account_number:
+          type: string
+          description: MSISDN or bank account number.
+          example: "+243815000000"
+        instructions:
+          type: string
+          description: Extra guidance shown under the entry (optional).
+
     AddWalletRequest:
       type: object
       properties:
@@ -2697,6 +2747,14 @@ components:
         id:
           type: string
           format: uuid
+        ref:
+          type: string
+          description: >
+            Human reference (DEP-2026-000042; prefix by type — DEP funding,
+            WDR withdrawal, RFD refund, DED deduction, COM commission).
+            The agent copies it as the motif of the off-platform payment;
+            ops match the incoming money against it.
+          example: DEP-2026-000042
         agent_profile_id:
           type: string
           format: uuid

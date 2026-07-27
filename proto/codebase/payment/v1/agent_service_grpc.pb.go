@@ -20,14 +20,15 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AgentService_GetMyProfile_FullMethodName    = "/payment.v1.AgentService/GetMyProfile"
-	AgentService_ListMyOffers_FullMethodName    = "/payment.v1.AgentService/ListMyOffers"
-	AgentService_AcceptOffer_FullMethodName     = "/payment.v1.AgentService/AcceptOffer"
-	AgentService_DeclineOffer_FullMethodName    = "/payment.v1.AgentService/DeclineOffer"
-	AgentService_ListMyTransfers_FullMethodName = "/payment.v1.AgentService/ListMyTransfers"
-	AgentService_ListMyWallets_FullMethodName   = "/payment.v1.AgentService/ListMyWallets"
-	AgentService_AddWallet_FullMethodName       = "/payment.v1.AgentService/AddWallet"
-	AgentService_RemoveWallet_FullMethodName    = "/payment.v1.AgentService/RemoveWallet"
+	AgentService_GetMyProfile_FullMethodName        = "/payment.v1.AgentService/GetMyProfile"
+	AgentService_ListMyOffers_FullMethodName        = "/payment.v1.AgentService/ListMyOffers"
+	AgentService_AcceptOffer_FullMethodName         = "/payment.v1.AgentService/AcceptOffer"
+	AgentService_DeclineOffer_FullMethodName        = "/payment.v1.AgentService/DeclineOffer"
+	AgentService_ListMyTransfers_FullMethodName     = "/payment.v1.AgentService/ListMyTransfers"
+	AgentService_ListMyWallets_FullMethodName       = "/payment.v1.AgentService/ListMyWallets"
+	AgentService_AddWallet_FullMethodName           = "/payment.v1.AgentService/AddWallet"
+	AgentService_RemoveWallet_FullMethodName        = "/payment.v1.AgentService/RemoveWallet"
+	AgentService_ListDepositChannels_FullMethodName = "/payment.v1.AgentService/ListDepositChannels"
 )
 
 // AgentServiceClient is the client API for AgentService service.
@@ -55,6 +56,11 @@ type AgentServiceClient interface {
 	// {operator, currency} pair; remove then re-add to change the msisdn.
 	AddWallet(ctx context.Context, in *AddWalletRequest, opts ...grpc.CallOption) (*AgentWallet, error)
 	RemoveWallet(ctx context.Context, in *RemoveWalletRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// The platform's official receiving accounts for deposits (G2 "fund
+	// your guarantee" / G12 deposits): server-owned config so an account
+	// number changes without an app release. The client renders exactly
+	// what this returns — nothing is hardcoded app-side.
+	ListDepositChannels(ctx context.Context, in *ListDepositChannelsRequest, opts ...grpc.CallOption) (*ListDepositChannelsResponse, error)
 }
 
 type agentServiceClient struct {
@@ -145,6 +151,16 @@ func (c *agentServiceClient) RemoveWallet(ctx context.Context, in *RemoveWalletR
 	return out, nil
 }
 
+func (c *agentServiceClient) ListDepositChannels(ctx context.Context, in *ListDepositChannelsRequest, opts ...grpc.CallOption) (*ListDepositChannelsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListDepositChannelsResponse)
+	err := c.cc.Invoke(ctx, AgentService_ListDepositChannels_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AgentServiceServer is the server API for AgentService service.
 // All implementations must embed UnimplementedAgentServiceServer
 // for forward compatibility.
@@ -170,6 +186,11 @@ type AgentServiceServer interface {
 	// {operator, currency} pair; remove then re-add to change the msisdn.
 	AddWallet(context.Context, *AddWalletRequest) (*AgentWallet, error)
 	RemoveWallet(context.Context, *RemoveWalletRequest) (*emptypb.Empty, error)
+	// The platform's official receiving accounts for deposits (G2 "fund
+	// your guarantee" / G12 deposits): server-owned config so an account
+	// number changes without an app release. The client renders exactly
+	// what this returns — nothing is hardcoded app-side.
+	ListDepositChannels(context.Context, *ListDepositChannelsRequest) (*ListDepositChannelsResponse, error)
 	mustEmbedUnimplementedAgentServiceServer()
 }
 
@@ -203,6 +224,9 @@ func (UnimplementedAgentServiceServer) AddWallet(context.Context, *AddWalletRequ
 }
 func (UnimplementedAgentServiceServer) RemoveWallet(context.Context, *RemoveWalletRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method RemoveWallet not implemented")
+}
+func (UnimplementedAgentServiceServer) ListDepositChannels(context.Context, *ListDepositChannelsRequest) (*ListDepositChannelsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListDepositChannels not implemented")
 }
 func (UnimplementedAgentServiceServer) mustEmbedUnimplementedAgentServiceServer() {}
 func (UnimplementedAgentServiceServer) testEmbeddedByValue()                      {}
@@ -369,6 +393,24 @@ func _AgentService_RemoveWallet_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgentService_ListDepositChannels_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListDepositChannelsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServiceServer).ListDepositChannels(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentService_ListDepositChannels_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServiceServer).ListDepositChannels(ctx, req.(*ListDepositChannelsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AgentService_ServiceDesc is the grpc.ServiceDesc for AgentService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -407,6 +449,10 @@ var AgentService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RemoveWallet",
 			Handler:    _AgentService_RemoveWallet_Handler,
+		},
+		{
+			MethodName: "ListDepositChannels",
+			Handler:    _AgentService_ListDepositChannels_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

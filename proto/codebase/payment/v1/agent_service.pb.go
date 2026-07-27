@@ -478,6 +478,165 @@ func (x *RemoveWalletRequest) GetId() string {
 	return ""
 }
 
+type ListDepositChannelsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListDepositChannelsRequest) Reset() {
+	*x = ListDepositChannelsRequest{}
+	mi := &file_payment_v1_agent_service_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListDepositChannelsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListDepositChannelsRequest) ProtoMessage() {}
+
+func (x *ListDepositChannelsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_payment_v1_agent_service_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListDepositChannelsRequest.ProtoReflect.Descriptor instead.
+func (*ListDepositChannelsRequest) Descriptor() ([]byte, []int) {
+	return file_payment_v1_agent_service_proto_rawDescGZIP(), []int{10}
+}
+
+// One official MOKA PAY receiving account. Free-form strings on purpose:
+// channels include banks (not in the Operator enum) and the set is ops
+// configuration, not a domain enum.
+type DepositChannel struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                                        // display label: "M-Pesa", "Rawbank"
+	Kind          string                 `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`                                        // "mobile_money" | "bank"
+	AccountName   string                 `protobuf:"bytes,3,opt,name=account_name,json=accountName,proto3" json:"account_name,omitempty"`       // e.g. "MOKA PAY SARL"
+	AccountNumber string                 `protobuf:"bytes,4,opt,name=account_number,json=accountNumber,proto3" json:"account_number,omitempty"` // MSISDN or bank account number
+	Instructions  *string                `protobuf:"bytes,5,opt,name=instructions,proto3,oneof" json:"instructions,omitempty"`                  // extra guidance shown under the entry
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DepositChannel) Reset() {
+	*x = DepositChannel{}
+	mi := &file_payment_v1_agent_service_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DepositChannel) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DepositChannel) ProtoMessage() {}
+
+func (x *DepositChannel) ProtoReflect() protoreflect.Message {
+	mi := &file_payment_v1_agent_service_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DepositChannel.ProtoReflect.Descriptor instead.
+func (*DepositChannel) Descriptor() ([]byte, []int) {
+	return file_payment_v1_agent_service_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *DepositChannel) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *DepositChannel) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *DepositChannel) GetAccountName() string {
+	if x != nil {
+		return x.AccountName
+	}
+	return ""
+}
+
+func (x *DepositChannel) GetAccountNumber() string {
+	if x != nil {
+		return x.AccountNumber
+	}
+	return ""
+}
+
+func (x *DepositChannel) GetInstructions() string {
+	if x != nil && x.Instructions != nil {
+		return *x.Instructions
+	}
+	return ""
+}
+
+type ListDepositChannelsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Channels      []*DepositChannel      `protobuf:"bytes,1,rep,name=channels,proto3" json:"channels,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListDepositChannelsResponse) Reset() {
+	*x = ListDepositChannelsResponse{}
+	mi := &file_payment_v1_agent_service_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListDepositChannelsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListDepositChannelsResponse) ProtoMessage() {}
+
+func (x *ListDepositChannelsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_payment_v1_agent_service_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListDepositChannelsResponse.ProtoReflect.Descriptor instead.
+func (*ListDepositChannelsResponse) Descriptor() ([]byte, []int) {
+	return file_payment_v1_agent_service_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *ListDepositChannelsResponse) GetChannels() []*DepositChannel {
+	if x != nil {
+		return x.Channels
+	}
+	return nil
+}
+
 var File_payment_v1_agent_service_proto protoreflect.FileDescriptor
 
 const file_payment_v1_agent_service_proto_rawDesc = "" +
@@ -507,7 +666,17 @@ const file_payment_v1_agent_service_proto_rawDesc = "" +
 	"\bcurrency\x18\x02 \x01(\x0e2\x14.payment.v1.CurrencyR\bcurrency\x12\x16\n" +
 	"\x06msisdn\x18\x03 \x01(\tR\x06msisdn\"%\n" +
 	"\x13RemoveWalletRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id2\xf2\x04\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\x1c\n" +
+	"\x1aListDepositChannelsRequest\"\xbc\x01\n" +
+	"\x0eDepositChannel\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
+	"\x04kind\x18\x02 \x01(\tR\x04kind\x12!\n" +
+	"\faccount_name\x18\x03 \x01(\tR\vaccountName\x12%\n" +
+	"\x0eaccount_number\x18\x04 \x01(\tR\raccountNumber\x12'\n" +
+	"\finstructions\x18\x05 \x01(\tH\x00R\finstructions\x88\x01\x01B\x0f\n" +
+	"\r_instructions\"U\n" +
+	"\x1bListDepositChannelsResponse\x126\n" +
+	"\bchannels\x18\x01 \x03(\v2\x1a.payment.v1.DepositChannelR\bchannels2\xda\x05\n" +
 	"\fAgentService\x12I\n" +
 	"\fGetMyProfile\x12\x1f.payment.v1.GetMyProfileRequest\x1a\x18.payment.v1.AgentProfile\x12Q\n" +
 	"\fListMyOffers\x12\x1f.payment.v1.ListMyOffersRequest\x1a .payment.v1.ListMyOffersResponse\x12C\n" +
@@ -516,7 +685,8 @@ const file_payment_v1_agent_service_proto_rawDesc = "" +
 	"\x0fListMyTransfers\x12\".payment.v1.ListMyTransfersRequest\x1a!.payment.v1.ListTransfersResponse\x12T\n" +
 	"\rListMyWallets\x12 .payment.v1.ListMyWalletsRequest\x1a!.payment.v1.ListMyWalletsResponse\x12B\n" +
 	"\tAddWallet\x12\x1c.payment.v1.AddWalletRequest\x1a\x17.payment.v1.AgentWallet\x12G\n" +
-	"\fRemoveWallet\x12\x1f.payment.v1.RemoveWalletRequest\x1a\x16.google.protobuf.EmptyB\x9d\x01\n" +
+	"\fRemoveWallet\x12\x1f.payment.v1.RemoveWalletRequest\x1a\x16.google.protobuf.Empty\x12f\n" +
+	"\x13ListDepositChannels\x12&.payment.v1.ListDepositChannelsRequest\x1a'.payment.v1.ListDepositChannelsResponseB\x9d\x01\n" +
 	"\x0ecom.payment.v1B\x11AgentServiceProtoP\x01Z/mokapay.app/proto/codebase/payment/v1;paymentv1\xa2\x02\x03PXX\xaa\x02\n" +
 	"Payment.V1\xca\x02\n" +
 	"Payment\\V1\xe2\x02\x16Payment\\V1\\GPBMetadata\xea\x02\vPayment::V1b\x06proto3"
@@ -533,57 +703,63 @@ func file_payment_v1_agent_service_proto_rawDescGZIP() []byte {
 	return file_payment_v1_agent_service_proto_rawDescData
 }
 
-var file_payment_v1_agent_service_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_payment_v1_agent_service_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_payment_v1_agent_service_proto_goTypes = []any{
-	(*GetMyProfileRequest)(nil),    // 0: payment.v1.GetMyProfileRequest
-	(*ListMyOffersRequest)(nil),    // 1: payment.v1.ListMyOffersRequest
-	(*ListMyOffersResponse)(nil),   // 2: payment.v1.ListMyOffersResponse
-	(*AcceptOfferRequest)(nil),     // 3: payment.v1.AcceptOfferRequest
-	(*DeclineOfferRequest)(nil),    // 4: payment.v1.DeclineOfferRequest
-	(*ListMyTransfersRequest)(nil), // 5: payment.v1.ListMyTransfersRequest
-	(*ListMyWalletsRequest)(nil),   // 6: payment.v1.ListMyWalletsRequest
-	(*ListMyWalletsResponse)(nil),  // 7: payment.v1.ListMyWalletsResponse
-	(*AddWalletRequest)(nil),       // 8: payment.v1.AddWalletRequest
-	(*RemoveWalletRequest)(nil),    // 9: payment.v1.RemoveWalletRequest
-	(OfferStatus)(0),               // 10: payment.v1.OfferStatus
-	(*Offer)(nil),                  // 11: payment.v1.Offer
-	(TransferStatus)(0),            // 12: payment.v1.TransferStatus
-	(*AgentWallet)(nil),            // 13: payment.v1.AgentWallet
-	(Operator)(0),                  // 14: payment.v1.Operator
-	(Currency)(0),                  // 15: payment.v1.Currency
-	(*AgentProfile)(nil),           // 16: payment.v1.AgentProfile
-	(*Transfer)(nil),               // 17: payment.v1.Transfer
-	(*ListTransfersResponse)(nil),  // 18: payment.v1.ListTransfersResponse
-	(*emptypb.Empty)(nil),          // 19: google.protobuf.Empty
+	(*GetMyProfileRequest)(nil),         // 0: payment.v1.GetMyProfileRequest
+	(*ListMyOffersRequest)(nil),         // 1: payment.v1.ListMyOffersRequest
+	(*ListMyOffersResponse)(nil),        // 2: payment.v1.ListMyOffersResponse
+	(*AcceptOfferRequest)(nil),          // 3: payment.v1.AcceptOfferRequest
+	(*DeclineOfferRequest)(nil),         // 4: payment.v1.DeclineOfferRequest
+	(*ListMyTransfersRequest)(nil),      // 5: payment.v1.ListMyTransfersRequest
+	(*ListMyWalletsRequest)(nil),        // 6: payment.v1.ListMyWalletsRequest
+	(*ListMyWalletsResponse)(nil),       // 7: payment.v1.ListMyWalletsResponse
+	(*AddWalletRequest)(nil),            // 8: payment.v1.AddWalletRequest
+	(*RemoveWalletRequest)(nil),         // 9: payment.v1.RemoveWalletRequest
+	(*ListDepositChannelsRequest)(nil),  // 10: payment.v1.ListDepositChannelsRequest
+	(*DepositChannel)(nil),              // 11: payment.v1.DepositChannel
+	(*ListDepositChannelsResponse)(nil), // 12: payment.v1.ListDepositChannelsResponse
+	(OfferStatus)(0),                    // 13: payment.v1.OfferStatus
+	(*Offer)(nil),                       // 14: payment.v1.Offer
+	(TransferStatus)(0),                 // 15: payment.v1.TransferStatus
+	(*AgentWallet)(nil),                 // 16: payment.v1.AgentWallet
+	(Operator)(0),                       // 17: payment.v1.Operator
+	(Currency)(0),                       // 18: payment.v1.Currency
+	(*AgentProfile)(nil),                // 19: payment.v1.AgentProfile
+	(*Transfer)(nil),                    // 20: payment.v1.Transfer
+	(*ListTransfersResponse)(nil),       // 21: payment.v1.ListTransfersResponse
+	(*emptypb.Empty)(nil),               // 22: google.protobuf.Empty
 }
 var file_payment_v1_agent_service_proto_depIdxs = []int32{
-	10, // 0: payment.v1.ListMyOffersRequest.status:type_name -> payment.v1.OfferStatus
-	11, // 1: payment.v1.ListMyOffersResponse.offers:type_name -> payment.v1.Offer
-	12, // 2: payment.v1.ListMyTransfersRequest.status:type_name -> payment.v1.TransferStatus
-	13, // 3: payment.v1.ListMyWalletsResponse.wallets:type_name -> payment.v1.AgentWallet
-	14, // 4: payment.v1.AddWalletRequest.operator:type_name -> payment.v1.Operator
-	15, // 5: payment.v1.AddWalletRequest.currency:type_name -> payment.v1.Currency
-	0,  // 6: payment.v1.AgentService.GetMyProfile:input_type -> payment.v1.GetMyProfileRequest
-	1,  // 7: payment.v1.AgentService.ListMyOffers:input_type -> payment.v1.ListMyOffersRequest
-	3,  // 8: payment.v1.AgentService.AcceptOffer:input_type -> payment.v1.AcceptOfferRequest
-	4,  // 9: payment.v1.AgentService.DeclineOffer:input_type -> payment.v1.DeclineOfferRequest
-	5,  // 10: payment.v1.AgentService.ListMyTransfers:input_type -> payment.v1.ListMyTransfersRequest
-	6,  // 11: payment.v1.AgentService.ListMyWallets:input_type -> payment.v1.ListMyWalletsRequest
-	8,  // 12: payment.v1.AgentService.AddWallet:input_type -> payment.v1.AddWalletRequest
-	9,  // 13: payment.v1.AgentService.RemoveWallet:input_type -> payment.v1.RemoveWalletRequest
-	16, // 14: payment.v1.AgentService.GetMyProfile:output_type -> payment.v1.AgentProfile
-	2,  // 15: payment.v1.AgentService.ListMyOffers:output_type -> payment.v1.ListMyOffersResponse
-	17, // 16: payment.v1.AgentService.AcceptOffer:output_type -> payment.v1.Transfer
-	11, // 17: payment.v1.AgentService.DeclineOffer:output_type -> payment.v1.Offer
-	18, // 18: payment.v1.AgentService.ListMyTransfers:output_type -> payment.v1.ListTransfersResponse
-	7,  // 19: payment.v1.AgentService.ListMyWallets:output_type -> payment.v1.ListMyWalletsResponse
-	13, // 20: payment.v1.AgentService.AddWallet:output_type -> payment.v1.AgentWallet
-	19, // 21: payment.v1.AgentService.RemoveWallet:output_type -> google.protobuf.Empty
-	14, // [14:22] is the sub-list for method output_type
-	6,  // [6:14] is the sub-list for method input_type
-	6,  // [6:6] is the sub-list for extension type_name
-	6,  // [6:6] is the sub-list for extension extendee
-	0,  // [0:6] is the sub-list for field type_name
+	13, // 0: payment.v1.ListMyOffersRequest.status:type_name -> payment.v1.OfferStatus
+	14, // 1: payment.v1.ListMyOffersResponse.offers:type_name -> payment.v1.Offer
+	15, // 2: payment.v1.ListMyTransfersRequest.status:type_name -> payment.v1.TransferStatus
+	16, // 3: payment.v1.ListMyWalletsResponse.wallets:type_name -> payment.v1.AgentWallet
+	17, // 4: payment.v1.AddWalletRequest.operator:type_name -> payment.v1.Operator
+	18, // 5: payment.v1.AddWalletRequest.currency:type_name -> payment.v1.Currency
+	11, // 6: payment.v1.ListDepositChannelsResponse.channels:type_name -> payment.v1.DepositChannel
+	0,  // 7: payment.v1.AgentService.GetMyProfile:input_type -> payment.v1.GetMyProfileRequest
+	1,  // 8: payment.v1.AgentService.ListMyOffers:input_type -> payment.v1.ListMyOffersRequest
+	3,  // 9: payment.v1.AgentService.AcceptOffer:input_type -> payment.v1.AcceptOfferRequest
+	4,  // 10: payment.v1.AgentService.DeclineOffer:input_type -> payment.v1.DeclineOfferRequest
+	5,  // 11: payment.v1.AgentService.ListMyTransfers:input_type -> payment.v1.ListMyTransfersRequest
+	6,  // 12: payment.v1.AgentService.ListMyWallets:input_type -> payment.v1.ListMyWalletsRequest
+	8,  // 13: payment.v1.AgentService.AddWallet:input_type -> payment.v1.AddWalletRequest
+	9,  // 14: payment.v1.AgentService.RemoveWallet:input_type -> payment.v1.RemoveWalletRequest
+	10, // 15: payment.v1.AgentService.ListDepositChannels:input_type -> payment.v1.ListDepositChannelsRequest
+	19, // 16: payment.v1.AgentService.GetMyProfile:output_type -> payment.v1.AgentProfile
+	2,  // 17: payment.v1.AgentService.ListMyOffers:output_type -> payment.v1.ListMyOffersResponse
+	20, // 18: payment.v1.AgentService.AcceptOffer:output_type -> payment.v1.Transfer
+	14, // 19: payment.v1.AgentService.DeclineOffer:output_type -> payment.v1.Offer
+	21, // 20: payment.v1.AgentService.ListMyTransfers:output_type -> payment.v1.ListTransfersResponse
+	7,  // 21: payment.v1.AgentService.ListMyWallets:output_type -> payment.v1.ListMyWalletsResponse
+	16, // 22: payment.v1.AgentService.AddWallet:output_type -> payment.v1.AgentWallet
+	22, // 23: payment.v1.AgentService.RemoveWallet:output_type -> google.protobuf.Empty
+	12, // 24: payment.v1.AgentService.ListDepositChannels:output_type -> payment.v1.ListDepositChannelsResponse
+	16, // [16:25] is the sub-list for method output_type
+	7,  // [7:16] is the sub-list for method input_type
+	7,  // [7:7] is the sub-list for extension type_name
+	7,  // [7:7] is the sub-list for extension extendee
+	0,  // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_payment_v1_agent_service_proto_init() }
@@ -595,13 +771,14 @@ func file_payment_v1_agent_service_proto_init() {
 	file_payment_v1_transfer_service_proto_init()
 	file_payment_v1_agent_service_proto_msgTypes[1].OneofWrappers = []any{}
 	file_payment_v1_agent_service_proto_msgTypes[5].OneofWrappers = []any{}
+	file_payment_v1_agent_service_proto_msgTypes[11].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_payment_v1_agent_service_proto_rawDesc), len(file_payment_v1_agent_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   10,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

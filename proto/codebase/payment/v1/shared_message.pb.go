@@ -732,8 +732,11 @@ type LedgerRequest struct {
 	DecidedAt           *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=decided_at,json=decidedAt,proto3,oneof" json:"decided_at,omitempty"`
 	CreatedAt           *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt           *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	// Human reference (DEP-2026-000042, prefix by type): what the agent
+	// copies as the motif of the off-platform payment.
+	Ref           string `protobuf:"bytes,15,opt,name=ref,proto3" json:"ref,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *LedgerRequest) Reset() {
@@ -862,6 +865,13 @@ func (x *LedgerRequest) GetUpdatedAt() *timestamppb.Timestamp {
 		return x.UpdatedAt
 	}
 	return nil
+}
+
+func (x *LedgerRequest) GetRef() string {
+	if x != nil {
+		return x.Ref
+	}
+	return ""
 }
 
 // One immutable settlement record.
@@ -1887,7 +1897,7 @@ const file_payment_v1_shared_message_proto_rawDesc = "" +
 	"created_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\a\n" +
-	"\x05_city\"\xa4\x06\n" +
+	"\x05_city\"\xb6\x06\n" +
 	"\rLedgerRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12(\n" +
 	"\x10agent_profile_id\x18\x02 \x01(\tR\x0eagentProfileId\x121\n" +
@@ -1907,7 +1917,8 @@ const file_payment_v1_shared_message_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x18\n" +
+	"updated_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x10\n" +
+	"\x03ref\x18\x0f \x01(\tR\x03refB\x18\n" +
 	"\x16_reference_entity_typeB\x16\n" +
 	"\x14_reference_entity_idB\x10\n" +
 	"\x0e_proof_file_idB\t\n" +

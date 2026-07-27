@@ -12,6 +12,7 @@ import (
 func LedgerRequestToProto(in ledger.LedgerRequest) *paymentv1.LedgerRequest {
 	out := &paymentv1.LedgerRequest{
 		Id:             in.ID.String(),
+		Ref:            in.Ref,
 		AgentProfileId: in.AgentProfileID.String(),
 		Type:           TypeToProto(in.Type),
 		Direction:      DirectionToProto(in.Direction),

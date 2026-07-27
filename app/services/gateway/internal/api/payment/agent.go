@@ -94,6 +94,15 @@ func (h Handler) listMyWallets(ctx context.Context, _ *http.Request) core.Encode
 	return protocodec.Proto{Message: res}
 }
 
+func (h Handler) listDepositChannels(ctx context.Context, _ *http.Request) core.Encoder {
+	res, err := h.moka.Payment.Agent.ListDepositChannels(ctx, &paymentv1.ListDepositChannelsRequest{})
+	if err != nil {
+		return rpcErr(err)
+	}
+
+	return protocodec.Proto{Message: res}
+}
+
 func (h Handler) addWallet(ctx context.Context, r *http.Request) core.Encoder {
 	req := &paymentv1.AddWalletRequest{}
 	if err := core.Decode(r, protocodec.Proto{Message: req}); err != nil {

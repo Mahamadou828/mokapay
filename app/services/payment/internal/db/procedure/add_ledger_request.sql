@@ -43,8 +43,16 @@ LANGUAGE sql AS $$
         RETURNING id
     )
     INSERT INTO ledger_requests
-        (agent_profile_fk, type, direction, amount, created_by, status, reference_entity_type, reference_entity_id, reason)
-    SELECT prof.id, p_type, p_direction, p_amount, p_created_by, p_status, p_reference_type, p_reference_id, p_reason
+        (ref, agent_profile_fk, type, direction, amount, created_by, status, reference_entity_type, reference_entity_id, reason)
+    SELECT CASE p_type
+               WHEN 'funding'    THEN 'DEP'
+               WHEN 'withdrawal' THEN 'WDR'
+               WHEN 'refund'     THEN 'RFD'
+               WHEN 'deduction'  THEN 'DED'
+               WHEN 'commission' THEN 'COM'
+           END || '-' || to_char(now(), 'YYYY') || '-' ||
+           lpad(nextval('ledger_ref_seq')::text, 6, '0'),
+           prof.id, p_type, p_direction, p_amount, p_created_by, p_status, p_reference_type, p_reference_id, p_reason
     FROM prof
     RETURNING *;
 $$;
