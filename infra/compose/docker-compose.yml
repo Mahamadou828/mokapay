@@ -66,6 +66,9 @@ services:
       timeout: 5s
       retries: 5
 
+  # Kept for offline experiments only — nothing points at it. The file
+  # service talks to real S3 (see its .env): presigned URLs go to the
+  # browser, and a compose-internal endpoint is not resolvable there.
   minio:
     image: minio/minio
     command: server /data --console-address ":9001"
@@ -144,17 +147,16 @@ services:
     env_file:
       - ../../app/services/file/.env
     # The .env targets host-side local dev; inside compose the stores live on
-    # the infrastructure network under their service names.
+    # the infrastructure network under their service names. Object storage is
+    # the exception: S3 is not overridden here, because the endpoint the
+    # service signs with is the one the browser is handed.
     environment:
       DB_HOST: postgres
       DB_PORT: "5432"
-      S3_ENDPOINT: http://minio:9000
       USER_GRPC_PORT: user:50051
       PAYMENT_GRPC_PORT: payment:50053
     depends_on:
       postgres:
-        condition: service_healthy
-      minio:
         condition: service_healthy
       user:
         condition: service_started

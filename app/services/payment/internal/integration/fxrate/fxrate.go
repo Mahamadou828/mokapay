@@ -84,9 +84,9 @@ func (h HTTP) RateMicros(ctx context.Context) (int64, error) {
 // Fallback serves the primary and degrades to the fallback on error —
 // logged, never fatal (a rate hiccup must not fail a quote).
 type Fallback struct {
-	Primary  Provider
-	Backup   Provider
-	Logger   *logger.Logger
+	Primary Provider
+	Backup  Provider
+	Logger  *logger.Logger
 }
 
 func (f Fallback) RateMicros(ctx context.Context) (int64, error) {
