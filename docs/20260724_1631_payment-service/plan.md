@@ -244,10 +244,34 @@ REFERENCES inside the service.
       capture); **[C]** deposit/withdrawal request flows + admin handlers on
       top — done; guarantee funding request now auto-opens on enrollment
       TOS accept; human refs (DEP-2026-NNNNNN) added
-- [ ] Slice 6 **[C]** — commissions (accrual + batch logic, manual CLI) +
+- [x] Slice 6 **[C]** — commissions (accrual + batch logic, manual CLI) +
       disputes records; **[M]** dispute resolution money effects + the
-      Tuesday periodic job — NOT STARTED: no commissions/disputes tables or
-      domains exist yet. The remaining open slice.
+      Tuesday periodic job — done (2026-07-28). Deviations from the sketch
+      above, all deliberate:
+      - The accrual keeps the fee split and the FX margin in **separate
+        columns with their own currency** (fee is from_currency, margin is
+        to_currency): adding francs to cents is teardown bug #3. A third
+        column, `payable_amount`, carries the agent's share in the
+        guarantee balance's denomination (USD), converted at the
+        transfer's OWN locked rate (`hold_amount : total_amount`) — never
+        a fresh rate lookup.
+      - `agent_fault` produces **only the capture** (a settled `deduction`
+        request + its ledger line), not the "capture + refund
+        ledger_request" of §4: `ledger_requests` are agent-scoped and a
+        client has no account here, so a second outflow would simply debit
+        the agent twice. The refund owed is stamped on the dispute
+        (`refund_amount`/`refund_currency`) as the ops instruction, with
+        the D10 shortfall logged.
+      - Commission and batch `status` are **derived in the views** (batch
+        link + the batch's ledger request status), never stored — no
+        denormalized copy to desync.
+      - Auto-dispute extends the existing `PaymentTimeoutArg` job with a
+        `Stage` field (client window vs payout window) rather than adding
+        a job kind; the payout clock starts at the client's funding proof.
+      - Proto names follow the ACTUAL service split (`TransferService.
+        OpenDispute`, `AgentService.ListMyCommissions`, `AdminService.
+        {ListDisputes,ResolveDispute,ListCommissionBatches}`), not the
+        `AdminPaymentService` sketch of §6.
 - [x] Slice 7 — done in evolved form: River jobs (match, offer expiry,
       payment timeout, auto-confirm, sweep, notify) instead of a broker;
       proofs flow file→payment over gRPC (system passport,
