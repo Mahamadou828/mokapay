@@ -216,8 +216,9 @@ func WalletToProto(w agentwallet.Wallet) *paymentv1.AgentWallet {
 		Id:             w.ID.String(),
 		AgentProfileId: w.AgentProfileID.String(),
 		Operator:       OperatorToProto(w.Operator),
-		Currency:       CurrencyToProto(w.Currency),
 		Msisdn:         w.Msisdn,
+		AcceptsUsd:     w.AcceptsUSD,
+		AcceptsCdf:     w.AcceptsCDF,
 		CreatedAt:      timestamppb.New(w.CreatedAt),
 		UpdatedAt:      timestamppb.New(w.UpdatedAt),
 	}

@@ -21,11 +21,13 @@ WHERE ap.status = 'active'
   AND EXISTS (SELECT 1 FROM agent_wallets w
               WHERE w.agent_profile_fk = ap.id AND w.deleted_at IS NULL
                 AND w.operator = sqlc.arg(from_operator)::payment_operator
-                AND w.currency = sqlc.arg(from_currency)::currency)
+                AND ((sqlc.arg(from_currency)::currency = 'usd' AND w.accepts_usd)
+                  OR (sqlc.arg(from_currency)::currency = 'cdf' AND w.accepts_cdf)))
   AND EXISTS (SELECT 1 FROM agent_wallets w
               WHERE w.agent_profile_fk = ap.id AND w.deleted_at IS NULL
                 AND w.operator = sqlc.arg(to_operator)::payment_operator
-                AND w.currency = sqlc.arg(to_currency)::currency)
+                AND ((sqlc.arg(to_currency)::currency = 'usd' AND w.accepts_usd)
+                  OR (sqlc.arg(to_currency)::currency = 'cdf' AND w.accepts_cdf)))
   AND NOT EXISTS (SELECT 1 FROM offers o
                   WHERE o.transfer_fk = sqlc.arg(transfer_id)::uuid
                     AND o.agent_profile_fk = ap.id

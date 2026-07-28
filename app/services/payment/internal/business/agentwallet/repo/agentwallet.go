@@ -29,25 +29,26 @@ func (s Store) WithTx(tx pgx.Tx) Store {
 	return Store{sqlc: s.sqlc.WithTx(tx)}
 }
 
-// Add declares a wallet pair; agentwallet.ErrWalletExists on a live
-// duplicate (remove then re-add to change the msisdn). The owning
+// Add declares a wallet; agentwallet.ErrWalletExists on a live duplicate
+// operator (remove then re-add to change msisdn or flags). The owning
 // profile is an explicit parameter on purpose.
 func (s Store) Add(ctx context.Context, agentProfileID uuid.UUID, nw agentwallet.NewWallet) (agentwallet.Wallet, error) {
 	row, err := s.sqlc.AddAgentWallet(ctx, sqlc.AddAgentWalletParams{
 		AgentProfileID: agentProfileID.String(),
 		Operator:       sqlc.PaymentOperator(nw.Operator),
-		Currency:       sqlc.Currency(nw.Currency),
 		Msisdn:         nw.Msisdn,
+		AcceptsUsd:     nw.AcceptsUSD,
+		AcceptsCdf:     nw.AcceptsCDF,
 	})
 	if err != nil {
 		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" && pgErr.ConstraintName == "agent_wallets_pair_uq" {
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" && pgErr.ConstraintName == "agent_wallets_operator_uq" {
 			return agentwallet.Wallet{}, agentwallet.ErrWalletExists
 		}
 		return agentwallet.Wallet{}, fmt.Errorf("adding agent wallet: %w", err)
 	}
 
-	return build(row.ID, row.AgentProfileFk, row.Operator, row.Currency, row.Msisdn, row.CreatedAt, row.UpdatedAt)
+	return build(row.ID, row.AgentProfileFk, row.Operator, row.Msisdn, row.AcceptsUsd, row.AcceptsCdf, row.CreatedAt, row.UpdatedAt)
 }
 
 // List returns the agent's live wallets.
@@ -59,7 +60,7 @@ func (s Store) List(ctx context.Context, agentProfileID uuid.UUID) ([]agentwalle
 
 	out := make([]agentwallet.Wallet, 0, len(rows))
 	for _, row := range rows {
-		w, err := build(row.ID, row.AgentProfileFk, row.Operator, row.Currency, row.Msisdn, row.CreatedAt, row.UpdatedAt)
+		w, err := build(row.ID, row.AgentProfileFk, row.Operator, row.Msisdn, row.AcceptsUsd, row.AcceptsCdf, row.CreatedAt, row.UpdatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -69,7 +70,8 @@ func (s Store) List(ctx context.Context, agentProfileID uuid.UUID) ([]agentwalle
 	return out, nil
 }
 
-// GetByPair resolves the wallet the client pays after a match.
+// GetByPair resolves the wallet the client pays after a match: the
+// operator's wallet, provided it accepts the transfer's currency.
 func (s Store) GetByPair(ctx context.Context, agentProfileID uuid.UUID, op transfer.Operator, cur transfer.Currency) (agentwallet.Wallet, error) {
 	row, err := s.sqlc.GetAgentWalletByPair(ctx, sqlc.GetAgentWalletByPairParams{
 		AgentProfileID: agentProfileID.String(),
@@ -83,7 +85,7 @@ func (s Store) GetByPair(ctx context.Context, agentProfileID uuid.UUID, op trans
 		return agentwallet.Wallet{}, fmt.Errorf("getting wallet pair: %w", err)
 	}
 
-	return build(row.ID, row.AgentProfileFk, row.Operator, row.Currency, row.Msisdn, row.CreatedAt, row.UpdatedAt)
+	return build(row.ID, row.AgentProfileFk, row.Operator, row.Msisdn, row.AcceptsUsd, row.AcceptsCdf, row.CreatedAt, row.UpdatedAt)
 }
 
 // Delete soft-deletes, owner-scoped.
@@ -97,7 +99,7 @@ func (s Store) Delete(ctx context.Context, id string, agentProfileID uuid.UUID) 
 	return nil
 }
 
-func build(id, profileFk string, op sqlc.PaymentOperator, cur sqlc.Currency, msisdn string, createdAt, updatedAt time.Time) (agentwallet.Wallet, error) {
+func build(id, profileFk string, op sqlc.PaymentOperator, msisdn string, acceptsUSD, acceptsCDF bool, createdAt, updatedAt time.Time) (agentwallet.Wallet, error) {
 	wid, err := uuid.Parse(id)
 	if err != nil {
 		return agentwallet.Wallet{}, fmt.Errorf("parsing wallet id %q: %w", id, err)
@@ -111,8 +113,9 @@ func build(id, profileFk string, op sqlc.PaymentOperator, cur sqlc.Currency, msi
 		ID:             wid,
 		AgentProfileID: profile,
 		Operator:       transfer.Operator(op),
-		Currency:       transfer.Currency(cur),
 		Msisdn:         msisdn,
+		AcceptsUSD:     acceptsUSD,
+		AcceptsCDF:     acceptsCDF,
 		CreatedAt:      createdAt,
 		UpdatedAt:      updatedAt,
 	}, nil

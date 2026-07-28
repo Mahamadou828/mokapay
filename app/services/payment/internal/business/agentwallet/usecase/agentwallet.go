@@ -38,8 +38,12 @@ func (u UseCase) ListMine(ctx context.Context, accountID uuid.UUID) ([]agentwall
 	return u.wallets.List(ctx, profile.ID)
 }
 
-// Add declares a wallet pair on the caller's profile.
+// Add declares a wallet on the caller's profile.
 func (u UseCase) Add(ctx context.Context, accountID uuid.UUID, nw agentwallet.NewWallet) (agentwallet.Wallet, error) {
+	if !nw.AcceptsUSD && !nw.AcceptsCDF {
+		return agentwallet.Wallet{}, agentwallet.ErrNoCurrency
+	}
+
 	profile, err := u.profiles.GetByAccount(ctx, accountID.String())
 	if err != nil {
 		return agentwallet.Wallet{}, err

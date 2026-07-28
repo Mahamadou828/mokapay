@@ -1677,10 +1677,11 @@ type AgentWallet struct {
 	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	AgentProfileId string                 `protobuf:"bytes,2,opt,name=agent_profile_id,json=agentProfileId,proto3" json:"agent_profile_id,omitempty"`
 	Operator       Operator               `protobuf:"varint,3,opt,name=operator,proto3,enum=payment.v1.Operator" json:"operator,omitempty"`
-	Currency       Currency               `protobuf:"varint,4,opt,name=currency,proto3,enum=payment.v1.Currency" json:"currency,omitempty"`
 	Msisdn         string                 `protobuf:"bytes,5,opt,name=msisdn,proto3" json:"msisdn,omitempty"`
 	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt      *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	AcceptsUsd     bool                   `protobuf:"varint,8,opt,name=accepts_usd,json=acceptsUsd,proto3" json:"accepts_usd,omitempty"`
+	AcceptsCdf     bool                   `protobuf:"varint,9,opt,name=accepts_cdf,json=acceptsCdf,proto3" json:"accepts_cdf,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -1736,13 +1737,6 @@ func (x *AgentWallet) GetOperator() Operator {
 	return Operator_OPERATOR_UNSPECIFIED
 }
 
-func (x *AgentWallet) GetCurrency() Currency {
-	if x != nil {
-		return x.Currency
-	}
-	return Currency_CURRENCY_UNSPECIFIED
-}
-
 func (x *AgentWallet) GetMsisdn() string {
 	if x != nil {
 		return x.Msisdn
@@ -1762,6 +1756,20 @@ func (x *AgentWallet) GetUpdatedAt() *timestamppb.Timestamp {
 		return x.UpdatedAt
 	}
 	return nil
+}
+
+func (x *AgentWallet) GetAcceptsUsd() bool {
+	if x != nil {
+		return x.AcceptsUsd
+	}
+	return false
+}
+
+func (x *AgentWallet) GetAcceptsCdf() bool {
+	if x != nil {
+		return x.AcceptsCdf
+	}
+	return false
 }
 
 // A stateless quote: nothing persisted — the rate locks at
@@ -2041,17 +2049,20 @@ const file_payment_v1_shared_message_proto_rawDesc = "" +
 	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\a\n" +
-	"\x05_city\"\xb9\x02\n" +
+	"\x05_city\"\xcf\x02\n" +
 	"\vAgentWallet\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12(\n" +
 	"\x10agent_profile_id\x18\x02 \x01(\tR\x0eagentProfileId\x120\n" +
-	"\boperator\x18\x03 \x01(\x0e2\x14.payment.v1.OperatorR\boperator\x120\n" +
-	"\bcurrency\x18\x04 \x01(\x0e2\x14.payment.v1.CurrencyR\bcurrency\x12\x16\n" +
+	"\boperator\x18\x03 \x01(\x0e2\x14.payment.v1.OperatorR\boperator\x12\x16\n" +
 	"\x06msisdn\x18\x05 \x01(\tR\x06msisdn\x129\n" +
 	"\n" +
 	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xd9\x02\n" +
+	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x1f\n" +
+	"\vaccepts_usd\x18\b \x01(\bR\n" +
+	"acceptsUsd\x12\x1f\n" +
+	"\vaccepts_cdf\x18\t \x01(\bR\n" +
+	"acceptsCdfJ\x04\b\x04\x10\x05\"\xd9\x02\n" +
 	"\x05Quote\x129\n" +
 	"\rfrom_currency\x18\x01 \x01(\x0e2\x14.payment.v1.CurrencyR\ffromCurrency\x12\x1f\n" +
 	"\vfrom_amount\x18\x02 \x01(\x03R\n" +
@@ -2206,16 +2217,15 @@ var file_payment_v1_shared_message_proto_depIdxs = []int32{
 	20, // 33: payment.v1.Beneficiary.created_at:type_name -> google.protobuf.Timestamp
 	20, // 34: payment.v1.Beneficiary.updated_at:type_name -> google.protobuf.Timestamp
 	7,  // 35: payment.v1.AgentWallet.operator:type_name -> payment.v1.Operator
-	6,  // 36: payment.v1.AgentWallet.currency:type_name -> payment.v1.Currency
-	20, // 37: payment.v1.AgentWallet.created_at:type_name -> google.protobuf.Timestamp
-	20, // 38: payment.v1.AgentWallet.updated_at:type_name -> google.protobuf.Timestamp
-	6,  // 39: payment.v1.Quote.from_currency:type_name -> payment.v1.Currency
-	6,  // 40: payment.v1.Quote.to_currency:type_name -> payment.v1.Currency
-	41, // [41:41] is the sub-list for method output_type
-	41, // [41:41] is the sub-list for method input_type
-	41, // [41:41] is the sub-list for extension type_name
-	41, // [41:41] is the sub-list for extension extendee
-	0,  // [0:41] is the sub-list for field type_name
+	20, // 36: payment.v1.AgentWallet.created_at:type_name -> google.protobuf.Timestamp
+	20, // 37: payment.v1.AgentWallet.updated_at:type_name -> google.protobuf.Timestamp
+	6,  // 38: payment.v1.Quote.from_currency:type_name -> payment.v1.Currency
+	6,  // 39: payment.v1.Quote.to_currency:type_name -> payment.v1.Currency
+	40, // [40:40] is the sub-list for method output_type
+	40, // [40:40] is the sub-list for method input_type
+	40, // [40:40] is the sub-list for extension type_name
+	40, // [40:40] is the sub-list for extension extendee
+	0,  // [0:40] is the sub-list for field type_name
 }
 
 func init() { file_payment_v1_shared_message_proto_init() }

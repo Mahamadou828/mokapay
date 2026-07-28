@@ -10,39 +10,43 @@ import (
 )
 
 const addAgentWallet = `-- name: AddAgentWallet :one
-SELECT id, agent_profile_fk, operator, currency, msisdn, created_at, updated_at, deleted_at FROM payments_ext.add_agent_wallet(
+SELECT id, agent_profile_fk, operator, msisdn, created_at, updated_at, deleted_at, accepts_usd, accepts_cdf FROM payments_ext.add_agent_wallet(
     $1::uuid,
     $2::payment_operator,
-    $3::currency,
-    $4
+    $3,
+    $4,
+    $5
 )
 `
 
 type AddAgentWalletParams struct {
 	AgentProfileID string
 	Operator       PaymentOperator
-	Currency       Currency
 	Msisdn         string
+	AcceptsUsd     bool
+	AcceptsCdf     bool
 }
 
-// 23505 on agent_wallets_pair_uq = pair already declared.
+// 23505 on agent_wallets_operator_uq = operator already declared.
 func (q *Queries) AddAgentWallet(ctx context.Context, arg AddAgentWalletParams) (AgentWallet, error) {
 	row := q.db.QueryRow(ctx, addAgentWallet,
 		arg.AgentProfileID,
 		arg.Operator,
-		arg.Currency,
 		arg.Msisdn,
+		arg.AcceptsUsd,
+		arg.AcceptsCdf,
 	)
 	var i AgentWallet
 	err := row.Scan(
 		&i.ID,
 		&i.AgentProfileFk,
 		&i.Operator,
-		&i.Currency,
 		&i.Msisdn,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.AcceptsUsd,
+		&i.AcceptsCdf,
 	)
 	return i, err
 }
@@ -65,11 +69,12 @@ func (q *Queries) DeleteAgentWallet(ctx context.Context, arg DeleteAgentWalletPa
 }
 
 const getAgentWalletByPair = `-- name: GetAgentWalletByPair :one
-SELECT id, agent_profile_fk, operator, currency, msisdn, created_at, updated_at
+SELECT id, agent_profile_fk, operator, msisdn, accepts_usd, accepts_cdf, created_at, updated_at
 FROM payments_ext.agent_wallets
 WHERE agent_profile_fk = $1::uuid
   AND operator = $2::payment_operator
-  AND currency = $3::currency
+  AND (($3::currency = 'usd' AND accepts_usd)
+    OR ($3::currency = 'cdf' AND accepts_cdf))
 `
 
 type GetAgentWalletByPairParams struct {
@@ -78,7 +83,8 @@ type GetAgentWalletByPairParams struct {
 	Currency       Currency
 }
 
-// The payment-details lookup: the wallet the client pays after a match.
+// The payment-details lookup: the wallet the client pays after a match —
+// the operator's wallet, provided it accepts the transfer's currency.
 func (q *Queries) GetAgentWalletByPair(ctx context.Context, arg GetAgentWalletByPairParams) (PaymentsExtAgentWallet, error) {
 	row := q.db.QueryRow(ctx, getAgentWalletByPair, arg.AgentProfileID, arg.Operator, arg.Currency)
 	var i PaymentsExtAgentWallet
@@ -86,8 +92,9 @@ func (q *Queries) GetAgentWalletByPair(ctx context.Context, arg GetAgentWalletBy
 		&i.ID,
 		&i.AgentProfileFk,
 		&i.Operator,
-		&i.Currency,
 		&i.Msisdn,
+		&i.AcceptsUsd,
+		&i.AcceptsCdf,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -95,7 +102,7 @@ func (q *Queries) GetAgentWalletByPair(ctx context.Context, arg GetAgentWalletBy
 }
 
 const listAgentWallets = `-- name: ListAgentWallets :many
-SELECT id, agent_profile_fk, operator, currency, msisdn, created_at, updated_at
+SELECT id, agent_profile_fk, operator, msisdn, accepts_usd, accepts_cdf, created_at, updated_at
 FROM payments_ext.agent_wallets
 WHERE agent_profile_fk = $1::uuid
 ORDER BY created_at
@@ -114,8 +121,9 @@ func (q *Queries) ListAgentWallets(ctx context.Context, agentProfileID string) (
 			&i.ID,
 			&i.AgentProfileFk,
 			&i.Operator,
-			&i.Currency,
 			&i.Msisdn,
+			&i.AcceptsUsd,
+			&i.AcceptsCdf,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {

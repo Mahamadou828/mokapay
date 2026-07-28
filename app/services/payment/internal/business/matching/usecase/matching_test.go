@@ -176,13 +176,11 @@ func (h harness) agent(ctx context.Context, t *testing.T, balance int64) agentpr
 	if err != nil {
 		t.Fatalf("activating: %v", err)
 	}
-	for _, w := range []agentwallet.NewWallet{
-		{Operator: transfer.OperatorOrangeMoney, Currency: transfer.CurrencyUSD, Msisdn: "+243991000001"},
-		{Operator: transfer.OperatorOrangeMoney, Currency: transfer.CurrencyCDF, Msisdn: "+243991000002"},
-	} {
-		if _, err := h.wallets.Add(ctx, p2.ID, w); err != nil {
-			t.Fatalf("wallet: %v", err)
-		}
+	if _, err := h.wallets.Add(ctx, p2.ID, agentwallet.NewWallet{
+		Operator: transfer.OperatorOrangeMoney, Msisdn: "+243991000001",
+		AcceptsUSD: true, AcceptsCDF: true,
+	}); err != nil {
+		t.Fatalf("adding wallet: %v", err)
 	}
 	return p2
 }
@@ -351,13 +349,11 @@ func TestMatchLifecycleEdges(t *testing.T) {
 
 	// An agent appears; the round goes out; a decline requeues immediately.
 	agent := h.agent(ctx, t, 1_000_000_000)
-	for _, w := range []agentwallet.NewWallet{
-		{Operator: transfer.OperatorMPesa, Currency: transfer.CurrencyUSD, Msisdn: "+243991000003"},
-		{Operator: transfer.OperatorMPesa, Currency: transfer.CurrencyCDF, Msisdn: "+243991000004"},
-	} {
-		if _, err := h.wallets.Add(ctx, agent.ID, w); err != nil {
-			t.Fatalf("wallet: %v", err)
-		}
+	if _, err := h.wallets.Add(ctx, agent.ID, agentwallet.NewWallet{
+		Operator: transfer.OperatorMPesa, Msisdn: "+243991000003",
+		AcceptsUSD: true, AcceptsCDF: true,
+	}); err != nil {
+		t.Fatalf("adding wallet: %v", err)
 	}
 	if err := h.matching.RunMatch(ctx, created.ID); err != nil {
 		t.Fatalf("RunMatch: %v", err)
@@ -383,13 +379,11 @@ func TestMatchLifecycleEdges(t *testing.T) {
 	// (offers land pre-expired, so expire→requeue cycles rounds) and a
 	// second eligible agent.
 	agent2 := h.agent(ctx, t, 1_000_000_000)
-	for _, w := range []agentwallet.NewWallet{
-		{Operator: transfer.OperatorMPesa, Currency: transfer.CurrencyUSD, Msisdn: "+243991000005"},
-		{Operator: transfer.OperatorMPesa, Currency: transfer.CurrencyCDF, Msisdn: "+243991000006"},
-	} {
-		if _, err := h.wallets.Add(ctx, agent2.ID, w); err != nil {
-			t.Fatalf("wallet: %v", err)
-		}
+	if _, err := h.wallets.Add(ctx, agent2.ID, agentwallet.NewWallet{
+		Operator: transfer.OperatorMPesa, Msisdn: "+243991000005",
+		AcceptsUSD: true, AcceptsCDF: true,
+	}); err != nil {
+		t.Fatalf("adding wallet: %v", err)
 	}
 	capUC := matchinguc.New(h.log, h.db, h.jobs, matchinguc.Config{
 		MaxAgents:      5,

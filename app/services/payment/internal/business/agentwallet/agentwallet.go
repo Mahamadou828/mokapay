@@ -1,7 +1,8 @@
-// Package agentwallet holds the agent wallet domain types: the
-// {operator, currency} pairs an agent can serve, with the msisdn the
-// client pays to off-platform after a match. Currency is a property of
-// the wallet, not the operator (dollarized market).
+// Package agentwallet holds the agent wallet domain types: one wallet
+// per operator, with the msisdn the client pays to off-platform after a
+// match and per-currency acceptance flags (DRC accounts hold both
+// currencies on one MSISDN; the flags keep the "no dollars on Orange"
+// opt-out until the business decides to drop it).
 package agentwallet
 
 import (
@@ -13,18 +14,23 @@ import (
 )
 
 // ErrWalletExists is returned by Add when the agent already declared
-// this {operator, currency} pair.
-var ErrWalletExists = errors.New("wallet pair already declared")
+// this operator (remove then re-add to change msisdn or flags).
+var ErrWalletExists = errors.New("wallet already declared for this operator")
 
 var ErrWalletNotFound = errors.New("wallet not found")
+
+// ErrNoCurrency rejects a wallet accepting neither currency — it could
+// never match anything.
+var ErrNoCurrency = errors.New("wallet must accept at least one currency")
 
 // Wallet is the read entity.
 type Wallet struct {
 	ID             uuid.UUID
 	AgentProfileID uuid.UUID
 	Operator       transfer.Operator
-	Currency       transfer.Currency
 	Msisdn         string
+	AcceptsUSD     bool
+	AcceptsCDF     bool
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 }
@@ -32,7 +38,8 @@ type Wallet struct {
 // NewWallet is the create payload; the owning profile is an explicit
 // repo parameter.
 type NewWallet struct {
-	Operator transfer.Operator
-	Currency transfer.Currency
-	Msisdn   string
+	Operator   transfer.Operator
+	Msisdn     string
+	AcceptsUSD bool
+	AcceptsCDF bool
 }

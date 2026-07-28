@@ -52,8 +52,9 @@ type AgentServiceClient interface {
 	DeclineOffer(ctx context.Context, in *DeclineOfferRequest, opts ...grpc.CallOption) (*Offer, error)
 	ListMyTransfers(ctx context.Context, in *ListMyTransfersRequest, opts ...grpc.CallOption) (*ListTransfersResponse, error)
 	ListMyWallets(ctx context.Context, in *ListMyWalletsRequest, opts ...grpc.CallOption) (*ListMyWalletsResponse, error)
-	// Self-service wallet declaration (settled 2026-07-25): one wallet per
-	// {operator, currency} pair; remove then re-add to change the msisdn.
+	// Self-service wallet declaration (revised 2026-07-27): one wallet per
+	// operator with per-currency acceptance flags; remove then re-add to
+	// change the msisdn or the flags.
 	AddWallet(ctx context.Context, in *AddWalletRequest, opts ...grpc.CallOption) (*AgentWallet, error)
 	RemoveWallet(ctx context.Context, in *RemoveWalletRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// The platform's official receiving accounts for deposits (G2 "fund
@@ -182,8 +183,9 @@ type AgentServiceServer interface {
 	DeclineOffer(context.Context, *DeclineOfferRequest) (*Offer, error)
 	ListMyTransfers(context.Context, *ListMyTransfersRequest) (*ListTransfersResponse, error)
 	ListMyWallets(context.Context, *ListMyWalletsRequest) (*ListMyWalletsResponse, error)
-	// Self-service wallet declaration (settled 2026-07-25): one wallet per
-	// {operator, currency} pair; remove then re-add to change the msisdn.
+	// Self-service wallet declaration (revised 2026-07-27): one wallet per
+	// operator with per-currency acceptance flags; remove then re-add to
+	// change the msisdn or the flags.
 	AddWallet(context.Context, *AddWalletRequest) (*AgentWallet, error)
 	RemoveWallet(context.Context, *RemoveWalletRequest) (*emptypb.Empty, error)
 	// The platform's official receiving accounts for deposits (G2 "fund

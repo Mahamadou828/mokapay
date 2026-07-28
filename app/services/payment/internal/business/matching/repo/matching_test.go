@@ -100,14 +100,17 @@ func fundedAgent(ctx context.Context, t *testing.T, s stores, balance int64) age
 	if err != nil {
 		t.Fatalf("activating profile: %v", err)
 	}
+	// The shared test DB persists across runs: suspend on the way out so
+	// this agent never pollutes a future run's candidate shortlist.
+	t.Cleanup(func() {
+		_, _ = s.profiles.SetStatus(context.Background(), p.ID.String(), agentprofile.StatusSuspended)
+	})
 
-	for _, w := range []agentwallet.NewWallet{
-		{Operator: transfer.OperatorOrangeMoney, Currency: transfer.CurrencyUSD, Msisdn: "+243990000001"},
-		{Operator: transfer.OperatorOrangeMoney, Currency: transfer.CurrencyCDF, Msisdn: "+243990000002"},
-	} {
-		if _, err := s.wallets.Add(ctx, p2.ID, w); err != nil {
-			t.Fatalf("adding wallet: %v", err)
-		}
+	if _, err := s.wallets.Add(ctx, p2.ID, agentwallet.NewWallet{
+		Operator: transfer.OperatorOrangeMoney, Msisdn: "+243990000001",
+		AcceptsUSD: true, AcceptsCDF: true,
+	}); err != nil {
+		t.Fatalf("adding wallet: %v", err)
 	}
 	return p2
 }
@@ -345,9 +348,11 @@ func TestDeclinedAgentExcluded(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	agent := fundedAgent(ctx, t, s, 10_000)
+	// Mega-funded + mega-hold: leftovers from pre-cleanup runs (10k
+	// agents) can't cover the hold, so the shortlist stays this test's.
+	agent := fundedAgent(ctx, t, s, 10_000_000)
 	client := uuid.New()
-	tr := usdToCdfTransfer(ctx, t, s, client, 2_000)
+	tr := usdToCdfTransfer(ctx, t, s, client, 4_000_000)
 
 	q := matching.CandidateQuery{
 		TransferID:   tr.ID,
@@ -477,9 +482,10 @@ func TestOfferExpiryFlow(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	agent := fundedAgent(ctx, t, s, 10_000)
+	// Mega-funded + mega-hold, same reason as TestDeclinedAgentExcluded.
+	agent := fundedAgent(ctx, t, s, 10_000_000)
 	client := uuid.New()
-	tr := usdToCdfTransfer(ctx, t, s, client, 2_000)
+	tr := usdToCdfTransfer(ctx, t, s, client, 4_000_000)
 
 	// A batch that expires immediately.
 	scored := []matching.ScoredAgent{{AgentProfileID: agent.ID, Score: 50}}
@@ -565,14 +571,15 @@ func TestCorridorAndWalletGates(t *testing.T) {
 	if _, err := s.profiles.SetStatus(ctx, p.ID.String(), agentprofile.StatusActive); err != nil {
 		t.Fatalf("activate: %v", err)
 	}
+	// USD-only on Orange: the currency opt-out under test.
 	if _, err := s.wallets.Add(ctx, p.ID, agentwallet.NewWallet{
-		Operator: transfer.OperatorOrangeMoney, Currency: transfer.CurrencyUSD, Msisdn: "+243990000009",
+		Operator: transfer.OperatorOrangeMoney, Msisdn: "+243990000009", AcceptsUSD: true,
 	}); err != nil {
 		t.Fatalf("wallet: %v", err)
 	}
-	// Duplicate pair rejected.
+	// Duplicate operator rejected.
 	if _, err := s.wallets.Add(ctx, p.ID, agentwallet.NewWallet{
-		Operator: transfer.OperatorOrangeMoney, Currency: transfer.CurrencyUSD, Msisdn: "+243990000010",
+		Operator: transfer.OperatorOrangeMoney, Msisdn: "+243990000010", AcceptsUSD: true, AcceptsCDF: true,
 	}); !errors.Is(err, agentwallet.ErrWalletExists) {
 		t.Fatalf("duplicate wallet = %v, want ErrWalletExists", err)
 	}

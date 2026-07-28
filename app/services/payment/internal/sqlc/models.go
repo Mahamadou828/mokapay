@@ -473,11 +473,12 @@ type AgentWallet struct {
 	ID             string
 	AgentProfileFk string
 	Operator       PaymentOperator
-	Currency       Currency
 	Msisdn         string
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 	DeletedAt      pgtype.Timestamptz
+	AcceptsUsd     bool
+	AcceptsCdf     bool
 }
 
 type Beneficiary struct {
@@ -583,8 +584,9 @@ type PaymentsExtAgentWallet struct {
 	ID             string
 	AgentProfileFk string
 	Operator       PaymentOperator
-	Currency       Currency
 	Msisdn         string
+	AcceptsUsd     bool
+	AcceptsCdf     bool
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 }

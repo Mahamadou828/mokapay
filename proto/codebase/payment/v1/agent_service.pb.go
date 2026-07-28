@@ -377,8 +377,9 @@ func (x *ListMyWalletsResponse) GetWallets() []*AgentWallet {
 type AddWalletRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Operator      Operator               `protobuf:"varint,1,opt,name=operator,proto3,enum=payment.v1.Operator" json:"operator,omitempty"`
-	Currency      Currency               `protobuf:"varint,2,opt,name=currency,proto3,enum=payment.v1.Currency" json:"currency,omitempty"`
 	Msisdn        string                 `protobuf:"bytes,3,opt,name=msisdn,proto3" json:"msisdn,omitempty"`
+	AcceptsUsd    bool                   `protobuf:"varint,4,opt,name=accepts_usd,json=acceptsUsd,proto3" json:"accepts_usd,omitempty"`
+	AcceptsCdf    bool                   `protobuf:"varint,5,opt,name=accepts_cdf,json=acceptsCdf,proto3" json:"accepts_cdf,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -420,18 +421,25 @@ func (x *AddWalletRequest) GetOperator() Operator {
 	return Operator_OPERATOR_UNSPECIFIED
 }
 
-func (x *AddWalletRequest) GetCurrency() Currency {
-	if x != nil {
-		return x.Currency
-	}
-	return Currency_CURRENCY_UNSPECIFIED
-}
-
 func (x *AddWalletRequest) GetMsisdn() string {
 	if x != nil {
 		return x.Msisdn
 	}
 	return ""
+}
+
+func (x *AddWalletRequest) GetAcceptsUsd() bool {
+	if x != nil {
+		return x.AcceptsUsd
+	}
+	return false
+}
+
+func (x *AddWalletRequest) GetAcceptsCdf() bool {
+	if x != nil {
+		return x.AcceptsCdf
+	}
+	return false
 }
 
 type RemoveWalletRequest struct {
@@ -660,11 +668,14 @@ const file_payment_v1_agent_service_proto_rawDesc = "" +
 	"\a_status\"\x16\n" +
 	"\x14ListMyWalletsRequest\"J\n" +
 	"\x15ListMyWalletsResponse\x121\n" +
-	"\awallets\x18\x01 \x03(\v2\x17.payment.v1.AgentWalletR\awallets\"\x8e\x01\n" +
+	"\awallets\x18\x01 \x03(\v2\x17.payment.v1.AgentWalletR\awallets\"\xa4\x01\n" +
 	"\x10AddWalletRequest\x120\n" +
-	"\boperator\x18\x01 \x01(\x0e2\x14.payment.v1.OperatorR\boperator\x120\n" +
-	"\bcurrency\x18\x02 \x01(\x0e2\x14.payment.v1.CurrencyR\bcurrency\x12\x16\n" +
-	"\x06msisdn\x18\x03 \x01(\tR\x06msisdn\"%\n" +
+	"\boperator\x18\x01 \x01(\x0e2\x14.payment.v1.OperatorR\boperator\x12\x16\n" +
+	"\x06msisdn\x18\x03 \x01(\tR\x06msisdn\x12\x1f\n" +
+	"\vaccepts_usd\x18\x04 \x01(\bR\n" +
+	"acceptsUsd\x12\x1f\n" +
+	"\vaccepts_cdf\x18\x05 \x01(\bR\n" +
+	"acceptsCdfJ\x04\b\x02\x10\x03\"%\n" +
 	"\x13RemoveWalletRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"\x1c\n" +
 	"\x1aListDepositChannelsRequest\"\xbc\x01\n" +
@@ -723,11 +734,10 @@ var file_payment_v1_agent_service_proto_goTypes = []any{
 	(TransferStatus)(0),                 // 15: payment.v1.TransferStatus
 	(*AgentWallet)(nil),                 // 16: payment.v1.AgentWallet
 	(Operator)(0),                       // 17: payment.v1.Operator
-	(Currency)(0),                       // 18: payment.v1.Currency
-	(*AgentProfile)(nil),                // 19: payment.v1.AgentProfile
-	(*Transfer)(nil),                    // 20: payment.v1.Transfer
-	(*ListTransfersResponse)(nil),       // 21: payment.v1.ListTransfersResponse
-	(*emptypb.Empty)(nil),               // 22: google.protobuf.Empty
+	(*AgentProfile)(nil),                // 18: payment.v1.AgentProfile
+	(*Transfer)(nil),                    // 19: payment.v1.Transfer
+	(*ListTransfersResponse)(nil),       // 20: payment.v1.ListTransfersResponse
+	(*emptypb.Empty)(nil),               // 21: google.protobuf.Empty
 }
 var file_payment_v1_agent_service_proto_depIdxs = []int32{
 	13, // 0: payment.v1.ListMyOffersRequest.status:type_name -> payment.v1.OfferStatus
@@ -735,31 +745,30 @@ var file_payment_v1_agent_service_proto_depIdxs = []int32{
 	15, // 2: payment.v1.ListMyTransfersRequest.status:type_name -> payment.v1.TransferStatus
 	16, // 3: payment.v1.ListMyWalletsResponse.wallets:type_name -> payment.v1.AgentWallet
 	17, // 4: payment.v1.AddWalletRequest.operator:type_name -> payment.v1.Operator
-	18, // 5: payment.v1.AddWalletRequest.currency:type_name -> payment.v1.Currency
-	11, // 6: payment.v1.ListDepositChannelsResponse.channels:type_name -> payment.v1.DepositChannel
-	0,  // 7: payment.v1.AgentService.GetMyProfile:input_type -> payment.v1.GetMyProfileRequest
-	1,  // 8: payment.v1.AgentService.ListMyOffers:input_type -> payment.v1.ListMyOffersRequest
-	3,  // 9: payment.v1.AgentService.AcceptOffer:input_type -> payment.v1.AcceptOfferRequest
-	4,  // 10: payment.v1.AgentService.DeclineOffer:input_type -> payment.v1.DeclineOfferRequest
-	5,  // 11: payment.v1.AgentService.ListMyTransfers:input_type -> payment.v1.ListMyTransfersRequest
-	6,  // 12: payment.v1.AgentService.ListMyWallets:input_type -> payment.v1.ListMyWalletsRequest
-	8,  // 13: payment.v1.AgentService.AddWallet:input_type -> payment.v1.AddWalletRequest
-	9,  // 14: payment.v1.AgentService.RemoveWallet:input_type -> payment.v1.RemoveWalletRequest
-	10, // 15: payment.v1.AgentService.ListDepositChannels:input_type -> payment.v1.ListDepositChannelsRequest
-	19, // 16: payment.v1.AgentService.GetMyProfile:output_type -> payment.v1.AgentProfile
-	2,  // 17: payment.v1.AgentService.ListMyOffers:output_type -> payment.v1.ListMyOffersResponse
-	20, // 18: payment.v1.AgentService.AcceptOffer:output_type -> payment.v1.Transfer
-	14, // 19: payment.v1.AgentService.DeclineOffer:output_type -> payment.v1.Offer
-	21, // 20: payment.v1.AgentService.ListMyTransfers:output_type -> payment.v1.ListTransfersResponse
-	7,  // 21: payment.v1.AgentService.ListMyWallets:output_type -> payment.v1.ListMyWalletsResponse
-	16, // 22: payment.v1.AgentService.AddWallet:output_type -> payment.v1.AgentWallet
-	22, // 23: payment.v1.AgentService.RemoveWallet:output_type -> google.protobuf.Empty
-	12, // 24: payment.v1.AgentService.ListDepositChannels:output_type -> payment.v1.ListDepositChannelsResponse
-	16, // [16:25] is the sub-list for method output_type
-	7,  // [7:16] is the sub-list for method input_type
-	7,  // [7:7] is the sub-list for extension type_name
-	7,  // [7:7] is the sub-list for extension extendee
-	0,  // [0:7] is the sub-list for field type_name
+	11, // 5: payment.v1.ListDepositChannelsResponse.channels:type_name -> payment.v1.DepositChannel
+	0,  // 6: payment.v1.AgentService.GetMyProfile:input_type -> payment.v1.GetMyProfileRequest
+	1,  // 7: payment.v1.AgentService.ListMyOffers:input_type -> payment.v1.ListMyOffersRequest
+	3,  // 8: payment.v1.AgentService.AcceptOffer:input_type -> payment.v1.AcceptOfferRequest
+	4,  // 9: payment.v1.AgentService.DeclineOffer:input_type -> payment.v1.DeclineOfferRequest
+	5,  // 10: payment.v1.AgentService.ListMyTransfers:input_type -> payment.v1.ListMyTransfersRequest
+	6,  // 11: payment.v1.AgentService.ListMyWallets:input_type -> payment.v1.ListMyWalletsRequest
+	8,  // 12: payment.v1.AgentService.AddWallet:input_type -> payment.v1.AddWalletRequest
+	9,  // 13: payment.v1.AgentService.RemoveWallet:input_type -> payment.v1.RemoveWalletRequest
+	10, // 14: payment.v1.AgentService.ListDepositChannels:input_type -> payment.v1.ListDepositChannelsRequest
+	18, // 15: payment.v1.AgentService.GetMyProfile:output_type -> payment.v1.AgentProfile
+	2,  // 16: payment.v1.AgentService.ListMyOffers:output_type -> payment.v1.ListMyOffersResponse
+	19, // 17: payment.v1.AgentService.AcceptOffer:output_type -> payment.v1.Transfer
+	14, // 18: payment.v1.AgentService.DeclineOffer:output_type -> payment.v1.Offer
+	20, // 19: payment.v1.AgentService.ListMyTransfers:output_type -> payment.v1.ListTransfersResponse
+	7,  // 20: payment.v1.AgentService.ListMyWallets:output_type -> payment.v1.ListMyWalletsResponse
+	16, // 21: payment.v1.AgentService.AddWallet:output_type -> payment.v1.AgentWallet
+	21, // 22: payment.v1.AgentService.RemoveWallet:output_type -> google.protobuf.Empty
+	12, // 23: payment.v1.AgentService.ListDepositChannels:output_type -> payment.v1.ListDepositChannelsResponse
+	15, // [15:24] is the sub-list for method output_type
+	6,  // [6:15] is the sub-list for method input_type
+	6,  // [6:6] is the sub-list for extension type_name
+	6,  // [6:6] is the sub-list for extension extendee
+	0,  // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_payment_v1_agent_service_proto_init() }

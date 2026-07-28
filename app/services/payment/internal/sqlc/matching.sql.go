@@ -30,11 +30,13 @@ WHERE ap.status = 'active'
   AND EXISTS (SELECT 1 FROM agent_wallets w
               WHERE w.agent_profile_fk = ap.id AND w.deleted_at IS NULL
                 AND w.operator = $3::payment_operator
-                AND w.currency = $4::currency)
+                AND (($4::currency = 'usd' AND w.accepts_usd)
+                  OR ($4::currency = 'cdf' AND w.accepts_cdf)))
   AND EXISTS (SELECT 1 FROM agent_wallets w
               WHERE w.agent_profile_fk = ap.id AND w.deleted_at IS NULL
                 AND w.operator = $5::payment_operator
-                AND w.currency = $6::currency)
+                AND (($6::currency = 'usd' AND w.accepts_usd)
+                  OR ($6::currency = 'cdf' AND w.accepts_cdf)))
   AND NOT EXISTS (SELECT 1 FROM offers o
                   WHERE o.transfer_fk = $7::uuid
                     AND o.agent_profile_fk = ap.id

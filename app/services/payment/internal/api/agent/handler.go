@@ -179,15 +179,18 @@ func (h *Handler) AddWallet(ctx context.Context, req *paymentv1.AddWalletRequest
 	}
 
 	op := transfermapper.OperatorFromProto(req.Operator)
-	cur := transfermapper.CurrencyFromProto(req.Currency)
-	if op == "" || cur == "" || req.Msisdn == "" {
-		return nil, status.Error(codes.InvalidArgument, "operator, currency and msisdn are required")
+	if op == "" || req.Msisdn == "" {
+		return nil, status.Error(codes.InvalidArgument, "operator and msisdn are required")
+	}
+	if !req.AcceptsUsd && !req.AcceptsCdf {
+		return nil, status.Error(codes.InvalidArgument, "the wallet must accept at least one currency")
 	}
 
 	w, err := h.wallets.Add(ctx, accountID, agentwallet.NewWallet{
-		Operator: op,
-		Currency: cur,
-		Msisdn:   req.Msisdn,
+		Operator:   op,
+		Msisdn:     req.Msisdn,
+		AcceptsUSD: req.AcceptsUsd,
+		AcceptsCDF: req.AcceptsCdf,
 	})
 	if err != nil {
 		return nil, grpcerr.Map(err)

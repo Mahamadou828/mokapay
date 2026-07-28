@@ -244,10 +244,12 @@ message AgentWallet {
   string id = 1;
   string agent_profile_id = 2;
   Operator operator = 3;
-  Currency currency = 4;
+  reserved 4;  // was currency — one wallet per operator now, flags below
   string msisdn = 5;
   google.protobuf.Timestamp created_at = 6;
   google.protobuf.Timestamp updated_at = 7;
+  bool accepts_usd = 8;
+  bool accepts_cdf = 9;
 }
 
 // A stateless quote: nothing persisted — the rate locks at
