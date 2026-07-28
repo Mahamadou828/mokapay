@@ -1,1 +1,33 @@
-{}
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl *)",
+      "Bash(go build *)",
+      "Bash(go vet *)",
+      "Bash(go test *)",
+      "Bash(go mod tidy)",
+      "Bash(gofmt *)",
+      "Bash(make check-all)",
+      "Bash(make test-all)",
+      "Bash(make proto)",
+      "Bash(make gateway/check)",
+      "Bash(make gateway/lint)",
+      "Bash(make gateway/test)",
+      "Bash(make payment/check)",
+      "Bash(make payment/lint)",
+      "Bash(make payment/test)",
+      "Bash(make user/check)",
+      "Bash(make user/lint)",
+      "Bash(make user/test)",
+      "Bash(make file/check)",
+      "Bash(make file/lint)",
+      "Bash(make file/test)",
+      "Bash(sqlc generate)",
+      "Bash(buf generate)",
+      "Bash(buf lint)",
+      "Bash(docker compose config *)",
+      "Bash(docker compose ps *)",
+      "Bash(docker compose logs *)"
+    ]
+  }
+}
