@@ -22,7 +22,7 @@ ENV VITE_API_URL=${VITE_API_URL}
 RUN npm run build
 
 FROM nginx:1.29-alpine
-COPY infra/compose/ui/spa.conf /etc/nginx/conf.d/default.conf
+COPY infra/compose/dev/ui/spa.conf /etc/nginx/conf.d/default.conf
 COPY --from=build-stage /workspace/dist /usr/share/nginx/html
 
 EXPOSE 80
