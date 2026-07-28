@@ -102,7 +102,10 @@ func (u UseCase) CreateLedgerRequest(ctx context.Context, pass *passport.Passpor
 			return ledger.LedgerRequest{}, err
 		}
 		nr.AgentProfileID = profile.ID
-		status = ledger.StatusPendingAdminApproval
+		status = ledger.StatusPendingAgentAction
+		if nr.Type == ledger.TypeWithdrawal {
+			status = ledger.StatusPendingAdminApproval
+		}
 	case "admin", "ops":
 		if nr.Type != ledger.TypeFunding && nr.Type != ledger.TypeRefund {
 			return ledger.LedgerRequest{}, ledger.ErrInvalidType

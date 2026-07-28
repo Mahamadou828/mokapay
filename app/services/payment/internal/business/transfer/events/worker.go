@@ -103,6 +103,11 @@ type NotifyWorker struct {
 }
 
 func (w *NotifyWorker) Work(ctx context.Context, job *river.Job[NotifyArg]) error {
+	// drop notification after 3 attempt
+	if job.Attempt >= 3 {
+		return nil
+	}
+
 	ctx = passport.AddToContext(ctx, passport.SystemPassport())
 
 	if _, err := w.Moka.User.Notification.PushNotification(ctx, &userv1.PushNotificationRequest{
