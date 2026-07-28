@@ -41,7 +41,8 @@ func Map(err error) error {
 
 	case errors.Is(err, agentprofile.ErrProfileExists),
 		errors.Is(err, ledger.ErrReferenceInUse),
-		errors.Is(err, agentwallet.ErrWalletExists):
+		errors.Is(err, agentwallet.ErrWalletExists),
+		errors.Is(err, beneficiary.ErrBeneficiaryExists):
 		return status.Error(codes.AlreadyExists, err.Error())
 
 	case errors.Is(err, agentprofile.ErrProfileHasFunds),

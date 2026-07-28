@@ -11,7 +11,12 @@ import (
 	"mokapay.app/app/services/payment/internal/business/transfer"
 )
 
-var ErrBeneficiaryNotFound = errors.New("beneficiary not found")
+var (
+	ErrBeneficiaryNotFound = errors.New("beneficiary not found")
+	// ErrBeneficiaryExists guards the live (client, phone) uniqueness on
+	// update — the add path upserts instead, so it never hits this.
+	ErrBeneficiaryExists = errors.New("another saved recipient already uses this phone")
+)
 
 // Beneficiary is the read entity.
 type Beneficiary struct {
@@ -34,5 +39,14 @@ type NewBeneficiary struct {
 	Name     string
 	Phone    string
 	Operator transfer.Operator
+	City     *string
+}
+
+// UpdateBeneficiary is the partial-update payload; nil means "don't
+// change". The target id and owning client are explicit parameters.
+type UpdateBeneficiary struct {
+	Name     *string
+	Phone    *string
+	Operator *transfer.Operator
 	City     *string
 }

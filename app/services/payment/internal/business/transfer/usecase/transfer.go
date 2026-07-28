@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/google/uuid"
@@ -129,6 +130,61 @@ func (u UseCase) AvailableOperators(from, to transfer.Currency) ([]transfer.Oper
 // GetQuote computes a quote from the cached rate.
 func (u UseCase) GetQuote(ctx context.Context, from transfer.Currency, amount int64, to transfer.Currency) (Quote, error) {
 	return u.quote(ctx, from, amount, to)
+}
+
+// GetQuoteByTarget is the reverse widget direction: the recipient must
+// receive target (to-currency minor units) — solve for the smallest
+// from_amount whose quote covers it, and return THAT quote. Stateless
+// like the forward path; the response's to_amount may exceed the target
+// by a rounding sliver (integer cents can't hit every franc exactly).
+func (u UseCase) GetQuoteByTarget(ctx context.Context, from transfer.Currency, to transfer.Currency, target int64) (Quote, error) {
+	if err := validateCorridor(from, to); err != nil {
+		return Quote{}, err
+	}
+	if target <= 0 {
+		return Quote{}, transfer.ErrInvalidAmount
+	}
+
+	// Same-currency corridors: the recipient receives exactly from_amount
+	// (the fee rides on top of it).
+	if from == to {
+		return u.quote(ctx, from, target, to)
+	}
+
+	// usd → cdf. Invert to = gross − margin, gross = from×rate/1e8:
+	// estimate, then verify with the authoritative forward quote and nudge
+	// up if integer rounding left it a franc short (a cent is worth
+	// thousands of francs of estimate error at most once).
+	rate, err := u.fx.RateMicros(ctx)
+	if err != nil {
+		u.logger.Error(ctx, "Transfer.QuoteByTarget: rate lookup failed", "err", err)
+		return Quote{}, fmt.Errorf("resolving usd:cdf rate: %w", err)
+	}
+	grossNeeded := target * 10_000 / int64(10_000-u.cfg.MarginBps)
+	// float64 keeps the estimate within a fraction of a cent here, and the
+	// int64 form grossNeeded×1e8 could overflow for large targets. Start
+	// one cent BELOW the floor estimate and walk up: the margin rounds
+	// half-up (not ceil), so the true answer can sit under the estimate —
+	// walking up from below finds the smallest covering amount.
+	amount := int64(math.Floor(float64(grossNeeded)*100_000_000/float64(rate))) - 1
+	if amount < 1 {
+		amount = 1
+	}
+
+	for range 6 {
+		q, err := u.quote(ctx, from, amount, to)
+		if err != nil {
+			return Quote{}, err
+		}
+		if q.ToAmount >= target {
+			return q, nil
+		}
+		amount++
+	}
+
+	// Six cents of correction is far beyond any rounding drift — a rate
+	// change mid-loop is the only way here; the caller just retries.
+	return Quote{}, transfer.ErrInvalidAmount
 }
 
 // CreateTransfer resolves the recipient, locks the rate, derives every
@@ -262,6 +318,32 @@ func (u UseCase) Timeline(ctx context.Context, pass *passport.Passport, id uuid.
 // ListBeneficiaries returns the caller's saved recipients.
 func (u UseCase) ListBeneficiaries(ctx context.Context, clientID uuid.UUID) ([]beneficiary.Beneficiary, error) {
 	return u.beneficiaries.List(ctx, clientID)
+}
+
+// AddBeneficiary saves a recipient ahead of any transfer — the same
+// upsert CreateTransfer performs for inline recipients: re-adding a live
+// (client, phone) pair refreshes its details instead of erroring.
+func (u UseCase) AddBeneficiary(ctx context.Context, clientID uuid.UUID, nb beneficiary.NewBeneficiary) (beneficiary.Beneficiary, error) {
+	b, err := u.beneficiaries.Add(ctx, clientID, nb)
+	if err != nil {
+		u.logger.Error(ctx, "Transfer.AddBeneficiary: failed", "err", err)
+		return beneficiary.Beneficiary{}, err
+	}
+	return b, nil
+}
+
+// UpdateBeneficiary edits one of the caller's saved recipients; nil
+// fields keep their value. The transfer keeps its own recipient
+// snapshot, so past history never changes.
+func (u UseCase) UpdateBeneficiary(ctx context.Context, clientID, id uuid.UUID, ub beneficiary.UpdateBeneficiary) (beneficiary.Beneficiary, error) {
+	b, err := u.beneficiaries.Update(ctx, id.String(), clientID, ub)
+	if err != nil {
+		if !errors.Is(err, beneficiary.ErrBeneficiaryNotFound) && !errors.Is(err, beneficiary.ErrBeneficiaryExists) {
+			u.logger.Error(ctx, "Transfer.UpdateBeneficiary: failed", "err", err)
+		}
+		return beneficiary.Beneficiary{}, err
+	}
+	return b, nil
 }
 
 // DeleteBeneficiary removes one of the caller's saved recipients.

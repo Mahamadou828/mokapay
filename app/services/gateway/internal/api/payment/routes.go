@@ -19,9 +19,12 @@ func (h Handler) Routes(authed, agent, ops *core.Group) {
 	authed.RegisterHandler(http.MethodGet, "/transfers", h.listTransfers)
 	authed.RegisterHandler(http.MethodGet, "/transfers/{id}", h.getTransfer)
 	authed.RegisterHandler(http.MethodGet, "/transfers/{id}/events", h.listTransferEvents)
+	authed.RegisterHandler(http.MethodGet, "/transfers/{id}/files", h.listTransferFiles)
 	authed.RegisterHandler(http.MethodPost, "/transfers/{id}/confirm", h.confirmReceipt)
 	authed.RegisterHandler(http.MethodPost, "/transfers/{id}/cancel", h.cancelTransfer)
 	authed.RegisterHandler(http.MethodGet, "/beneficiaries", h.listBeneficiaries)
+	authed.RegisterHandler(http.MethodPost, "/beneficiaries", h.addBeneficiary)
+	authed.RegisterHandler(http.MethodPatch, "/beneficiaries/{id}", h.updateBeneficiary)
 	authed.RegisterHandler(http.MethodDelete, "/beneficiaries/{id}", h.deleteBeneficiary)
 
 	// The proof upload flow (presign + confirm): the bytes go straight to

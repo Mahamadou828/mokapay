@@ -24,6 +24,7 @@ type Config struct {
 	}
 	Client struct {
 		UserGRPCPort string
+		FileGRPCPort string
 	}
 	Redis struct {
 		Host string
@@ -77,6 +78,7 @@ func newConfig() Config {
 	cfg.Server.MaxEventWorkers = config.GetEnvAsInt("MAX_EVENT_WORKERS", 10)
 
 	cfg.Client.UserGRPCPort = config.GetEnv("USER_GRPC_PORT", "localhost:50051")
+	cfg.Client.FileGRPCPort = config.GetEnv("FILE_GRPC_PORT", "localhost:50052")
 
 	cfg.Redis.Host = config.GetEnv("REDIS_HOST", "localhost")
 	cfg.Redis.Port = config.GetEnv("REDIS_PORT", "6379")

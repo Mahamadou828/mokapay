@@ -10,6 +10,7 @@ import (
 	coreerrs "mokapay.app/core/error"
 	core "mokapay.app/core/http"
 	filev1 "mokapay.app/proto/codebase/file/v1"
+	paymentv1 "mokapay.app/proto/codebase/payment/v1"
 )
 
 // The file routes ride in the payment handler package: the proofs they
@@ -63,6 +64,20 @@ func (h Handler) listFiles(ctx context.Context, r *http.Request) core.Encoder {
 		RelatedType: r.URL.Query().Get("related_type"),
 		RelatedId:   r.URL.Query().Get("related_id"),
 		Purpose:     purpose,
+	})
+	if err != nil {
+		return rpcErr(err)
+	}
+
+	return protocodec.Proto{Message: res}
+}
+
+// listTransferFiles goes through the payment service, not the file
+// service: a transfer's proofs are readable by every party (client,
+// assigned agent, ops), and only payment knows who the parties are.
+func (h Handler) listTransferFiles(ctx context.Context, r *http.Request) core.Encoder {
+	res, err := h.moka.Payment.Transfer.ListTransferFiles(ctx, &paymentv1.ListTransferFilesRequest{
+		TransferId: core.Param(r, "id"),
 	})
 	if err != nil {
 		return rpcErr(err)

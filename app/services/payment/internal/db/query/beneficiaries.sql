@@ -19,6 +19,17 @@ FROM payments_ext.beneficiaries
 WHERE client_nk = sqlc.arg(client_nk)::uuid
 ORDER BY created_at DESC;
 
+-- name: UpdateBeneficiary :one
+-- Owner-scoped partial update; a NULL argument keeps the stored value.
+SELECT * FROM payments_ext.update_beneficiary(
+    sqlc.arg(id)::uuid,
+    sqlc.arg(client_nk)::uuid,
+    sqlc.narg(name),
+    sqlc.narg(phone),
+    sqlc.narg(operator)::payment_operator,
+    sqlc.narg(city)
+);
+
 -- name: DeleteBeneficiary :exec
 SELECT payments_ext.delete_beneficiary(
     sqlc.arg(id)::uuid,

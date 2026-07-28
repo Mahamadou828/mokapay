@@ -97,3 +97,58 @@ func TestQuoteGuards(t *testing.T) {
 		t.Error("usd->cdf with no rate must fail")
 	}
 }
+
+func TestQuoteByTargetUSDToCDF(t *testing.T) {
+	// Reverse of TestQuoteUSDToCDF: asking for exactly 281,635 francs
+	// must land back on 100 USD (10,000 cents) — the round trip is exact.
+	u := quoter(2_830_500_000)
+	q, err := u.GetQuoteByTarget(context.Background(), transfer.CurrencyUSD, transfer.CurrencyCDF, 281_635)
+	if err != nil {
+		t.Fatalf("quote by target: %v", err)
+	}
+	if q.FromAmount != 10_000 || q.ToAmount != 281_635 {
+		t.Fatalf("reverse quote = from %d to %d, want from 10000 to 281635", q.FromAmount, q.ToAmount)
+	}
+
+	// A target that no cent amount hits exactly rounds UP: the recipient
+	// gets at least what was asked, never less.
+	q, err = u.GetQuoteByTarget(context.Background(), transfer.CurrencyUSD, transfer.CurrencyCDF, 281_636)
+	if err != nil {
+		t.Fatalf("quote by target +1: %v", err)
+	}
+	if q.ToAmount < 281_636 {
+		t.Fatalf("reverse quote covers %d < target 281636", q.ToAmount)
+	}
+	if q.FromAmount != 10_001 {
+		t.Fatalf("reverse from = %d, want 10001 (one cent up)", q.FromAmount)
+	}
+}
+
+func TestQuoteByTargetSameCurrency(t *testing.T) {
+	// Same currency: the recipient receives exactly from_amount, so the
+	// target IS the from amount; fee rides on top.
+	q, err := quoter(2_830_500_000).GetQuoteByTarget(context.Background(), transfer.CurrencyCDF, transfer.CurrencyCDF, 283_000)
+	if err != nil {
+		t.Fatalf("quote by target: %v", err)
+	}
+	if q.FromAmount != 283_000 || q.ToAmount != 283_000 || q.FeeAmount != 4_245 {
+		t.Fatalf("cdf->cdf reverse = %+v", q)
+	}
+}
+
+func TestQuoteByTargetGuards(t *testing.T) {
+	u := quoter(2_830_000_000)
+	ctx := context.Background()
+
+	if _, err := u.GetQuoteByTarget(ctx, transfer.CurrencyCDF, transfer.CurrencyUSD, 1000); !errors.Is(err, transfer.ErrCorridorNotAllowed) {
+		t.Errorf("cdf->usd = %v, want ErrCorridorNotAllowed", err)
+	}
+	if _, err := u.GetQuoteByTarget(ctx, transfer.CurrencyUSD, transfer.CurrencyCDF, 0); !errors.Is(err, transfer.ErrInvalidAmount) {
+		t.Errorf("zero target = %v, want ErrInvalidAmount", err)
+	}
+	// A target only reachable above the from-amount cap fails cleanly
+	// (the forward quote's MaxAmount guard fires inside the solver).
+	if _, err := u.GetQuoteByTarget(ctx, transfer.CurrencyUSD, transfer.CurrencyCDF, 1<<62); !errors.Is(err, transfer.ErrInvalidAmount) {
+		t.Errorf("huge target = %v, want ErrInvalidAmount", err)
+	}
+}

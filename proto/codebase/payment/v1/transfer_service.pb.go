@@ -10,6 +10,7 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
+	v1 "mokapay.app/proto/codebase/file/v1"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -119,10 +120,16 @@ func (x *GetAvailableOperatorsResponse) GetOperators() []Operator {
 }
 
 type GetQuoteRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	FromCurrency  Currency               `protobuf:"varint,1,opt,name=from_currency,json=fromCurrency,proto3,enum=payment.v1.Currency" json:"from_currency,omitempty"`
-	FromAmount    int64                  `protobuf:"varint,2,opt,name=from_amount,json=fromAmount,proto3" json:"from_amount,omitempty"` // minor units, source-denominated
-	ToCurrency    Currency               `protobuf:"varint,3,opt,name=to_currency,json=toCurrency,proto3,enum=payment.v1.Currency" json:"to_currency,omitempty"`
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	FromCurrency Currency               `protobuf:"varint,1,opt,name=from_currency,json=fromCurrency,proto3,enum=payment.v1.Currency" json:"from_currency,omitempty"`
+	// Exactly one of from_amount / to_amount is set — the two directions
+	// of the send widget. from_amount: "you send X, what does the
+	// recipient get?"; to_amount: "the recipient must get Y, what do I
+	// send?" (the server solves for the smallest from_amount whose quote
+	// covers Y — the response's to_amount may exceed Y by a rounding sliver).
+	FromAmount    int64    `protobuf:"varint,2,opt,name=from_amount,json=fromAmount,proto3" json:"from_amount,omitempty"` // minor units, source-denominated
+	ToCurrency    Currency `protobuf:"varint,3,opt,name=to_currency,json=toCurrency,proto3,enum=payment.v1.Currency" json:"to_currency,omitempty"`
+	ToAmount      *int64   `protobuf:"varint,4,opt,name=to_amount,json=toAmount,proto3,oneof" json:"to_amount,omitempty"` // minor units, target-denominated
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -176,6 +183,13 @@ func (x *GetQuoteRequest) GetToCurrency() Currency {
 		return x.ToCurrency
 	}
 	return Currency_CURRENCY_UNSPECIFIED
+}
+
+func (x *GetQuoteRequest) GetToAmount() int64 {
+	if x != nil && x.ToAmount != nil {
+		return *x.ToAmount
+	}
+	return 0
 }
 
 type CreateTransferRequest struct {
@@ -524,6 +538,155 @@ func (x *ListTransferEventsResponse) GetEvents() []*TransferEvent {
 	return nil
 }
 
+type ListTransferFilesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TransferId    string                 `protobuf:"bytes,1,opt,name=transfer_id,json=transferId,proto3" json:"transfer_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListTransferFilesRequest) Reset() {
+	*x = ListTransferFilesRequest{}
+	mi := &file_payment_v1_transfer_service_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListTransferFilesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListTransferFilesRequest) ProtoMessage() {}
+
+func (x *ListTransferFilesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_payment_v1_transfer_service_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListTransferFilesRequest.ProtoReflect.Descriptor instead.
+func (*ListTransferFilesRequest) Descriptor() ([]byte, []int) {
+	return file_payment_v1_transfer_service_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *ListTransferFilesRequest) GetTransferId() string {
+	if x != nil {
+		return x.TransferId
+	}
+	return ""
+}
+
+type TransferFile struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	File  *v1.File               `protobuf:"bytes,1,opt,name=file,proto3" json:"file,omitempty"`
+	// Presigned GET, only once the file is stored.
+	DownloadUrl          *string `protobuf:"bytes,2,opt,name=download_url,json=downloadUrl,proto3,oneof" json:"download_url,omitempty"`
+	DownloadUrlExpiresIn *int64  `protobuf:"varint,3,opt,name=download_url_expires_in,json=downloadUrlExpiresIn,proto3,oneof" json:"download_url_expires_in,omitempty"` // seconds
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *TransferFile) Reset() {
+	*x = TransferFile{}
+	mi := &file_payment_v1_transfer_service_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TransferFile) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TransferFile) ProtoMessage() {}
+
+func (x *TransferFile) ProtoReflect() protoreflect.Message {
+	mi := &file_payment_v1_transfer_service_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TransferFile.ProtoReflect.Descriptor instead.
+func (*TransferFile) Descriptor() ([]byte, []int) {
+	return file_payment_v1_transfer_service_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *TransferFile) GetFile() *v1.File {
+	if x != nil {
+		return x.File
+	}
+	return nil
+}
+
+func (x *TransferFile) GetDownloadUrl() string {
+	if x != nil && x.DownloadUrl != nil {
+		return *x.DownloadUrl
+	}
+	return ""
+}
+
+func (x *TransferFile) GetDownloadUrlExpiresIn() int64 {
+	if x != nil && x.DownloadUrlExpiresIn != nil {
+		return *x.DownloadUrlExpiresIn
+	}
+	return 0
+}
+
+type ListTransferFilesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Files         []*TransferFile        `protobuf:"bytes,1,rep,name=files,proto3" json:"files,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListTransferFilesResponse) Reset() {
+	*x = ListTransferFilesResponse{}
+	mi := &file_payment_v1_transfer_service_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListTransferFilesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListTransferFilesResponse) ProtoMessage() {}
+
+func (x *ListTransferFilesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_payment_v1_transfer_service_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListTransferFilesResponse.ProtoReflect.Descriptor instead.
+func (*ListTransferFilesResponse) Descriptor() ([]byte, []int) {
+	return file_payment_v1_transfer_service_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *ListTransferFilesResponse) GetFiles() []*TransferFile {
+	if x != nil {
+		return x.Files
+	}
+	return nil
+}
+
 type ConfirmReceiptRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -533,7 +696,7 @@ type ConfirmReceiptRequest struct {
 
 func (x *ConfirmReceiptRequest) Reset() {
 	*x = ConfirmReceiptRequest{}
-	mi := &file_payment_v1_transfer_service_proto_msgTypes[9]
+	mi := &file_payment_v1_transfer_service_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -545,7 +708,7 @@ func (x *ConfirmReceiptRequest) String() string {
 func (*ConfirmReceiptRequest) ProtoMessage() {}
 
 func (x *ConfirmReceiptRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_payment_v1_transfer_service_proto_msgTypes[9]
+	mi := &file_payment_v1_transfer_service_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -558,7 +721,7 @@ func (x *ConfirmReceiptRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfirmReceiptRequest.ProtoReflect.Descriptor instead.
 func (*ConfirmReceiptRequest) Descriptor() ([]byte, []int) {
-	return file_payment_v1_transfer_service_proto_rawDescGZIP(), []int{9}
+	return file_payment_v1_transfer_service_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ConfirmReceiptRequest) GetId() string {
@@ -578,7 +741,7 @@ type CancelTransferRequest struct {
 
 func (x *CancelTransferRequest) Reset() {
 	*x = CancelTransferRequest{}
-	mi := &file_payment_v1_transfer_service_proto_msgTypes[10]
+	mi := &file_payment_v1_transfer_service_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -590,7 +753,7 @@ func (x *CancelTransferRequest) String() string {
 func (*CancelTransferRequest) ProtoMessage() {}
 
 func (x *CancelTransferRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_payment_v1_transfer_service_proto_msgTypes[10]
+	mi := &file_payment_v1_transfer_service_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -603,7 +766,7 @@ func (x *CancelTransferRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelTransferRequest.ProtoReflect.Descriptor instead.
 func (*CancelTransferRequest) Descriptor() ([]byte, []int) {
-	return file_payment_v1_transfer_service_proto_rawDescGZIP(), []int{10}
+	return file_payment_v1_transfer_service_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *CancelTransferRequest) GetId() string {
@@ -628,7 +791,7 @@ type ListBeneficiariesRequest struct {
 
 func (x *ListBeneficiariesRequest) Reset() {
 	*x = ListBeneficiariesRequest{}
-	mi := &file_payment_v1_transfer_service_proto_msgTypes[11]
+	mi := &file_payment_v1_transfer_service_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -640,7 +803,7 @@ func (x *ListBeneficiariesRequest) String() string {
 func (*ListBeneficiariesRequest) ProtoMessage() {}
 
 func (x *ListBeneficiariesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_payment_v1_transfer_service_proto_msgTypes[11]
+	mi := &file_payment_v1_transfer_service_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -653,7 +816,7 @@ func (x *ListBeneficiariesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListBeneficiariesRequest.ProtoReflect.Descriptor instead.
 func (*ListBeneficiariesRequest) Descriptor() ([]byte, []int) {
-	return file_payment_v1_transfer_service_proto_rawDescGZIP(), []int{11}
+	return file_payment_v1_transfer_service_proto_rawDescGZIP(), []int{14}
 }
 
 type ListBeneficiariesResponse struct {
@@ -665,7 +828,7 @@ type ListBeneficiariesResponse struct {
 
 func (x *ListBeneficiariesResponse) Reset() {
 	*x = ListBeneficiariesResponse{}
-	mi := &file_payment_v1_transfer_service_proto_msgTypes[12]
+	mi := &file_payment_v1_transfer_service_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -677,7 +840,7 @@ func (x *ListBeneficiariesResponse) String() string {
 func (*ListBeneficiariesResponse) ProtoMessage() {}
 
 func (x *ListBeneficiariesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_payment_v1_transfer_service_proto_msgTypes[12]
+	mi := &file_payment_v1_transfer_service_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -690,7 +853,7 @@ func (x *ListBeneficiariesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListBeneficiariesResponse.ProtoReflect.Descriptor instead.
 func (*ListBeneficiariesResponse) Descriptor() ([]byte, []int) {
-	return file_payment_v1_transfer_service_proto_rawDescGZIP(), []int{12}
+	return file_payment_v1_transfer_service_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ListBeneficiariesResponse) GetBeneficiaries() []*Beneficiary {
@@ -698,6 +861,150 @@ func (x *ListBeneficiariesResponse) GetBeneficiaries() []*Beneficiary {
 		return x.Beneficiaries
 	}
 	return nil
+}
+
+type AddBeneficiaryRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Phone         string                 `protobuf:"bytes,2,opt,name=phone,proto3" json:"phone,omitempty"` // where the recipient is paid, off-platform
+	Operator      Operator               `protobuf:"varint,3,opt,name=operator,proto3,enum=payment.v1.Operator" json:"operator,omitempty"`
+	City          *string                `protobuf:"bytes,4,opt,name=city,proto3,oneof" json:"city,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AddBeneficiaryRequest) Reset() {
+	*x = AddBeneficiaryRequest{}
+	mi := &file_payment_v1_transfer_service_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AddBeneficiaryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddBeneficiaryRequest) ProtoMessage() {}
+
+func (x *AddBeneficiaryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_payment_v1_transfer_service_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddBeneficiaryRequest.ProtoReflect.Descriptor instead.
+func (*AddBeneficiaryRequest) Descriptor() ([]byte, []int) {
+	return file_payment_v1_transfer_service_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *AddBeneficiaryRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *AddBeneficiaryRequest) GetPhone() string {
+	if x != nil {
+		return x.Phone
+	}
+	return ""
+}
+
+func (x *AddBeneficiaryRequest) GetOperator() Operator {
+	if x != nil {
+		return x.Operator
+	}
+	return Operator_OPERATOR_UNSPECIFIED
+}
+
+func (x *AddBeneficiaryRequest) GetCity() string {
+	if x != nil && x.City != nil {
+		return *x.City
+	}
+	return ""
+}
+
+type UpdateBeneficiaryRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
+	Phone         *string                `protobuf:"bytes,3,opt,name=phone,proto3,oneof" json:"phone,omitempty"` // must stay unique among the caller's live recipients
+	Operator      *Operator              `protobuf:"varint,4,opt,name=operator,proto3,enum=payment.v1.Operator,oneof" json:"operator,omitempty"`
+	City          *string                `protobuf:"bytes,5,opt,name=city,proto3,oneof" json:"city,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateBeneficiaryRequest) Reset() {
+	*x = UpdateBeneficiaryRequest{}
+	mi := &file_payment_v1_transfer_service_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateBeneficiaryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateBeneficiaryRequest) ProtoMessage() {}
+
+func (x *UpdateBeneficiaryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_payment_v1_transfer_service_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateBeneficiaryRequest.ProtoReflect.Descriptor instead.
+func (*UpdateBeneficiaryRequest) Descriptor() ([]byte, []int) {
+	return file_payment_v1_transfer_service_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *UpdateBeneficiaryRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *UpdateBeneficiaryRequest) GetName() string {
+	if x != nil && x.Name != nil {
+		return *x.Name
+	}
+	return ""
+}
+
+func (x *UpdateBeneficiaryRequest) GetPhone() string {
+	if x != nil && x.Phone != nil {
+		return *x.Phone
+	}
+	return ""
+}
+
+func (x *UpdateBeneficiaryRequest) GetOperator() Operator {
+	if x != nil && x.Operator != nil {
+		return *x.Operator
+	}
+	return Operator_OPERATOR_UNSPECIFIED
+}
+
+func (x *UpdateBeneficiaryRequest) GetCity() string {
+	if x != nil && x.City != nil {
+		return *x.City
+	}
+	return ""
 }
 
 type DeleteBeneficiaryRequest struct {
@@ -709,7 +1016,7 @@ type DeleteBeneficiaryRequest struct {
 
 func (x *DeleteBeneficiaryRequest) Reset() {
 	*x = DeleteBeneficiaryRequest{}
-	mi := &file_payment_v1_transfer_service_proto_msgTypes[13]
+	mi := &file_payment_v1_transfer_service_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -721,7 +1028,7 @@ func (x *DeleteBeneficiaryRequest) String() string {
 func (*DeleteBeneficiaryRequest) ProtoMessage() {}
 
 func (x *DeleteBeneficiaryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_payment_v1_transfer_service_proto_msgTypes[13]
+	mi := &file_payment_v1_transfer_service_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -734,7 +1041,7 @@ func (x *DeleteBeneficiaryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteBeneficiaryRequest.ProtoReflect.Descriptor instead.
 func (*DeleteBeneficiaryRequest) Descriptor() ([]byte, []int) {
-	return file_payment_v1_transfer_service_proto_rawDescGZIP(), []int{13}
+	return file_payment_v1_transfer_service_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *DeleteBeneficiaryRequest) GetId() string {
@@ -755,7 +1062,7 @@ type UpdateTransferStatusRequest struct {
 
 func (x *UpdateTransferStatusRequest) Reset() {
 	*x = UpdateTransferStatusRequest{}
-	mi := &file_payment_v1_transfer_service_proto_msgTypes[14]
+	mi := &file_payment_v1_transfer_service_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -767,7 +1074,7 @@ func (x *UpdateTransferStatusRequest) String() string {
 func (*UpdateTransferStatusRequest) ProtoMessage() {}
 
 func (x *UpdateTransferStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_payment_v1_transfer_service_proto_msgTypes[14]
+	mi := &file_payment_v1_transfer_service_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -780,7 +1087,7 @@ func (x *UpdateTransferStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateTransferStatusRequest.ProtoReflect.Descriptor instead.
 func (*UpdateTransferStatusRequest) Descriptor() ([]byte, []int) {
-	return file_payment_v1_transfer_service_proto_rawDescGZIP(), []int{14}
+	return file_payment_v1_transfer_service_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *UpdateTransferStatusRequest) GetId() string {
@@ -809,19 +1116,22 @@ var File_payment_v1_transfer_service_proto protoreflect.FileDescriptor
 const file_payment_v1_transfer_service_proto_rawDesc = "" +
 	"\n" +
 	"!payment/v1/transfer_service.proto\x12\n" +
-	"payment.v1\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fpayment/v1/shared_message.proto\"\x90\x01\n" +
+	"payment.v1\x1a\x1cfile/v1/shared_message.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fpayment/v1/shared_message.proto\"\x90\x01\n" +
 	"\x1cGetAvailableOperatorsRequest\x129\n" +
 	"\rfrom_currency\x18\x01 \x01(\x0e2\x14.payment.v1.CurrencyR\ffromCurrency\x125\n" +
 	"\vto_currency\x18\x02 \x01(\x0e2\x14.payment.v1.CurrencyR\n" +
 	"toCurrency\"S\n" +
 	"\x1dGetAvailableOperatorsResponse\x122\n" +
-	"\toperators\x18\x01 \x03(\x0e2\x14.payment.v1.OperatorR\toperators\"\xa4\x01\n" +
+	"\toperators\x18\x01 \x03(\x0e2\x14.payment.v1.OperatorR\toperators\"\xd4\x01\n" +
 	"\x0fGetQuoteRequest\x129\n" +
 	"\rfrom_currency\x18\x01 \x01(\x0e2\x14.payment.v1.CurrencyR\ffromCurrency\x12\x1f\n" +
 	"\vfrom_amount\x18\x02 \x01(\x03R\n" +
 	"fromAmount\x125\n" +
 	"\vto_currency\x18\x03 \x01(\x0e2\x14.payment.v1.CurrencyR\n" +
-	"toCurrency\"\xe7\x04\n" +
+	"toCurrency\x12 \n" +
+	"\tto_amount\x18\x04 \x01(\x03H\x00R\btoAmount\x88\x01\x01B\f\n" +
+	"\n" +
+	"_to_amount\"\xe7\x04\n" +
 	"\x15CreateTransferRequest\x129\n" +
 	"\rfrom_currency\x18\x01 \x01(\x0e2\x14.payment.v1.CurrencyR\ffromCurrency\x129\n" +
 	"\rfrom_operator\x18\x02 \x01(\x0e2\x14.payment.v1.OperatorR\ffromOperator\x12\x1f\n" +
@@ -854,7 +1164,18 @@ const file_payment_v1_transfer_service_proto_rawDesc = "" +
 	"\vtransfer_id\x18\x01 \x01(\tR\n" +
 	"transferId\"O\n" +
 	"\x1aListTransferEventsResponse\x121\n" +
-	"\x06events\x18\x01 \x03(\v2\x19.payment.v1.TransferEventR\x06events\"'\n" +
+	"\x06events\x18\x01 \x03(\v2\x19.payment.v1.TransferEventR\x06events\";\n" +
+	"\x18ListTransferFilesRequest\x12\x1f\n" +
+	"\vtransfer_id\x18\x01 \x01(\tR\n" +
+	"transferId\"\xc2\x01\n" +
+	"\fTransferFile\x12!\n" +
+	"\x04file\x18\x01 \x01(\v2\r.file.v1.FileR\x04file\x12&\n" +
+	"\fdownload_url\x18\x02 \x01(\tH\x00R\vdownloadUrl\x88\x01\x01\x12:\n" +
+	"\x17download_url_expires_in\x18\x03 \x01(\x03H\x01R\x14downloadUrlExpiresIn\x88\x01\x01B\x0f\n" +
+	"\r_download_urlB\x1a\n" +
+	"\x18_download_url_expires_in\"K\n" +
+	"\x19ListTransferFilesResponse\x12.\n" +
+	"\x05files\x18\x01 \x03(\v2\x18.payment.v1.TransferFileR\x05files\"'\n" +
 	"\x15ConfirmReceiptRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"O\n" +
 	"\x15CancelTransferRequest\x12\x0e\n" +
@@ -863,23 +1184,42 @@ const file_payment_v1_transfer_service_proto_rawDesc = "" +
 	"\a_reason\"\x1a\n" +
 	"\x18ListBeneficiariesRequest\"Z\n" +
 	"\x19ListBeneficiariesResponse\x12=\n" +
-	"\rbeneficiaries\x18\x01 \x03(\v2\x17.payment.v1.BeneficiaryR\rbeneficiaries\"*\n" +
+	"\rbeneficiaries\x18\x01 \x03(\v2\x17.payment.v1.BeneficiaryR\rbeneficiaries\"\x95\x01\n" +
+	"\x15AddBeneficiaryRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
+	"\x05phone\x18\x02 \x01(\tR\x05phone\x120\n" +
+	"\boperator\x18\x03 \x01(\x0e2\x14.payment.v1.OperatorR\boperator\x12\x17\n" +
+	"\x04city\x18\x04 \x01(\tH\x00R\x04city\x88\x01\x01B\a\n" +
+	"\x05_city\"\xd7\x01\n" +
+	"\x18UpdateBeneficiaryRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
+	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x19\n" +
+	"\x05phone\x18\x03 \x01(\tH\x01R\x05phone\x88\x01\x01\x125\n" +
+	"\boperator\x18\x04 \x01(\x0e2\x14.payment.v1.OperatorH\x02R\boperator\x88\x01\x01\x12\x17\n" +
+	"\x04city\x18\x05 \x01(\tH\x03R\x04city\x88\x01\x01B\a\n" +
+	"\x05_nameB\b\n" +
+	"\x06_phoneB\v\n" +
+	"\t_operatorB\a\n" +
+	"\x05_city\"*\n" +
 	"\x18DeleteBeneficiaryRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"\x85\x01\n" +
 	"\x1bUpdateTransferStatusRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x122\n" +
 	"\x06status\x18\x02 \x01(\x0e2\x1a.payment.v1.TransferStatusR\x06status\x12\"\n" +
-	"\rproof_file_id\x18\x03 \x01(\tR\vproofFileId2\xa8\a\n" +
+	"\rproof_file_id\x18\x03 \x01(\tR\vproofFileId2\xac\t\n" +
 	"\x0fTransferService\x12l\n" +
 	"\x15GetAvailableOperators\x12(.payment.v1.GetAvailableOperatorsRequest\x1a).payment.v1.GetAvailableOperatorsResponse\x12:\n" +
 	"\bGetQuote\x12\x1b.payment.v1.GetQuoteRequest\x1a\x11.payment.v1.Quote\x12I\n" +
 	"\x0eCreateTransfer\x12!.payment.v1.CreateTransferRequest\x1a\x14.payment.v1.Transfer\x12C\n" +
 	"\vGetTransfer\x12\x1e.payment.v1.GetTransferRequest\x1a\x14.payment.v1.Transfer\x12T\n" +
 	"\rListTransfers\x12 .payment.v1.ListTransfersRequest\x1a!.payment.v1.ListTransfersResponse\x12c\n" +
-	"\x12ListTransferEvents\x12%.payment.v1.ListTransferEventsRequest\x1a&.payment.v1.ListTransferEventsResponse\x12I\n" +
+	"\x12ListTransferEvents\x12%.payment.v1.ListTransferEventsRequest\x1a&.payment.v1.ListTransferEventsResponse\x12`\n" +
+	"\x11ListTransferFiles\x12$.payment.v1.ListTransferFilesRequest\x1a%.payment.v1.ListTransferFilesResponse\x12I\n" +
 	"\x0eConfirmReceipt\x12!.payment.v1.ConfirmReceiptRequest\x1a\x14.payment.v1.Transfer\x12I\n" +
 	"\x0eCancelTransfer\x12!.payment.v1.CancelTransferRequest\x1a\x14.payment.v1.Transfer\x12`\n" +
-	"\x11ListBeneficiaries\x12$.payment.v1.ListBeneficiariesRequest\x1a%.payment.v1.ListBeneficiariesResponse\x12Q\n" +
+	"\x11ListBeneficiaries\x12$.payment.v1.ListBeneficiariesRequest\x1a%.payment.v1.ListBeneficiariesResponse\x12L\n" +
+	"\x0eAddBeneficiary\x12!.payment.v1.AddBeneficiaryRequest\x1a\x17.payment.v1.Beneficiary\x12R\n" +
+	"\x11UpdateBeneficiary\x12$.payment.v1.UpdateBeneficiaryRequest\x1a\x17.payment.v1.Beneficiary\x12Q\n" +
 	"\x11DeleteBeneficiary\x12$.payment.v1.DeleteBeneficiaryRequest\x1a\x16.google.protobuf.Empty\x12U\n" +
 	"\x14UpdateTransferStatus\x12'.payment.v1.UpdateTransferStatusRequest\x1a\x14.payment.v1.TransferB\xa0\x01\n" +
 	"\x0ecom.payment.v1B\x14TransferServiceProtoP\x01Z/mokapay.app/proto/codebase/payment/v1;paymentv1\xa2\x02\x03PXX\xaa\x02\n" +
@@ -898,7 +1238,7 @@ func file_payment_v1_transfer_service_proto_rawDescGZIP() []byte {
 	return file_payment_v1_transfer_service_proto_rawDescData
 }
 
-var file_payment_v1_transfer_service_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_payment_v1_transfer_service_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_payment_v1_transfer_service_proto_goTypes = []any{
 	(*GetAvailableOperatorsRequest)(nil),  // 0: payment.v1.GetAvailableOperatorsRequest
 	(*GetAvailableOperatorsResponse)(nil), // 1: payment.v1.GetAvailableOperatorsResponse
@@ -909,63 +1249,79 @@ var file_payment_v1_transfer_service_proto_goTypes = []any{
 	(*ListTransfersResponse)(nil),         // 6: payment.v1.ListTransfersResponse
 	(*ListTransferEventsRequest)(nil),     // 7: payment.v1.ListTransferEventsRequest
 	(*ListTransferEventsResponse)(nil),    // 8: payment.v1.ListTransferEventsResponse
-	(*ConfirmReceiptRequest)(nil),         // 9: payment.v1.ConfirmReceiptRequest
-	(*CancelTransferRequest)(nil),         // 10: payment.v1.CancelTransferRequest
-	(*ListBeneficiariesRequest)(nil),      // 11: payment.v1.ListBeneficiariesRequest
-	(*ListBeneficiariesResponse)(nil),     // 12: payment.v1.ListBeneficiariesResponse
-	(*DeleteBeneficiaryRequest)(nil),      // 13: payment.v1.DeleteBeneficiaryRequest
-	(*UpdateTransferStatusRequest)(nil),   // 14: payment.v1.UpdateTransferStatusRequest
-	(Currency)(0),                         // 15: payment.v1.Currency
-	(Operator)(0),                         // 16: payment.v1.Operator
-	(TransferStatus)(0),                   // 17: payment.v1.TransferStatus
-	(*Transfer)(nil),                      // 18: payment.v1.Transfer
-	(*TransferEvent)(nil),                 // 19: payment.v1.TransferEvent
-	(*Beneficiary)(nil),                   // 20: payment.v1.Beneficiary
-	(*Quote)(nil),                         // 21: payment.v1.Quote
-	(*emptypb.Empty)(nil),                 // 22: google.protobuf.Empty
+	(*ListTransferFilesRequest)(nil),      // 9: payment.v1.ListTransferFilesRequest
+	(*TransferFile)(nil),                  // 10: payment.v1.TransferFile
+	(*ListTransferFilesResponse)(nil),     // 11: payment.v1.ListTransferFilesResponse
+	(*ConfirmReceiptRequest)(nil),         // 12: payment.v1.ConfirmReceiptRequest
+	(*CancelTransferRequest)(nil),         // 13: payment.v1.CancelTransferRequest
+	(*ListBeneficiariesRequest)(nil),      // 14: payment.v1.ListBeneficiariesRequest
+	(*ListBeneficiariesResponse)(nil),     // 15: payment.v1.ListBeneficiariesResponse
+	(*AddBeneficiaryRequest)(nil),         // 16: payment.v1.AddBeneficiaryRequest
+	(*UpdateBeneficiaryRequest)(nil),      // 17: payment.v1.UpdateBeneficiaryRequest
+	(*DeleteBeneficiaryRequest)(nil),      // 18: payment.v1.DeleteBeneficiaryRequest
+	(*UpdateTransferStatusRequest)(nil),   // 19: payment.v1.UpdateTransferStatusRequest
+	(Currency)(0),                         // 20: payment.v1.Currency
+	(Operator)(0),                         // 21: payment.v1.Operator
+	(TransferStatus)(0),                   // 22: payment.v1.TransferStatus
+	(*Transfer)(nil),                      // 23: payment.v1.Transfer
+	(*TransferEvent)(nil),                 // 24: payment.v1.TransferEvent
+	(*v1.File)(nil),                       // 25: file.v1.File
+	(*Beneficiary)(nil),                   // 26: payment.v1.Beneficiary
+	(*Quote)(nil),                         // 27: payment.v1.Quote
+	(*emptypb.Empty)(nil),                 // 28: google.protobuf.Empty
 }
 var file_payment_v1_transfer_service_proto_depIdxs = []int32{
-	15, // 0: payment.v1.GetAvailableOperatorsRequest.from_currency:type_name -> payment.v1.Currency
-	15, // 1: payment.v1.GetAvailableOperatorsRequest.to_currency:type_name -> payment.v1.Currency
-	16, // 2: payment.v1.GetAvailableOperatorsResponse.operators:type_name -> payment.v1.Operator
-	15, // 3: payment.v1.GetQuoteRequest.from_currency:type_name -> payment.v1.Currency
-	15, // 4: payment.v1.GetQuoteRequest.to_currency:type_name -> payment.v1.Currency
-	15, // 5: payment.v1.CreateTransferRequest.from_currency:type_name -> payment.v1.Currency
-	16, // 6: payment.v1.CreateTransferRequest.from_operator:type_name -> payment.v1.Operator
-	15, // 7: payment.v1.CreateTransferRequest.to_currency:type_name -> payment.v1.Currency
-	16, // 8: payment.v1.CreateTransferRequest.recipient_operator:type_name -> payment.v1.Operator
-	17, // 9: payment.v1.ListTransfersRequest.status:type_name -> payment.v1.TransferStatus
-	18, // 10: payment.v1.ListTransfersResponse.transfers:type_name -> payment.v1.Transfer
-	19, // 11: payment.v1.ListTransferEventsResponse.events:type_name -> payment.v1.TransferEvent
-	20, // 12: payment.v1.ListBeneficiariesResponse.beneficiaries:type_name -> payment.v1.Beneficiary
-	17, // 13: payment.v1.UpdateTransferStatusRequest.status:type_name -> payment.v1.TransferStatus
-	0,  // 14: payment.v1.TransferService.GetAvailableOperators:input_type -> payment.v1.GetAvailableOperatorsRequest
-	2,  // 15: payment.v1.TransferService.GetQuote:input_type -> payment.v1.GetQuoteRequest
-	3,  // 16: payment.v1.TransferService.CreateTransfer:input_type -> payment.v1.CreateTransferRequest
-	4,  // 17: payment.v1.TransferService.GetTransfer:input_type -> payment.v1.GetTransferRequest
-	5,  // 18: payment.v1.TransferService.ListTransfers:input_type -> payment.v1.ListTransfersRequest
-	7,  // 19: payment.v1.TransferService.ListTransferEvents:input_type -> payment.v1.ListTransferEventsRequest
-	9,  // 20: payment.v1.TransferService.ConfirmReceipt:input_type -> payment.v1.ConfirmReceiptRequest
-	10, // 21: payment.v1.TransferService.CancelTransfer:input_type -> payment.v1.CancelTransferRequest
-	11, // 22: payment.v1.TransferService.ListBeneficiaries:input_type -> payment.v1.ListBeneficiariesRequest
-	13, // 23: payment.v1.TransferService.DeleteBeneficiary:input_type -> payment.v1.DeleteBeneficiaryRequest
-	14, // 24: payment.v1.TransferService.UpdateTransferStatus:input_type -> payment.v1.UpdateTransferStatusRequest
-	1,  // 25: payment.v1.TransferService.GetAvailableOperators:output_type -> payment.v1.GetAvailableOperatorsResponse
-	21, // 26: payment.v1.TransferService.GetQuote:output_type -> payment.v1.Quote
-	18, // 27: payment.v1.TransferService.CreateTransfer:output_type -> payment.v1.Transfer
-	18, // 28: payment.v1.TransferService.GetTransfer:output_type -> payment.v1.Transfer
-	6,  // 29: payment.v1.TransferService.ListTransfers:output_type -> payment.v1.ListTransfersResponse
-	8,  // 30: payment.v1.TransferService.ListTransferEvents:output_type -> payment.v1.ListTransferEventsResponse
-	18, // 31: payment.v1.TransferService.ConfirmReceipt:output_type -> payment.v1.Transfer
-	18, // 32: payment.v1.TransferService.CancelTransfer:output_type -> payment.v1.Transfer
-	12, // 33: payment.v1.TransferService.ListBeneficiaries:output_type -> payment.v1.ListBeneficiariesResponse
-	22, // 34: payment.v1.TransferService.DeleteBeneficiary:output_type -> google.protobuf.Empty
-	18, // 35: payment.v1.TransferService.UpdateTransferStatus:output_type -> payment.v1.Transfer
-	25, // [25:36] is the sub-list for method output_type
-	14, // [14:25] is the sub-list for method input_type
-	14, // [14:14] is the sub-list for extension type_name
-	14, // [14:14] is the sub-list for extension extendee
-	0,  // [0:14] is the sub-list for field type_name
+	20, // 0: payment.v1.GetAvailableOperatorsRequest.from_currency:type_name -> payment.v1.Currency
+	20, // 1: payment.v1.GetAvailableOperatorsRequest.to_currency:type_name -> payment.v1.Currency
+	21, // 2: payment.v1.GetAvailableOperatorsResponse.operators:type_name -> payment.v1.Operator
+	20, // 3: payment.v1.GetQuoteRequest.from_currency:type_name -> payment.v1.Currency
+	20, // 4: payment.v1.GetQuoteRequest.to_currency:type_name -> payment.v1.Currency
+	20, // 5: payment.v1.CreateTransferRequest.from_currency:type_name -> payment.v1.Currency
+	21, // 6: payment.v1.CreateTransferRequest.from_operator:type_name -> payment.v1.Operator
+	20, // 7: payment.v1.CreateTransferRequest.to_currency:type_name -> payment.v1.Currency
+	21, // 8: payment.v1.CreateTransferRequest.recipient_operator:type_name -> payment.v1.Operator
+	22, // 9: payment.v1.ListTransfersRequest.status:type_name -> payment.v1.TransferStatus
+	23, // 10: payment.v1.ListTransfersResponse.transfers:type_name -> payment.v1.Transfer
+	24, // 11: payment.v1.ListTransferEventsResponse.events:type_name -> payment.v1.TransferEvent
+	25, // 12: payment.v1.TransferFile.file:type_name -> file.v1.File
+	10, // 13: payment.v1.ListTransferFilesResponse.files:type_name -> payment.v1.TransferFile
+	26, // 14: payment.v1.ListBeneficiariesResponse.beneficiaries:type_name -> payment.v1.Beneficiary
+	21, // 15: payment.v1.AddBeneficiaryRequest.operator:type_name -> payment.v1.Operator
+	21, // 16: payment.v1.UpdateBeneficiaryRequest.operator:type_name -> payment.v1.Operator
+	22, // 17: payment.v1.UpdateTransferStatusRequest.status:type_name -> payment.v1.TransferStatus
+	0,  // 18: payment.v1.TransferService.GetAvailableOperators:input_type -> payment.v1.GetAvailableOperatorsRequest
+	2,  // 19: payment.v1.TransferService.GetQuote:input_type -> payment.v1.GetQuoteRequest
+	3,  // 20: payment.v1.TransferService.CreateTransfer:input_type -> payment.v1.CreateTransferRequest
+	4,  // 21: payment.v1.TransferService.GetTransfer:input_type -> payment.v1.GetTransferRequest
+	5,  // 22: payment.v1.TransferService.ListTransfers:input_type -> payment.v1.ListTransfersRequest
+	7,  // 23: payment.v1.TransferService.ListTransferEvents:input_type -> payment.v1.ListTransferEventsRequest
+	9,  // 24: payment.v1.TransferService.ListTransferFiles:input_type -> payment.v1.ListTransferFilesRequest
+	12, // 25: payment.v1.TransferService.ConfirmReceipt:input_type -> payment.v1.ConfirmReceiptRequest
+	13, // 26: payment.v1.TransferService.CancelTransfer:input_type -> payment.v1.CancelTransferRequest
+	14, // 27: payment.v1.TransferService.ListBeneficiaries:input_type -> payment.v1.ListBeneficiariesRequest
+	16, // 28: payment.v1.TransferService.AddBeneficiary:input_type -> payment.v1.AddBeneficiaryRequest
+	17, // 29: payment.v1.TransferService.UpdateBeneficiary:input_type -> payment.v1.UpdateBeneficiaryRequest
+	18, // 30: payment.v1.TransferService.DeleteBeneficiary:input_type -> payment.v1.DeleteBeneficiaryRequest
+	19, // 31: payment.v1.TransferService.UpdateTransferStatus:input_type -> payment.v1.UpdateTransferStatusRequest
+	1,  // 32: payment.v1.TransferService.GetAvailableOperators:output_type -> payment.v1.GetAvailableOperatorsResponse
+	27, // 33: payment.v1.TransferService.GetQuote:output_type -> payment.v1.Quote
+	23, // 34: payment.v1.TransferService.CreateTransfer:output_type -> payment.v1.Transfer
+	23, // 35: payment.v1.TransferService.GetTransfer:output_type -> payment.v1.Transfer
+	6,  // 36: payment.v1.TransferService.ListTransfers:output_type -> payment.v1.ListTransfersResponse
+	8,  // 37: payment.v1.TransferService.ListTransferEvents:output_type -> payment.v1.ListTransferEventsResponse
+	11, // 38: payment.v1.TransferService.ListTransferFiles:output_type -> payment.v1.ListTransferFilesResponse
+	23, // 39: payment.v1.TransferService.ConfirmReceipt:output_type -> payment.v1.Transfer
+	23, // 40: payment.v1.TransferService.CancelTransfer:output_type -> payment.v1.Transfer
+	15, // 41: payment.v1.TransferService.ListBeneficiaries:output_type -> payment.v1.ListBeneficiariesResponse
+	26, // 42: payment.v1.TransferService.AddBeneficiary:output_type -> payment.v1.Beneficiary
+	26, // 43: payment.v1.TransferService.UpdateBeneficiary:output_type -> payment.v1.Beneficiary
+	28, // 44: payment.v1.TransferService.DeleteBeneficiary:output_type -> google.protobuf.Empty
+	23, // 45: payment.v1.TransferService.UpdateTransferStatus:output_type -> payment.v1.Transfer
+	32, // [32:46] is the sub-list for method output_type
+	18, // [18:32] is the sub-list for method input_type
+	18, // [18:18] is the sub-list for extension type_name
+	18, // [18:18] is the sub-list for extension extendee
+	0,  // [0:18] is the sub-list for field type_name
 }
 
 func init() { file_payment_v1_transfer_service_proto_init() }
@@ -974,16 +1330,20 @@ func file_payment_v1_transfer_service_proto_init() {
 		return
 	}
 	file_payment_v1_shared_message_proto_init()
+	file_payment_v1_transfer_service_proto_msgTypes[2].OneofWrappers = []any{}
 	file_payment_v1_transfer_service_proto_msgTypes[3].OneofWrappers = []any{}
 	file_payment_v1_transfer_service_proto_msgTypes[5].OneofWrappers = []any{}
 	file_payment_v1_transfer_service_proto_msgTypes[10].OneofWrappers = []any{}
+	file_payment_v1_transfer_service_proto_msgTypes[13].OneofWrappers = []any{}
+	file_payment_v1_transfer_service_proto_msgTypes[16].OneofWrappers = []any{}
+	file_payment_v1_transfer_service_proto_msgTypes[17].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_payment_v1_transfer_service_proto_rawDesc), len(file_payment_v1_transfer_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   15,
+			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -12,12 +12,14 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"mokapay.app/app/services/payment/internal/api/transfer/mapper"
+	"mokapay.app/app/services/payment/internal/business/beneficiary"
 	"mokapay.app/app/services/payment/internal/business/transfer"
 	"mokapay.app/app/services/payment/internal/business/transfer/usecase"
 	"mokapay.app/app/services/payment/internal/sdk/grpcerr"
 	"mokapay.app/app/services/payment/internal/sdk/identity"
 	"mokapay.app/core/logger"
 	"mokapay.app/core/passport"
+	filev1 "mokapay.app/proto/codebase/file/v1"
 	paymentv1 "mokapay.app/proto/codebase/payment/v1"
 )
 
@@ -26,10 +28,14 @@ type Handler struct {
 
 	logger *logger.Logger
 	uc     usecase.UseCase
+	// The file service, for party-scoped proof reads: the file service
+	// only knows owners, so ListTransferFiles authorizes here and reads
+	// under the system passport.
+	files filev1.FileServiceClient
 }
 
-func NewHandler(l *logger.Logger, uc usecase.UseCase) *Handler {
-	return &Handler{logger: l, uc: uc}
+func NewHandler(l *logger.Logger, uc usecase.UseCase, files filev1.FileServiceClient) *Handler {
+	return &Handler{logger: l, uc: uc, files: files}
 }
 
 func (h *Handler) GetAvailableOperators(ctx context.Context, req *paymentv1.GetAvailableOperatorsRequest) (*paymentv1.GetAvailableOperatorsResponse, error) {
@@ -58,11 +64,20 @@ func (h *Handler) GetQuote(ctx context.Context, req *paymentv1.GetQuoteRequest) 
 		return nil, err
 	}
 
-	q, err := h.uc.GetQuote(ctx,
-		mapper.CurrencyFromProto(req.FromCurrency),
-		req.FromAmount,
-		mapper.CurrencyFromProto(req.ToCurrency),
-	)
+	from := mapper.CurrencyFromProto(req.FromCurrency)
+	to := mapper.CurrencyFromProto(req.ToCurrency)
+
+	// The two widget directions: send-amount known, or target known.
+	var q usecase.Quote
+	var err error
+	switch {
+	case req.ToAmount != nil && req.FromAmount > 0:
+		return nil, status.Error(codes.InvalidArgument, "set from_amount or to_amount, not both")
+	case req.ToAmount != nil:
+		q, err = h.uc.GetQuoteByTarget(ctx, from, to, *req.ToAmount)
+	default:
+		q, err = h.uc.GetQuote(ctx, from, req.FromAmount, to)
+	}
 	if err != nil {
 		return nil, grpcerr.Map(err)
 	}
@@ -173,6 +188,54 @@ func (h *Handler) ListTransferEvents(ctx context.Context, req *paymentv1.ListTra
 	return &paymentv1.ListTransferEventsResponse{Events: out}, nil
 }
 
+// ListTransferFiles serves the proofs attached to a transfer to every
+// party. The file service's own read policy is owner-or-ops, so a
+// client could never see the agent's payout proof (and vice versa);
+// party scope lives here — uc.Get authorizes exactly like GetTransfer
+// (owner, assigned agent, ops; a foreign transfer reads as missing) and
+// the files are then fetched under the system passport.
+func (h *Handler) ListTransferFiles(ctx context.Context, req *paymentv1.ListTransferFilesRequest) (*paymentv1.ListTransferFilesResponse, error) {
+	pass, err := passport.FromContext(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "no passport in context")
+	}
+
+	id, err := uuid.Parse(req.TransferId)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid transfer id")
+	}
+
+	if _, err := h.uc.Get(ctx, pass, id); err != nil {
+		return nil, grpcerr.Map(err)
+	}
+
+	sysCtx := passport.AddToContext(ctx, passport.SystemPassport())
+	list, err := h.files.ListFiles(sysCtx, &filev1.ListFilesRequest{
+		RelatedType: "transfer",
+		RelatedId:   id.String(),
+	})
+	if err != nil {
+		h.logger.Error(ctx, "Transfer.ListTransferFiles: file service list", "err", err)
+		return nil, status.Error(codes.Internal, "internal error")
+	}
+
+	out := make([]*paymentv1.TransferFile, 0, len(list.Files))
+	for _, f := range list.Files {
+		got, err := h.files.GetFile(sysCtx, &filev1.GetFileRequest{Id: f.Id})
+		if err != nil {
+			h.logger.Error(ctx, "Transfer.ListTransferFiles: file service get", "id", f.Id, "err", err)
+			return nil, status.Error(codes.Internal, "internal error")
+		}
+		out = append(out, &paymentv1.TransferFile{
+			File:                 got.File,
+			DownloadUrl:          got.DownloadUrl,
+			DownloadUrlExpiresIn: got.DownloadUrlExpiresIn,
+		})
+	}
+
+	return &paymentv1.ListTransferFilesResponse{Files: out}, nil
+}
+
 func (h *Handler) ListBeneficiaries(ctx context.Context, _ *paymentv1.ListBeneficiariesRequest) (*paymentv1.ListBeneficiariesResponse, error) {
 	clientID, err := identity.RequireRoles(ctx, "user", "agent", "pending_agent", "ops", "admin")
 	if err != nil {
@@ -190,6 +253,67 @@ func (h *Handler) ListBeneficiaries(ctx context.Context, _ *paymentv1.ListBenefi
 	}
 
 	return &paymentv1.ListBeneficiariesResponse{Beneficiaries: out}, nil
+}
+
+func (h *Handler) AddBeneficiary(ctx context.Context, req *paymentv1.AddBeneficiaryRequest) (*paymentv1.Beneficiary, error) {
+	clientID, err := identity.RequireRoles(ctx, "user", "agent", "pending_agent", "ops", "admin")
+	if err != nil {
+		return nil, err
+	}
+
+	op := mapper.OperatorFromProto(req.Operator)
+	if req.Name == "" || req.Phone == "" || op == "" {
+		return nil, status.Error(codes.InvalidArgument, "name, phone and operator are required")
+	}
+
+	b, err := h.uc.AddBeneficiary(ctx, clientID, beneficiary.NewBeneficiary{
+		Name:     req.Name,
+		Phone:    req.Phone,
+		Operator: op,
+		City:     req.City,
+	})
+	if err != nil {
+		return nil, grpcerr.Map(err)
+	}
+
+	return mapper.BeneficiaryToProto(b), nil
+}
+
+func (h *Handler) UpdateBeneficiary(ctx context.Context, req *paymentv1.UpdateBeneficiaryRequest) (*paymentv1.Beneficiary, error) {
+	clientID, err := identity.RequireRoles(ctx, "user", "agent", "pending_agent", "ops", "admin")
+	if err != nil {
+		return nil, err
+	}
+
+	id, err := uuid.Parse(req.Id)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid beneficiary id")
+	}
+
+	// A provided-but-empty required field is a mistake, not a clear.
+	if (req.Name != nil && *req.Name == "") || (req.Phone != nil && *req.Phone == "") {
+		return nil, status.Error(codes.InvalidArgument, "name and phone cannot be empty")
+	}
+
+	ub := beneficiary.UpdateBeneficiary{
+		Name:  req.Name,
+		Phone: req.Phone,
+		City:  req.City,
+	}
+	if req.Operator != nil {
+		op := mapper.OperatorFromProto(*req.Operator)
+		if op == "" {
+			return nil, status.Error(codes.InvalidArgument, "invalid operator")
+		}
+		ub.Operator = new(op)
+	}
+
+	b, err := h.uc.UpdateBeneficiary(ctx, clientID, id, ub)
+	if err != nil {
+		return nil, grpcerr.Map(err)
+	}
+
+	return mapper.BeneficiaryToProto(b), nil
 }
 
 func (h *Handler) DeleteBeneficiary(ctx context.Context, req *paymentv1.DeleteBeneficiaryRequest) (*emptypb.Empty, error) {

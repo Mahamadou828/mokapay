@@ -147,6 +147,35 @@ func (h Handler) listBeneficiaries(ctx context.Context, _ *http.Request) core.En
 	return protocodec.Proto{Message: res}
 }
 
+func (h Handler) addBeneficiary(ctx context.Context, r *http.Request) core.Encoder {
+	req := &paymentv1.AddBeneficiaryRequest{}
+	if err := core.Decode(r, protocodec.Proto{Message: req}); err != nil {
+		return coreerrs.New(errs.InvalidArgument, err)
+	}
+
+	res, err := h.moka.Payment.Transfer.AddBeneficiary(ctx, req)
+	if err != nil {
+		return rpcErr(err)
+	}
+
+	return protocodec.Proto{Message: res}
+}
+
+func (h Handler) updateBeneficiary(ctx context.Context, r *http.Request) core.Encoder {
+	req := &paymentv1.UpdateBeneficiaryRequest{}
+	if err := core.Decode(r, protocodec.Proto{Message: req}); err != nil {
+		return coreerrs.New(errs.InvalidArgument, err)
+	}
+	req.Id = core.Param(r, "id") // the path owns the id, never the body
+
+	res, err := h.moka.Payment.Transfer.UpdateBeneficiary(ctx, req)
+	if err != nil {
+		return rpcErr(err)
+	}
+
+	return protocodec.Proto{Message: res}
+}
+
 func (h Handler) deleteBeneficiary(ctx context.Context, r *http.Request) core.Encoder {
 	res, err := h.moka.Payment.Transfer.DeleteBeneficiary(ctx, &paymentv1.DeleteBeneficiaryRequest{
 		Id: core.Param(r, "id"),

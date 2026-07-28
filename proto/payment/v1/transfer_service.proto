@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package payment.v1;
 
+import "file/v1/shared_message.proto";
 import "google/protobuf/empty.proto";
 import "payment/v1/shared_message.proto";
 
@@ -19,11 +20,21 @@ service TransferService {
   rpc GetTransfer(GetTransferRequest) returns (Transfer);          // owner, assigned agent, or ops
   rpc ListTransfers(ListTransfersRequest) returns (ListTransfersResponse);  // mine (client side)
   rpc ListTransferEvents(ListTransferEventsRequest) returns (ListTransferEventsResponse);
+  // The proofs attached to a transfer, readable by every party — the
+  // file service only knows owners; the party scope (client, assigned
+  // agent, ops) is enforced here and the files are fetched internally.
+  rpc ListTransferFiles(ListTransferFilesRequest) returns (ListTransferFilesResponse);
   // pending_client_confirmation → done; releases the agent's hold.
   rpc ConfirmReceipt(ConfirmReceiptRequest) returns (Transfer);
   // Owner cancel, pre-accept only (no hold yet).
   rpc CancelTransfer(CancelTransferRequest) returns (Transfer);
   rpc ListBeneficiaries(ListBeneficiariesRequest) returns (ListBeneficiariesResponse);
+  // Save a recipient ahead of any transfer (D7). Idempotent on the
+  // caller's (phone) pair: re-adding a live one refreshes its details —
+  // same upsert CreateTransfer uses for inline recipients.
+  rpc AddBeneficiary(AddBeneficiaryRequest) returns (Beneficiary);
+  // Owner-scoped partial update; absent fields keep their value.
+  rpc UpdateBeneficiary(UpdateBeneficiaryRequest) returns (Beneficiary);
   rpc DeleteBeneficiary(DeleteBeneficiaryRequest) returns (google.protobuf.Empty);
   // SYSTEM-ONLY: the file worker reports proofs; forward-only between
   // the proof-gated pendings, can never reach done.
@@ -41,8 +52,14 @@ message GetAvailableOperatorsResponse {
 
 message GetQuoteRequest {
   Currency from_currency = 1;
-  int64 from_amount = 2;  // minor units, source-denominated
+  // Exactly one of from_amount / to_amount is set — the two directions
+  // of the send widget. from_amount: "you send X, what does the
+  // recipient get?"; to_amount: "the recipient must get Y, what do I
+  // send?" (the server solves for the smallest from_amount whose quote
+  // covers Y — the response's to_amount may exceed Y by a rounding sliver).
+  int64 from_amount = 2;           // minor units, source-denominated
   Currency to_currency = 3;
+  optional int64 to_amount = 4;    // minor units, target-denominated
 }
 
 message CreateTransferRequest {
@@ -81,6 +98,21 @@ message ListTransferEventsResponse {
   repeated TransferEvent events = 1;
 }
 
+message ListTransferFilesRequest {
+  string transfer_id = 1;
+}
+
+message TransferFile {
+  file.v1.File file = 1;
+  // Presigned GET, only once the file is stored.
+  optional string download_url = 2;
+  optional int64 download_url_expires_in = 3;  // seconds
+}
+
+message ListTransferFilesResponse {
+  repeated TransferFile files = 1;
+}
+
 message ConfirmReceiptRequest {
   string id = 1;
 }
@@ -94,6 +126,21 @@ message ListBeneficiariesRequest {}
 
 message ListBeneficiariesResponse {
   repeated Beneficiary beneficiaries = 1;
+}
+
+message AddBeneficiaryRequest {
+  string name = 1;
+  string phone = 2;      // where the recipient is paid, off-platform
+  Operator operator = 3;
+  optional string city = 4;
+}
+
+message UpdateBeneficiaryRequest {
+  string id = 1;
+  optional string name = 2;
+  optional string phone = 3;      // must stay unique among the caller's live recipients
+  optional Operator operator = 4;
+  optional string city = 5;
 }
 
 message DeleteBeneficiaryRequest {

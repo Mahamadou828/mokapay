@@ -77,11 +77,15 @@ func Run() error {
 
 	// -------------------------------------------------------------------------
 	// Init the Moka client: the River notify worker pushes through the
-	// user service's NotificationService under a system passport.
+	// user service's NotificationService under a system passport, and the
+	// transfer surface reads proofs from the file service (party-scoped
+	// reads the file service itself cannot authorize).
 	moka, err := client.NewMokaClient(client.Config{
 		UserServiceAddr: cfg.Client.UserGRPCPort,
+		FileServiceAddr: cfg.Client.FileGRPCPort,
 	}, map[client.Connection]bool{
 		client.ConnectionUser: true,
+		client.ConnectionFile: true,
 	})
 	if err != nil {
 		log.Error(ctx, "startup", "failed to init moka client", "error", err)
@@ -222,7 +226,7 @@ func Run() error {
 
 	paymentv1.RegisterAdminServiceServer(srv, adminapi.NewHandler(log, profileUC, transferUC))
 	paymentv1.RegisterLedgerServiceServer(srv, ledgerapi.NewHandler(log, ledgerUC))
-	paymentv1.RegisterTransferServiceServer(srv, transferapi.NewHandler(log, transferUC))
+	paymentv1.RegisterTransferServiceServer(srv, transferapi.NewHandler(log, transferUC, moka.File.File))
 	paymentv1.RegisterAgentServiceServer(srv, agentapi.NewHandler(log, profileUC, matchingUC, transferUC, walletUC, depositChannels))
 
 	lis, err := net.Listen("tcp", cfg.GRPC.Port)

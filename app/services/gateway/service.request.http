@@ -222,6 +222,21 @@ Authorization: Bearer {{access_token}}
 POST {{host}}/v1/enrollments/{{enrollment_id}}/cancel
 Authorization: Bearer {{access_token}}
 
+### Create a back-office account (ADMIN only — ops gets 403; the initial
+### password is handed over out-of-band, staffer changes it via the
+### normal password flow)
+POST {{host}}/v1/accounts
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+
+{
+  "phone_number": "+243890000001",
+  "password": "ChangeMe-2026!",
+  "first_name": "Moka",
+  "last_name": "Staff",
+  "role": "ACCOUNT_ROLE_OPS"
+}
+
 ### List accounts
 GET {{host}}/v1/accounts
 Authorization: Bearer {{access_token}}
@@ -277,6 +292,18 @@ Authorization: Bearer {{access_token}}
   "to_currency": "CURRENCY_CDF"
 }
 
+### Quote, reverse direction — "the recipient must get 281,635 CDF, what
+### do I send?" (the widget's swap arrows; response covers the target)
+POST {{host}}/v1/transfers/quote
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+
+{
+  "from_currency": "CURRENCY_USD",
+  "to_currency": "CURRENCY_CDF",
+  "to_amount": "281635"
+}
+
 ### Create a transfer (inline recipient — also saves the beneficiary)
 POST {{host}}/v1/transfers
 Content-Type: application/json
@@ -310,6 +337,11 @@ Authorization: Bearer {{access_token}}
 GET {{host}}/v1/transfers/{{transfer_id}}/events
 Authorization: Bearer {{access_token}}
 
+### Its proofs — party-scoped: works for the client AND the assigned
+### agent (GET /v1/files/{id} stays owner-only)
+GET {{host}}/v1/transfers/{{transfer_id}}/files
+Authorization: Bearer {{access_token}}
+
 ### Confirm receipt (pending_client_confirmation → done, releases the hold)
 POST {{host}}/v1/transfers/{{transfer_id}}/confirm
 Authorization: Bearer {{access_token}}
@@ -326,6 +358,32 @@ Authorization: Bearer {{access_token}}
 ### My saved recipients
 GET {{host}}/v1/beneficiaries
 Authorization: Bearer {{access_token}}
+
+### Save a recipient (idempotent on phone — re-adding refreshes details)
+POST {{host}}/v1/beneficiaries
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+
+{
+  "name": "Marie Kabila",
+  "phone": "+243821234567",
+  "operator": "OPERATOR_M_PESA",
+  "city": "Goma"
+}
+
+> {%
+  if (response.body.id) { client.global.set("beneficiary_id", response.body.id); }
+%}
+
+### Update a saved recipient (partial — absent fields keep their value)
+PATCH {{host}}/v1/beneficiaries/{{beneficiary_id}}
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+
+{
+  "name": "Marie Kabila-Mwamba",
+  "city": "Bukavu"
+}
 
 ### Delete a saved recipient
 DELETE {{host}}/v1/beneficiaries/{{beneficiary_id}}
@@ -370,15 +428,17 @@ Authorization: Bearer {{access_token}}
 GET {{host}}/v1/agent/wallets
 Authorization: Bearer {{access_token}}
 
-### Declare a wallet (one per {operator, currency} pair)
+### Declare a wallet (one per operator; the accepts_* flags are the
+### currency opt-out — at least one must be true)
 POST {{host}}/v1/agent/wallets
 Content-Type: application/json
 Authorization: Bearer {{access_token}}
 
 {
   "operator": "OPERATOR_ORANGE_MONEY",
-  "currency": "CURRENCY_USD",
-  "msisdn": "+243990000001"
+  "msisdn": "+243990000001",
+  "accepts_usd": true,
+  "accepts_cdf": true
 }
 
 > {%

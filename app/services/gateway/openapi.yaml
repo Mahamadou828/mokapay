@@ -680,6 +680,38 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "403":
           $ref: "#/components/responses/PermissionDenied"
+    post:
+      tags: [Admin]
+      summary: Create a back-office account (ops or admin)
+      description: >
+        Provisions a staff account: Cognito identity + account row, active
+        immediately — no OTP gate (staff are never self-registered). The
+        route sits on the ops tier but the service requires an **admin**
+        caller: the one operation where ops and admin differ. The initial
+        password is handed over out-of-band; the staffer changes it through
+        the normal password flow.
+      operationId: createAccount
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminCreateAccountRequest"
+      responses:
+        "200":
+          description: The created account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/PermissionDenied"
+        "409":
+          description: Phone number already registered
 
   /v1/accounts/{id}:
     parameters:
@@ -922,6 +954,53 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/transfers/{id}/files:
+    get:
+      tags: [Transfers]
+      summary: List a transfer's proofs (party-scoped)
+      description: >
+        The proofs attached to a transfer, readable by every party —
+        the client, the assigned agent and ops. Use this (not GET
+        /v1/files/{id}, which is owner-only) to show the counterpart's
+        proof: the client's payment proof to the agent, the agent's
+        payout proof to the client. Each entry carries a presigned
+        download URL once the file is stored. A transfer that isn't
+        yours reads as 404.
+      operationId: listTransferFiles
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: The transfer's files, with download URLs when stored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  files:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        file:
+                          $ref: "#/components/schemas/File"
+                        download_url:
+                          type: string
+                          description: Presigned GET, only once stored.
+                        download_url_expires_in:
+                          type: integer
+                          format: int64
+                          description: Seconds until the URL expires.
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /v1/transfers/{id}/confirm:
     post:
       tags: [Transfers]
@@ -1005,8 +1084,97 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/Beneficiary"
+    post:
+      tags: [Transfers]
+      summary: Save a recipient
+      description: >
+        Saves a recipient ahead of any transfer. Idempotent on the phone:
+        re-adding a live one refreshes its details instead of erroring —
+        the same upsert a transfer with inline recipient details performs.
+      operationId: addBeneficiary
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, phone, operator]
+              properties:
+                name:
+                  type: string
+                  example: Marie Kabila
+                phone:
+                  type: string
+                  description: Where the recipient is paid, off-platform.
+                  example: "+243821234567"
+                operator:
+                  $ref: "#/components/schemas/Operator"
+                city:
+                  type: string
+      responses:
+        "200":
+          description: The saved beneficiary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Beneficiary"
+        "400":
+          $ref: "#/components/responses/BadRequest"
 
   /v1/beneficiaries/{id}:
+    patch:
+      tags: [Transfers]
+      summary: Update a saved recipient
+      description: >
+        Owner-scoped partial update — absent fields keep their value.
+        Editing a beneficiary never rewrites past transfers (each
+        transfer keeps its own recipient snapshot). Changing the phone
+        to one another live saved recipient already uses returns 409.
+      operationId: updateBeneficiary
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                phone:
+                  type: string
+                  example: "+243821234567"
+                operator:
+                  $ref: "#/components/schemas/Operator"
+                city:
+                  type: string
+      responses:
+        "200":
+          description: The updated beneficiary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Beneficiary"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Another saved recipient already uses this phone
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
     delete:
       tags: [Transfers]
       summary: Delete a saved recipient
@@ -1385,6 +1553,11 @@ paths:
     get:
       tags: [Files]
       summary: Get a file (+ presigned download URL once stored)
+      description: >
+        Owner-only (ops sees everything): you can only fetch files you
+        uploaded. To view the counterpart's proof on a transfer, use
+        GET /v1/transfers/{id}/files — party scope lives with the
+        transfer, not the file.
       operationId: getFile
       security:
         - bearerAuth: []
@@ -1465,7 +1638,10 @@ paths:
     get:
       tags: [Ledger]
       summary: List my ledger requests
-      description: Always scoped to my own profile, whatever filters say.
+      description: >
+        Always scoped to my own profile, whatever filters say. Pending
+        agents included — this is how G2 finds the enrollment guarantee
+        request (filter type=LEDGER_REQUEST_TYPE_FUNDING and copy its ref).
       operationId: listMyLedgerRequests
       security:
         - bearerAuth: []
@@ -2060,6 +2236,29 @@ components:
         preferred_language:
           $ref: "#/components/schemas/Language"
 
+    AdminCreateAccountRequest:
+      type: object
+      required: [phone_number, password, first_name, last_name, role]
+      properties:
+        phone_number:
+          type: string
+          example: "+243812345678"
+        password:
+          type: string
+          description: Initial password (Cognito policy applies), handed over out-of-band.
+        first_name:
+          type: string
+        last_name:
+          type: string
+        role:
+          type: string
+          enum: [ACCOUNT_ROLE_OPS, ACCOUNT_ROLE_ADMIN]
+          description: Back-office roles only — customer roles go through register/enrollment.
+        email:
+          type: string
+        preferred_language:
+          $ref: "#/components/schemas/Language"
+
     AdminUpdateAccountRequest:
       type: object
       description: Moderation partial update — absent fields keep their value.
@@ -2224,17 +2423,27 @@ components:
 
     GetQuoteRequest:
       type: object
-      description: Amounts are minor units of from_currency (USD cents, CDF whole francs).
+      description: >
+        Exactly one of from_amount / to_amount is set — the two directions
+        of the send widget. from_amount ("you send X"): what does the
+        recipient get? to_amount ("recipient must get Y"): the server
+        solves for the smallest send amount whose quote covers Y — the
+        response's to_amount may exceed Y by a rounding sliver. Amounts
+        are minor units of their own currency (USD cents, CDF whole francs).
       properties:
         from_currency:
           $ref: "#/components/schemas/Currency"
         from_amount:
           type: string
-          description: int64 as JSON string (proto3-JSON)
+          description: int64 as JSON string (proto3-JSON), from_currency minor units
           example: "10000"
         to_currency:
           $ref: "#/components/schemas/Currency"
-      required: [from_currency, from_amount, to_currency]
+        to_amount:
+          type: string
+          description: int64 as JSON string (proto3-JSON), to_currency minor units
+          example: "281635"
+      required: [from_currency, to_currency]
 
     Quote:
       type: object
@@ -2529,6 +2738,7 @@ components:
 
     AgentWallet:
       type: object
+      description: One wallet per operator; the accepts_* flags say which currencies the agent serves on it.
       properties:
         id:
           type: string
@@ -2538,10 +2748,12 @@ components:
           format: uuid
         operator:
           $ref: "#/components/schemas/Operator"
-        currency:
-          $ref: "#/components/schemas/Currency"
         msisdn:
           type: string
+        accepts_usd:
+          type: boolean
+        accepts_cdf:
+          type: boolean
         created_at:
           type: string
           format: date-time
@@ -2573,15 +2785,21 @@ components:
 
     AddWalletRequest:
       type: object
+      description: >
+        One wallet per operator. At least one accepts_* flag must be true
+        — they are the "no dollars on Orange" opt-out. Remove then re-add
+        to change the msisdn or the flags.
       properties:
         operator:
           $ref: "#/components/schemas/Operator"
-        currency:
-          $ref: "#/components/schemas/Currency"
         msisdn:
           type: string
           example: "+243990000001"
-      required: [operator, currency, msisdn]
+        accepts_usd:
+          type: boolean
+        accepts_cdf:
+          type: boolean
+      required: [operator, msisdn]
 
     FilePurpose:
       type: string

@@ -127,3 +127,48 @@ func (q *Queries) ListBeneficiaries(ctx context.Context, clientNk string) ([]Pay
 	}
 	return items, nil
 }
+
+const updateBeneficiary = `-- name: UpdateBeneficiary :one
+SELECT id, client_nk, name, phone, operator, city, created_at, updated_at, deleted_at FROM payments_ext.update_beneficiary(
+    $1::uuid,
+    $2::uuid,
+    $3,
+    $4,
+    $5::payment_operator,
+    $6
+)
+`
+
+type UpdateBeneficiaryParams struct {
+	ID       string
+	ClientNk string
+	Name     pgtype.Text
+	Phone    pgtype.Text
+	Operator NullPaymentOperator
+	City     pgtype.Text
+}
+
+// Owner-scoped partial update; a NULL argument keeps the stored value.
+func (q *Queries) UpdateBeneficiary(ctx context.Context, arg UpdateBeneficiaryParams) (Beneficiary, error) {
+	row := q.db.QueryRow(ctx, updateBeneficiary,
+		arg.ID,
+		arg.ClientNk,
+		arg.Name,
+		arg.Phone,
+		arg.Operator,
+		arg.City,
+	)
+	var i Beneficiary
+	err := row.Scan(
+		&i.ID,
+		&i.ClientNk,
+		&i.Name,
+		&i.Phone,
+		&i.Operator,
+		&i.City,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}

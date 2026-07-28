@@ -26,9 +26,12 @@ const (
 	TransferService_GetTransfer_FullMethodName           = "/payment.v1.TransferService/GetTransfer"
 	TransferService_ListTransfers_FullMethodName         = "/payment.v1.TransferService/ListTransfers"
 	TransferService_ListTransferEvents_FullMethodName    = "/payment.v1.TransferService/ListTransferEvents"
+	TransferService_ListTransferFiles_FullMethodName     = "/payment.v1.TransferService/ListTransferFiles"
 	TransferService_ConfirmReceipt_FullMethodName        = "/payment.v1.TransferService/ConfirmReceipt"
 	TransferService_CancelTransfer_FullMethodName        = "/payment.v1.TransferService/CancelTransfer"
 	TransferService_ListBeneficiaries_FullMethodName     = "/payment.v1.TransferService/ListBeneficiaries"
+	TransferService_AddBeneficiary_FullMethodName        = "/payment.v1.TransferService/AddBeneficiary"
+	TransferService_UpdateBeneficiary_FullMethodName     = "/payment.v1.TransferService/UpdateBeneficiary"
 	TransferService_DeleteBeneficiary_FullMethodName     = "/payment.v1.TransferService/DeleteBeneficiary"
 	TransferService_UpdateTransferStatus_FullMethodName  = "/payment.v1.TransferService/UpdateTransferStatus"
 )
@@ -51,11 +54,21 @@ type TransferServiceClient interface {
 	GetTransfer(ctx context.Context, in *GetTransferRequest, opts ...grpc.CallOption) (*Transfer, error)
 	ListTransfers(ctx context.Context, in *ListTransfersRequest, opts ...grpc.CallOption) (*ListTransfersResponse, error)
 	ListTransferEvents(ctx context.Context, in *ListTransferEventsRequest, opts ...grpc.CallOption) (*ListTransferEventsResponse, error)
+	// The proofs attached to a transfer, readable by every party — the
+	// file service only knows owners; the party scope (client, assigned
+	// agent, ops) is enforced here and the files are fetched internally.
+	ListTransferFiles(ctx context.Context, in *ListTransferFilesRequest, opts ...grpc.CallOption) (*ListTransferFilesResponse, error)
 	// pending_client_confirmation → done; releases the agent's hold.
 	ConfirmReceipt(ctx context.Context, in *ConfirmReceiptRequest, opts ...grpc.CallOption) (*Transfer, error)
 	// Owner cancel, pre-accept only (no hold yet).
 	CancelTransfer(ctx context.Context, in *CancelTransferRequest, opts ...grpc.CallOption) (*Transfer, error)
 	ListBeneficiaries(ctx context.Context, in *ListBeneficiariesRequest, opts ...grpc.CallOption) (*ListBeneficiariesResponse, error)
+	// Save a recipient ahead of any transfer (D7). Idempotent on the
+	// caller's (phone) pair: re-adding a live one refreshes its details —
+	// same upsert CreateTransfer uses for inline recipients.
+	AddBeneficiary(ctx context.Context, in *AddBeneficiaryRequest, opts ...grpc.CallOption) (*Beneficiary, error)
+	// Owner-scoped partial update; absent fields keep their value.
+	UpdateBeneficiary(ctx context.Context, in *UpdateBeneficiaryRequest, opts ...grpc.CallOption) (*Beneficiary, error)
 	DeleteBeneficiary(ctx context.Context, in *DeleteBeneficiaryRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// SYSTEM-ONLY: the file worker reports proofs; forward-only between
 	// the proof-gated pendings, can never reach done.
@@ -130,6 +143,16 @@ func (c *transferServiceClient) ListTransferEvents(ctx context.Context, in *List
 	return out, nil
 }
 
+func (c *transferServiceClient) ListTransferFiles(ctx context.Context, in *ListTransferFilesRequest, opts ...grpc.CallOption) (*ListTransferFilesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListTransferFilesResponse)
+	err := c.cc.Invoke(ctx, TransferService_ListTransferFiles_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *transferServiceClient) ConfirmReceipt(ctx context.Context, in *ConfirmReceiptRequest, opts ...grpc.CallOption) (*Transfer, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Transfer)
@@ -154,6 +177,26 @@ func (c *transferServiceClient) ListBeneficiaries(ctx context.Context, in *ListB
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListBeneficiariesResponse)
 	err := c.cc.Invoke(ctx, TransferService_ListBeneficiaries_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *transferServiceClient) AddBeneficiary(ctx context.Context, in *AddBeneficiaryRequest, opts ...grpc.CallOption) (*Beneficiary, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Beneficiary)
+	err := c.cc.Invoke(ctx, TransferService_AddBeneficiary_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *transferServiceClient) UpdateBeneficiary(ctx context.Context, in *UpdateBeneficiaryRequest, opts ...grpc.CallOption) (*Beneficiary, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Beneficiary)
+	err := c.cc.Invoke(ctx, TransferService_UpdateBeneficiary_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -198,11 +241,21 @@ type TransferServiceServer interface {
 	GetTransfer(context.Context, *GetTransferRequest) (*Transfer, error)
 	ListTransfers(context.Context, *ListTransfersRequest) (*ListTransfersResponse, error)
 	ListTransferEvents(context.Context, *ListTransferEventsRequest) (*ListTransferEventsResponse, error)
+	// The proofs attached to a transfer, readable by every party — the
+	// file service only knows owners; the party scope (client, assigned
+	// agent, ops) is enforced here and the files are fetched internally.
+	ListTransferFiles(context.Context, *ListTransferFilesRequest) (*ListTransferFilesResponse, error)
 	// pending_client_confirmation → done; releases the agent's hold.
 	ConfirmReceipt(context.Context, *ConfirmReceiptRequest) (*Transfer, error)
 	// Owner cancel, pre-accept only (no hold yet).
 	CancelTransfer(context.Context, *CancelTransferRequest) (*Transfer, error)
 	ListBeneficiaries(context.Context, *ListBeneficiariesRequest) (*ListBeneficiariesResponse, error)
+	// Save a recipient ahead of any transfer (D7). Idempotent on the
+	// caller's (phone) pair: re-adding a live one refreshes its details —
+	// same upsert CreateTransfer uses for inline recipients.
+	AddBeneficiary(context.Context, *AddBeneficiaryRequest) (*Beneficiary, error)
+	// Owner-scoped partial update; absent fields keep their value.
+	UpdateBeneficiary(context.Context, *UpdateBeneficiaryRequest) (*Beneficiary, error)
 	DeleteBeneficiary(context.Context, *DeleteBeneficiaryRequest) (*emptypb.Empty, error)
 	// SYSTEM-ONLY: the file worker reports proofs; forward-only between
 	// the proof-gated pendings, can never reach done.
@@ -235,6 +288,9 @@ func (UnimplementedTransferServiceServer) ListTransfers(context.Context, *ListTr
 func (UnimplementedTransferServiceServer) ListTransferEvents(context.Context, *ListTransferEventsRequest) (*ListTransferEventsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListTransferEvents not implemented")
 }
+func (UnimplementedTransferServiceServer) ListTransferFiles(context.Context, *ListTransferFilesRequest) (*ListTransferFilesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListTransferFiles not implemented")
+}
 func (UnimplementedTransferServiceServer) ConfirmReceipt(context.Context, *ConfirmReceiptRequest) (*Transfer, error) {
 	return nil, status.Error(codes.Unimplemented, "method ConfirmReceipt not implemented")
 }
@@ -243,6 +299,12 @@ func (UnimplementedTransferServiceServer) CancelTransfer(context.Context, *Cance
 }
 func (UnimplementedTransferServiceServer) ListBeneficiaries(context.Context, *ListBeneficiariesRequest) (*ListBeneficiariesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListBeneficiaries not implemented")
+}
+func (UnimplementedTransferServiceServer) AddBeneficiary(context.Context, *AddBeneficiaryRequest) (*Beneficiary, error) {
+	return nil, status.Error(codes.Unimplemented, "method AddBeneficiary not implemented")
+}
+func (UnimplementedTransferServiceServer) UpdateBeneficiary(context.Context, *UpdateBeneficiaryRequest) (*Beneficiary, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateBeneficiary not implemented")
 }
 func (UnimplementedTransferServiceServer) DeleteBeneficiary(context.Context, *DeleteBeneficiaryRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteBeneficiary not implemented")
@@ -379,6 +441,24 @@ func _TransferService_ListTransferEvents_Handler(srv interface{}, ctx context.Co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TransferService_ListTransferFiles_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListTransferFilesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TransferServiceServer).ListTransferFiles(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TransferService_ListTransferFiles_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TransferServiceServer).ListTransferFiles(ctx, req.(*ListTransferFilesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _TransferService_ConfirmReceipt_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ConfirmReceiptRequest)
 	if err := dec(in); err != nil {
@@ -429,6 +509,42 @@ func _TransferService_ListBeneficiaries_Handler(srv interface{}, ctx context.Con
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(TransferServiceServer).ListBeneficiaries(ctx, req.(*ListBeneficiariesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TransferService_AddBeneficiary_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddBeneficiaryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TransferServiceServer).AddBeneficiary(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TransferService_AddBeneficiary_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TransferServiceServer).AddBeneficiary(ctx, req.(*AddBeneficiaryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TransferService_UpdateBeneficiary_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateBeneficiaryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TransferServiceServer).UpdateBeneficiary(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TransferService_UpdateBeneficiary_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TransferServiceServer).UpdateBeneficiary(ctx, req.(*UpdateBeneficiaryRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -501,6 +617,10 @@ var TransferService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _TransferService_ListTransferEvents_Handler,
 		},
 		{
+			MethodName: "ListTransferFiles",
+			Handler:    _TransferService_ListTransferFiles_Handler,
+		},
+		{
 			MethodName: "ConfirmReceipt",
 			Handler:    _TransferService_ConfirmReceipt_Handler,
 		},
@@ -511,6 +631,14 @@ var TransferService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListBeneficiaries",
 			Handler:    _TransferService_ListBeneficiaries_Handler,
+		},
+		{
+			MethodName: "AddBeneficiary",
+			Handler:    _TransferService_AddBeneficiary_Handler,
+		},
+		{
+			MethodName: "UpdateBeneficiary",
+			Handler:    _TransferService_UpdateBeneficiary_Handler,
 		},
 		{
 			MethodName: "DeleteBeneficiary",

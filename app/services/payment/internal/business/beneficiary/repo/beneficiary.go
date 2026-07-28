@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"mokapay.app/app/services/payment/internal/business/beneficiary"
 	"mokapay.app/app/services/payment/internal/business/transfer"
@@ -78,6 +79,32 @@ func (s Store) List(ctx context.Context, clientID uuid.UUID) ([]beneficiary.Bene
 	return out, nil
 }
 
+// Update applies a partial update, owner-scoped: a foreign row is
+// indistinguishable from a missing one. A phone collision with another
+// live recipient surfaces as ErrBeneficiaryExists.
+func (s Store) Update(ctx context.Context, id string, clientID uuid.UUID, ub beneficiary.UpdateBeneficiary) (beneficiary.Beneficiary, error) {
+	row, err := s.sqlc.UpdateBeneficiary(ctx, sqlc.UpdateBeneficiaryParams{
+		ID:       id,
+		ClientNk: clientID.String(),
+		Name:     toText(ub.Name),
+		Phone:    toText(ub.Phone),
+		Operator: toOperator(ub.Operator),
+		City:     toText(ub.City),
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return beneficiary.Beneficiary{}, beneficiary.ErrBeneficiaryNotFound
+		}
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" && pgErr.ConstraintName == "beneficiaries_client_phone_uq" {
+			return beneficiary.Beneficiary{}, beneficiary.ErrBeneficiaryExists
+		}
+		return beneficiary.Beneficiary{}, fmt.Errorf("updating beneficiary %s: %w", id, err)
+	}
+
+	return build(row.ID, row.ClientNk, row.Name, row.Phone, row.Operator, row.City, row.CreatedAt, row.UpdatedAt)
+}
+
 // Delete soft-deletes, owner-scoped; deleting a foreign or missing row
 // is a silent no-op at the SQL level (the view simply stops listing it).
 func (s Store) Delete(ctx context.Context, id string, clientID uuid.UUID) error {
@@ -121,4 +148,11 @@ func toText(s *string) pgtype.Text {
 		return pgtype.Text{}
 	}
 	return pgtype.Text{String: *s, Valid: true}
+}
+
+func toOperator(op *transfer.Operator) sqlc.NullPaymentOperator {
+	if op == nil {
+		return sqlc.NullPaymentOperator{}
+	}
+	return sqlc.NullPaymentOperator{PaymentOperator: sqlc.PaymentOperator(*op), Valid: true}
 }

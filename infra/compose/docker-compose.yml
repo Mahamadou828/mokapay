@@ -128,6 +128,10 @@ services:
       DB_PORT: "5432"
       REDIS_HOST: redis
       REDIS_PORT: "6379"
+      # Enrollment accept/approve call payment (agent profile, guarantee
+      # settlement). No depends_on: payment already depends on user, and
+      # the gRPC client dials lazily, so ordering resolves itself.
+      PAYMENT_GRPC_PORT: payment:50053
     depends_on:
       postgres:
         condition: service_healthy
@@ -183,6 +187,7 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       USER_GRPC_PORT: user:50051
+      FILE_GRPC_PORT: file:50052
     depends_on:
       postgres:
         condition: service_healthy
