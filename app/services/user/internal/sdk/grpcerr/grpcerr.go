@@ -64,6 +64,9 @@ func Map(err error) error {
 	case errors.Is(err, auth.ErrAccountSuspended),
 		errors.Is(err, auth.ErrAccountBanned):
 		return status.Error(codes.PermissionDenied, err.Error())
+
+	case errors.Is(err, auth.ErrRoleNotAllowed):
+		return status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	// Unknown failure: don't leak internals on the wire — the usecase

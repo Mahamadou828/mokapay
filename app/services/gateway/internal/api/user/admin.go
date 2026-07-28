@@ -44,6 +44,23 @@ func (h Handler) getAccount(ctx context.Context, r *http.Request) core.Encoder {
 	return protocodec.Proto{Message: res}
 }
 
+// createAccount provisions a back-office (ops/admin) account. The route
+// sits on the ops tier, but the user service enforces the narrower gate:
+// only an admin caller passes.
+func (h Handler) createAccount(ctx context.Context, r *http.Request) core.Encoder {
+	req := &userv1.AdminServiceCreateAccountRequest{}
+	if err := core.Decode(r, protocodec.Proto{Message: req}); err != nil {
+		return coreerrs.New(errs.InvalidArgument, err)
+	}
+
+	res, err := h.moka.User.Admin.CreateAccount(ctx, req)
+	if err != nil {
+		return rpcErr(err)
+	}
+
+	return protocodec.Proto{Message: res}
+}
+
 func (h Handler) updateAccount(ctx context.Context, r *http.Request) core.Encoder {
 	req := &userv1.AdminServiceUpdateAccountRequest{}
 	if err := core.Decode(r, protocodec.Proto{Message: req}); err != nil {

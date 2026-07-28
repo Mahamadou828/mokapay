@@ -6,16 +6,18 @@ import (
 	"github.com/google/uuid"
 	"mokapay.app/app/services/user/internal/business/auth"
 	"mokapay.app/app/services/user/internal/business/auth/repo"
+	authuc "mokapay.app/app/services/user/internal/business/auth/usecase/auth"
 	coredb "mokapay.app/core/db"
 	"mokapay.app/core/logger"
 )
 
 // AccountProvider is the narrow slice of the auth provider the account
-// domain needs: revoking sessions on moderation and removing the identity
-// on delete.
+// domain needs: revoking sessions on moderation, removing the identity on
+// delete, and provisioning one for staff creation.
 type AccountProvider interface {
 	Logout(ctx context.Context, username string) error
 	AdminDelete(ctx context.Context, username string) error
+	SignUp(ctx context.Context, phone, pwd string) (string, error)
 }
 
 // Admin covers profile self-service (Me / UpdateOwnAccount) and the
@@ -77,6 +79,43 @@ func (a Admin) DeleteAccount(ctx context.Context, id uuid.UUID) error {
 	}
 
 	return nil
+}
+
+// CreateStaffAccount provisions a back-office account (spec: staff are
+// never self-registered): Cognito identity first, then the account row —
+// active immediately, no OTP gate; the admin hands the initial password
+// over out-of-band. Role is an explicit parameter and only ops/admin are
+// accepted; the api layer has already established the caller is an admin.
+func (a Admin) CreateStaffAccount(ctx context.Context, role auth.AccountRole, na auth.NewAccount) (auth.Account, error) {
+	if role != auth.AccountRoleOps && role != auth.AccountRoleAdmin {
+		return auth.Account{}, auth.ErrRoleNotAllowed
+	}
+
+	phoneNumber, err := authuc.NormalizePhoneNumber(na.PhoneNumber)
+	if err != nil {
+		a.logger.Error(ctx, "Admin.CreateStaffAccount: failed to parse phone number", "err", err)
+		return auth.Account{}, auth.ErrInvalidPhoneNumber
+	}
+	na.PhoneNumber = phoneNumber
+
+	sub, err := a.provider.SignUp(ctx, phoneNumber, na.Password)
+	if err != nil {
+		a.logger.Error(ctx, "Admin.CreateStaffAccount: failed to provision cognito user", "err", err)
+		return auth.Account{}, err
+	}
+
+	// Compensate on failure by deleting the Cognito user — an orphan there
+	// would block this phone from ever being provisioned or registered.
+	account, err := a.repo.AddStaffAccount(ctx, role, auth.AccountStatusActive, na, sub)
+	if err != nil {
+		a.logger.Error(ctx, "Admin.CreateStaffAccount: failed to add account", "err", err)
+		if delErr := a.provider.AdminDelete(ctx, phoneNumber); delErr != nil {
+			a.logger.Error(ctx, "Admin.CreateStaffAccount: failed to delete cognito user after add account failure — orphan user, needs manual cleanup", "err", delErr, "phone", phoneNumber)
+		}
+		return auth.Account{}, err
+	}
+
+	return account, nil
 }
 
 func (a Admin) GetAccount(ctx context.Context, id uuid.UUID) (auth.Account, error) {

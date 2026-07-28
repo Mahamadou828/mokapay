@@ -17,6 +17,13 @@ var (
 	ErrWrongRegion = errors.New("phone: unsupported country")
 )
 
+// NormalizePhoneNumber converts user input to E.164 ("+243812345678") —
+// the exported entry for sibling usecases (staff provisioning); the auth
+// flows keep calling the internal name.
+func NormalizePhoneNumber(input string) (string, error) {
+	return normalizePhoneNumber(input)
+}
+
 // normalizePhoneNumber converts user input to E.164 ("+243812345678").
 func normalizePhoneNumber(input string) (string, error) {
 	num, err := phonenumbers.Parse(clean(input), DefaultRegion)

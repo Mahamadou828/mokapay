@@ -22,6 +22,7 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	AdminService_GetAccount_FullMethodName         = "/user.v1.AdminService/GetAccount"
 	AdminService_ListAccounts_FullMethodName       = "/user.v1.AdminService/ListAccounts"
+	AdminService_CreateAccount_FullMethodName      = "/user.v1.AdminService/CreateAccount"
 	AdminService_UpdateAccount_FullMethodName      = "/user.v1.AdminService/UpdateAccount"
 	AdminService_DeleteAccount_FullMethodName      = "/user.v1.AdminService/DeleteAccount"
 	AdminService_PromoteUserToAgent_FullMethodName = "/user.v1.AdminService/PromoteUserToAgent"
@@ -39,8 +40,14 @@ const (
 type AdminServiceClient interface {
 	GetAccount(ctx context.Context, in *GetAccountRequest, opts ...grpc.CallOption) (*Account, error)
 	ListAccounts(ctx context.Context, in *ListAccountsRequest, opts ...grpc.CallOption) (*ListAccountsResponse, error)
+	// Back-office provisioning: creates an OPS or ADMIN account (Cognito
+	// identity + account row, active immediately — staff are never
+	// self-registered, no OTP gate). ADMIN-only: the one operation where
+	// ops and admin differ; ops moderate, admin also mints staff.
+	CreateAccount(ctx context.Context, in *AdminServiceCreateAccountRequest, opts ...grpc.CallOption) (*Account, error)
 	// Moderation + role changes. Setting status to SUSPENDED/BANNED revokes
-	// the account's refresh tokens.
+	// the account's refresh tokens. Changing the role requires an ADMIN
+	// caller (ops must not be able to promote — themselves included).
 	UpdateAccount(ctx context.Context, in *AdminServiceUpdateAccountRequest, opts ...grpc.CallOption) (*Account, error)
 	DeleteAccount(ctx context.Context, in *DeleteAccountRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Agent enrollment (spec agent-onboarding, D4). Invite flips the role to
@@ -74,6 +81,16 @@ func (c *adminServiceClient) ListAccounts(ctx context.Context, in *ListAccountsR
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListAccountsResponse)
 	err := c.cc.Invoke(ctx, AdminService_ListAccounts_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) CreateAccount(ctx context.Context, in *AdminServiceCreateAccountRequest, opts ...grpc.CallOption) (*Account, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Account)
+	err := c.cc.Invoke(ctx, AdminService_CreateAccount_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -149,8 +166,14 @@ func (c *adminServiceClient) ListEnrollments(ctx context.Context, in *ListEnroll
 type AdminServiceServer interface {
 	GetAccount(context.Context, *GetAccountRequest) (*Account, error)
 	ListAccounts(context.Context, *ListAccountsRequest) (*ListAccountsResponse, error)
+	// Back-office provisioning: creates an OPS or ADMIN account (Cognito
+	// identity + account row, active immediately — staff are never
+	// self-registered, no OTP gate). ADMIN-only: the one operation where
+	// ops and admin differ; ops moderate, admin also mints staff.
+	CreateAccount(context.Context, *AdminServiceCreateAccountRequest) (*Account, error)
 	// Moderation + role changes. Setting status to SUSPENDED/BANNED revokes
-	// the account's refresh tokens.
+	// the account's refresh tokens. Changing the role requires an ADMIN
+	// caller (ops must not be able to promote — themselves included).
 	UpdateAccount(context.Context, *AdminServiceUpdateAccountRequest) (*Account, error)
 	DeleteAccount(context.Context, *DeleteAccountRequest) (*emptypb.Empty, error)
 	// Agent enrollment (spec agent-onboarding, D4). Invite flips the role to
@@ -175,6 +198,9 @@ func (UnimplementedAdminServiceServer) GetAccount(context.Context, *GetAccountRe
 }
 func (UnimplementedAdminServiceServer) ListAccounts(context.Context, *ListAccountsRequest) (*ListAccountsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListAccounts not implemented")
+}
+func (UnimplementedAdminServiceServer) CreateAccount(context.Context, *AdminServiceCreateAccountRequest) (*Account, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateAccount not implemented")
 }
 func (UnimplementedAdminServiceServer) UpdateAccount(context.Context, *AdminServiceUpdateAccountRequest) (*Account, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateAccount not implemented")
@@ -247,6 +273,24 @@ func _AdminService_ListAccounts_Handler(srv interface{}, ctx context.Context, de
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AdminServiceServer).ListAccounts(ctx, req.(*ListAccountsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_CreateAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AdminServiceCreateAccountRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).CreateAccount(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_CreateAccount_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).CreateAccount(ctx, req.(*AdminServiceCreateAccountRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -373,6 +417,10 @@ var AdminService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListAccounts",
 			Handler:    _AdminService_ListAccounts_Handler,
+		},
+		{
+			MethodName: "CreateAccount",
+			Handler:    _AdminService_CreateAccount_Handler,
 		},
 		{
 			MethodName: "UpdateAccount",

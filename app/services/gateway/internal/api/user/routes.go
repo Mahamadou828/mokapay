@@ -31,6 +31,7 @@ func (h Handler) Routes(public, authed, ops *core.Group) {
 	authed.RegisterHandler(http.MethodPost, "/enrollment/decline", h.declineEnrollment)
 
 	ops.RegisterHandler(http.MethodGet, "/accounts", h.listAccounts)
+	ops.RegisterHandler(http.MethodPost, "/accounts", h.createAccount)
 	ops.RegisterHandler(http.MethodGet, "/accounts/{id}", h.getAccount)
 	ops.RegisterHandler(http.MethodPatch, "/accounts/{id}", h.updateAccount)
 	ops.RegisterHandler(http.MethodDelete, "/accounts/{id}", h.deleteAccount)

@@ -9,8 +9,10 @@ import (
 	"mokapay.app/core/db"
 )
 
-// Seed provisions the single OPS account (spec: OPS accounts are never
-// self-registered). Idempotent: a live account on the seed phone is left as-is.
+// Seed provisions the bootstrap back-office account (spec: staff accounts
+// are never self-registered). Role admin, not ops: staff creation and role
+// changes are admin-only, so the first account must be able to mint the
+// rest. Idempotent: a live account on the seed phone is left as-is.
 func Seed() error {
 	ctx := context.Background()
 	cfg := newConfig()
@@ -49,7 +51,7 @@ func Seed() error {
 	// Credentials live in Cognito: seed only creates our account row. The
 	// matching Cognito user (same phone as username) is provisioned separately.
 	if _, err := pg.Pool.ExecContext(ctx,
-		"SELECT users_ext.add_account($1, $2, $3, NULL, 'fr', 'ops', 'active')",
+		"SELECT users_ext.add_account($1, $2, $3, NULL, 'fr', 'admin', 'active')",
 		cfg.Seed.OpsPhone, "Moka", "Ops",
 	); err != nil {
 		err = fmt.Errorf("inserting ops account: %w", err)

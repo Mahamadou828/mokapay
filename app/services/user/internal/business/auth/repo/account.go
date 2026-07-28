@@ -42,6 +42,36 @@ func (s Store) AddAccount(ctx context.Context, na auth.NewAccount, sub string) (
 	return accountToDomain(row)
 }
 
+// AddStaffAccount creates a back-office account row. Role and status are
+// explicit parameters on purpose — a provisioned staffer never lands on
+// the store defaults, and silently deriving them on the payload would let
+// a caller forget they exist.
+func (s Store) AddStaffAccount(ctx context.Context, role auth.AccountRole, status auth.AccountStatus, na auth.NewAccount, sub string) (auth.Account, error) {
+	var subParam pgtype.Text
+	if sub != "" {
+		subParam = pgtype.Text{String: sub, Valid: true}
+	}
+
+	row, err := s.sqlc.AddAccount(ctx, sqlc.AddAccountParams{
+		PhoneNumber:       na.PhoneNumber,
+		CognitoSub:        subParam,
+		FirstName:         na.FirstName,
+		LastName:          na.LastName,
+		Email:             toNullString(na.Email),
+		PreferredLanguage: toNullLanguage(na.PreferredLanguage),
+		Role:              sqlc.NullAccountRole{AccountRole: sqlc.AccountRole(role), Valid: true},
+		Status:            sqlc.NullAccountStatus{AccountStatus: sqlc.AccountStatus(status), Valid: true},
+	})
+	if err != nil {
+		if conflict := uniqueViolationErr(err); conflict != nil {
+			return auth.Account{}, conflict
+		}
+		return auth.Account{}, fmt.Errorf("adding staff account: %w", err)
+	}
+
+	return accountToDomain(row)
+}
+
 // GetAccountBySub returns the live account bound to the Cognito user
 // (unique among live provisioned rows).
 func (s Store) GetAccountBySub(ctx context.Context, cognitoSub string) (auth.Account, error) {

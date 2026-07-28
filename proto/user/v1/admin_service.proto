@@ -10,8 +10,14 @@ import "user/v1/shared_message.proto";
 service AdminService {
   rpc GetAccount(GetAccountRequest) returns (Account);
   rpc ListAccounts(ListAccountsRequest) returns (ListAccountsResponse);
+  // Back-office provisioning: creates an OPS or ADMIN account (Cognito
+  // identity + account row, active immediately — staff are never
+  // self-registered, no OTP gate). ADMIN-only: the one operation where
+  // ops and admin differ; ops moderate, admin also mints staff.
+  rpc CreateAccount(AdminServiceCreateAccountRequest) returns (Account);
   // Moderation + role changes. Setting status to SUSPENDED/BANNED revokes
-  // the account's refresh tokens.
+  // the account's refresh tokens. Changing the role requires an ADMIN
+  // caller (ops must not be able to promote — themselves included).
   rpc UpdateAccount(AdminServiceUpdateAccountRequest) returns (Account);
   rpc DeleteAccount(DeleteAccountRequest) returns (google.protobuf.Empty);
 
@@ -36,6 +42,18 @@ message ListAccountsRequest {
 
 message ListAccountsResponse {
   repeated Account accounts = 1;
+}
+
+message AdminServiceCreateAccountRequest {
+  string phone_number = 1;
+  // Initial password, set permanent in Cognito — the admin hands it over
+  // out-of-band; the staffer changes it through the normal flow.
+  string password = 2;
+  string first_name = 3;
+  string last_name = 4;
+  AccountRole role = 5;  // OPS or ADMIN only
+  optional string email = 6;
+  optional Language preferred_language = 7;
 }
 
 message AdminServiceUpdateAccountRequest {

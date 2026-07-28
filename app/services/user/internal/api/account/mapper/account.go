@@ -68,6 +68,24 @@ func AdminUpdateToDomain(id uuid.UUID, in *userv1.AdminServiceUpdateAccountReque
 	return out
 }
 
+// CreateStaffToDomain maps a staff provisioning request. The role travels
+// as an explicit usecase parameter, never on the payload; Code stays empty
+// (no OTP gate — the account is admin-initiated).
+func CreateStaffToDomain(in *userv1.AdminServiceCreateAccountRequest) auth.NewAccount {
+	out := auth.NewAccount{
+		PhoneNumber: in.PhoneNumber,
+		Password:    in.Password,
+		FirstName:   in.FirstName,
+		LastName:    in.LastName,
+		Email:       in.Email,
+	}
+	if in.PreferredLanguage != nil {
+		out.PreferredLanguage = LanguageFromProto(*in.PreferredLanguage)
+	}
+
+	return out
+}
+
 func AccountFilterToDomain(in *userv1.ListAccountsRequest) auth.AccountFilter {
 	var out auth.AccountFilter
 	if in.Role != nil {

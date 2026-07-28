@@ -22,6 +22,11 @@ var ErrCognitoSubTaken = errors.New("cognito user already bound to an account")
 var ErrAccountSuspended = errors.New("account suspended")
 var ErrAccountBanned = errors.New("account banned")
 
+// ErrRoleNotAllowed rejects a staff creation whose requested role is not
+// a back-office one (ops/admin) — customer-facing roles go through the
+// register and enrollment flows, never through provisioning.
+var ErrRoleNotAllowed = errors.New("role not allowed for staff creation")
+
 // AccountRole values mirror the stored account_role enum.
 type AccountRole string
 
