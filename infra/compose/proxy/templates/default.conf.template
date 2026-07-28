@@ -1,0 +1,68 @@
+# The edge: one nginx in front of everything. Two ways in, because a
+# single-hostname fronting (tailscale serve) cannot route by subdomain:
+#
+#   by host, on :80 —
+#     app.<domain> (and the bare domain) → the mobile web app
+#     admin.<domain>                     → the back-office app
+#   by port —
+#     :80 default = the mobile app, :81 default = the admin app
+#   /v1/* everywhere → the gateway (same-origin API, no CORS)
+#
+# Tailscale deployment (TLS terminates at tailscaled, one hostname):
+#   tailscale serve --bg --https=443  http://localhost:80    # mobile + API
+#   tailscale serve --bg --https=8443 http://localhost:81    # admin + API
+# → https://<machine>.<tailnet>.ts.net       = mobile app
+#   https://<machine>.<tailnet>.ts.net:8443  = admin app
+#
+# ${NGINX_DOMAIN} is substituted by the official nginx image entrypoint
+# (envsubst over /etc/nginx/templates). Default "localhost": browsers
+# resolve app.localhost / admin.localhost to 127.0.0.1, so hostname
+# routing also works locally with zero DNS setup.
+
+# The API is JSON-only — file bytes go straight to S3 via presigned
+# URLs, never through here — so the body cap stays small.
+client_max_body_size 2m;
+
+# The mobile web app: the storefront, also served on the bare domain.
+server {
+    listen 80 default_server;
+    server_name app.${NGINX_DOMAIN} ${NGINX_DOMAIN};
+
+    location /v1/ {
+        proxy_pass http://gateway:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location / {
+        proxy_pass http://mobile-ui:80;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+# The back-office app: admin.<domain> on :80, or anything on :81 (the
+# port is the routing when there is only one hostname to work with).
+server {
+    listen 80;
+    listen 81 default_server;
+    server_name admin.${NGINX_DOMAIN};
+
+    location /v1/ {
+        proxy_pass http://gateway:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location / {
+        proxy_pass http://admin-ui:80;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}

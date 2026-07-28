@@ -32,10 +32,21 @@ export `COMPOSE_FILE` (from `vars.env`) so plain `docker compose` works inside
 them.
 
 ```bash
-make start                    # docker compose up -d (postgres, mongodb, redis)
+make start                    # docker compose up -d --build (stores + all services + UIs + edge nginx)
 make stop                     # docker compose down
 # manually: docker compose -f infra/compose/docker-compose.yml up -d
 ```
+
+The compose stack is the deployment: an nginx edge (`proxy`) routes by
+hostname (`app.<domain>` → mobile web app, `admin.<domain>` → back-office,
+`${MOKAPAY_DOMAIN:-localhost}`) and by port for single-hostname frontings —
+host port `${MOKAPAY_HTTP_PORT:-80}` defaults to the mobile app, host port
+`${MOKAPAY_ADMIN_HTTP_PORT:-81}` to the admin app. `/v1/*` on any of them →
+the gateway (same-origin API, no CORS). Tailscale deployment: `tailscale
+serve --bg --https=443 http://localhost:80` (mobile) + `tailscale serve
+--bg --https=8443 http://localhost:81` (admin). Frontends build from the
+shared `infra/compose/ui/Dockerfile`. Object storage is real S3 (file
+service `.env`) — there is no MinIO.
 
 ### Running a Go Service
 
