@@ -5,8 +5,7 @@
 .env.*
 !.env.example
 
-# local working docs (see .claude/rules/docs.md)
-/docs/
+
 
 
 # compiled output

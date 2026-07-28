@@ -1,0 +1,213 @@
+<mxfile host="drawio-plugin" modified="2026-07-02T13:16:10.010Z" agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36" version="22.1.22" etag="8iTYUsImjMZFJybD182F" type="embed">
+  <diagram name="Page-1" id="8dxL8PTCNLcFgzkRcHbU">
+    <mxGraphModel dx="3165" dy="12" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-88" value="Admin" style="swimlane;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="1275" y="1220" width="1475" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-94" value="Pick an user to promote" style="rounded=0;whiteSpace=wrap;html=1;" parent="MM6UWNh_vaKNBNQ7rLjU-88" vertex="1">
+          <mxGeometry x="35" y="90" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-138" value="is payment correct ?" style="rhombus;whiteSpace=wrap;html=1;" parent="MM6UWNh_vaKNBNQ7rLjU-88" vertex="1">
+          <mxGeometry x="1217.5" y="80" width="80" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-95" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="MM6UWNh_vaKNBNQ7rLjU-89" target="MM6UWNh_vaKNBNQ7rLjU-94" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-89" value="Start" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;" parent="1" vertex="1">
+          <mxGeometry x="1150" y="1315" width="50" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-90" value="System&lt;br&gt;" style="swimlane;horizontal=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="1275" y="1530" width="1725" height="230" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-160" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="MM6UWNh_vaKNBNQ7rLjU-90" source="MM6UWNh_vaKNBNQ7rLjU-96" target="MM6UWNh_vaKNBNQ7rLjU-158" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-96" value="Send user TOS agreement notification" style="rounded=0;whiteSpace=wrap;html=1;" parent="MM6UWNh_vaKNBNQ7rLjU-90" vertex="1">
+          <mxGeometry x="35" y="85" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-102" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="MM6UWNh_vaKNBNQ7rLjU-90" source="MM6UWNh_vaKNBNQ7rLjU-100" target="MM6UWNh_vaKNBNQ7rLjU-96" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-100" value="Add role to user:&amp;nbsp;&lt;br&gt;PENDING_AGENT" style="rounded=0;whiteSpace=wrap;html=1;" parent="MM6UWNh_vaKNBNQ7rLjU-90" vertex="1">
+          <mxGeometry x="35" y="10" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-118" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" parent="MM6UWNh_vaKNBNQ7rLjU-90" source="MM6UWNh_vaKNBNQ7rLjU-113" target="MM6UWNh_vaKNBNQ7rLjU-161" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-113" value="remove role PENDING_AGENT&amp;nbsp;&amp;nbsp;" style="rounded=0;whiteSpace=wrap;html=1;" parent="MM6UWNh_vaKNBNQ7rLjU-90" vertex="1">
+          <mxGeometry x="185" y="160" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-114" value="end" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;" parent="MM6UWNh_vaKNBNQ7rLjU-90" vertex="1">
+          <mxGeometry x="335" y="20" width="40" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-117" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="MM6UWNh_vaKNBNQ7rLjU-90" source="MM6UWNh_vaKNBNQ7rLjU-116" target="MM6UWNh_vaKNBNQ7rLjU-114" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-116" value="send admin notification user decline" style="rounded=0;whiteSpace=wrap;html=1;" parent="MM6UWNh_vaKNBNQ7rLjU-90" vertex="1">
+          <mxGeometry x="185" y="10" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-124" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" parent="MM6UWNh_vaKNBNQ7rLjU-90" source="MM6UWNh_vaKNBNQ7rLjU-120" target="MM6UWNh_vaKNBNQ7rLjU-123" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-127" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="MM6UWNh_vaKNBNQ7rLjU-90" source="MM6UWNh_vaKNBNQ7rLjU-120" target="MM6UWNh_vaKNBNQ7rLjU-125" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-120" value="&lt;div&gt;save user agreement&lt;/div&gt;&lt;div&gt;create agent profile:&lt;/div&gt;&lt;div&gt;status - inactive&lt;br&gt;balance - 0&amp;nbsp;&lt;br&gt;level - N1&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="MM6UWNh_vaKNBNQ7rLjU-90" vertex="1">
+          <mxGeometry x="405" y="70" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-123" value="send admin notif" style="rounded=0;whiteSpace=wrap;html=1;" parent="MM6UWNh_vaKNBNQ7rLjU-90" vertex="1">
+          <mxGeometry x="405" y="10" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-129" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="MM6UWNh_vaKNBNQ7rLjU-90" source="MM6UWNh_vaKNBNQ7rLjU-125" target="MM6UWNh_vaKNBNQ7rLjU-128" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-125" value="&lt;div&gt;create new:&amp;nbsp;&lt;/div&gt;&lt;div&gt;ledger_request&amp;nbsp;&lt;/div&gt;&lt;div&gt;status - PENDIN_AGENT_ACTION type - funding&lt;br&gt;amount - 20 USD&lt;br&gt;attach enrollment fk !!!&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="MM6UWNh_vaKNBNQ7rLjU-90" vertex="1">
+          <mxGeometry x="555" y="60" width="205" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-140" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="MM6UWNh_vaKNBNQ7rLjU-90" source="MM6UWNh_vaKNBNQ7rLjU-128" target="MM6UWNh_vaKNBNQ7rLjU-134" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-128" value="send agent notif and payment information" style="rounded=0;whiteSpace=wrap;html=1;" parent="MM6UWNh_vaKNBNQ7rLjU-90" vertex="1">
+          <mxGeometry x="815" y="80" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-141" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="MM6UWNh_vaKNBNQ7rLjU-90" source="MM6UWNh_vaKNBNQ7rLjU-134" target="MM6UWNh_vaKNBNQ7rLjU-135" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-134" value="receive payment proof" style="rounded=0;whiteSpace=wrap;html=1;" parent="MM6UWNh_vaKNBNQ7rLjU-90" vertex="1">
+          <mxGeometry x="985" y="80" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="MM6UWNh_vaKNBNQ7rLjU-90" source="MM6UWNh_vaKNBNQ7rLjU-135" target="2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-135" value="Update:&amp;nbsp;&lt;br&gt;ledger_request&lt;br&gt;status - PENDING_ADMIN_APPROVAL" style="rounded=0;whiteSpace=wrap;html=1;" parent="MM6UWNh_vaKNBNQ7rLjU-90" vertex="1">
+          <mxGeometry x="1135" y="80" width="245" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-158" value="create new enrollment request and attach admin and user" style="rounded=0;whiteSpace=wrap;html=1;" parent="MM6UWNh_vaKNBNQ7rLjU-90" vertex="1">
+          <mxGeometry x="35" y="160" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-163" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="MM6UWNh_vaKNBNQ7rLjU-90" source="MM6UWNh_vaKNBNQ7rLjU-161" target="MM6UWNh_vaKNBNQ7rLjU-116" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-161" value="update enrollment status as decline" style="rounded=0;whiteSpace=wrap;html=1;" parent="MM6UWNh_vaKNBNQ7rLjU-90" vertex="1">
+          <mxGeometry x="185" y="85" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="2" value="Send admin approval request" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="MM6UWNh_vaKNBNQ7rLjU-90">
+          <mxGeometry x="1171.25" y="20" width="172.5" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-91" value="Agents" style="swimlane;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="1275" y="1790" width="1475" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-105" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="MM6UWNh_vaKNBNQ7rLjU-91" source="MM6UWNh_vaKNBNQ7rLjU-98" target="MM6UWNh_vaKNBNQ7rLjU-104" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-98" value="received TOS" style="rounded=0;whiteSpace=wrap;html=1;" parent="MM6UWNh_vaKNBNQ7rLjU-91" vertex="1">
+          <mxGeometry x="35" y="40" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-104" value="agree ?" style="rhombus;whiteSpace=wrap;html=1;" parent="MM6UWNh_vaKNBNQ7rLjU-91" vertex="1">
+          <mxGeometry x="205" y="30" width="80" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-152" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="MM6UWNh_vaKNBNQ7rLjU-91" source="MM6UWNh_vaKNBNQ7rLjU-130" target="MM6UWNh_vaKNBNQ7rLjU-151" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-130" value="receive notif" style="rounded=0;whiteSpace=wrap;html=1;" parent="MM6UWNh_vaKNBNQ7rLjU-91" vertex="1">
+          <mxGeometry x="815" y="40" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-133" value="upload proof" style="rounded=0;whiteSpace=wrap;html=1;" parent="MM6UWNh_vaKNBNQ7rLjU-91" vertex="1">
+          <mxGeometry x="995" y="40" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-156" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="MM6UWNh_vaKNBNQ7rLjU-91" source="MM6UWNh_vaKNBNQ7rLjU-151" target="MM6UWNh_vaKNBNQ7rLjU-155" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-151" value="all good?" style="rhombus;whiteSpace=wrap;html=1;" parent="MM6UWNh_vaKNBNQ7rLjU-91" vertex="1">
+          <mxGeometry x="835" y="110" width="80" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-155" value="&lt;div&gt;file dispute or qa&lt;/div&gt;&lt;div&gt;read 1.&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="MM6UWNh_vaKNBNQ7rLjU-91" vertex="1">
+          <mxGeometry x="665" y="120" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-97" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="MM6UWNh_vaKNBNQ7rLjU-94" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1370" y="1540" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-99" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="MM6UWNh_vaKNBNQ7rLjU-158" target="MM6UWNh_vaKNBNQ7rLjU-98" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-121" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;curved=1;" parent="1" source="MM6UWNh_vaKNBNQ7rLjU-104" target="MM6UWNh_vaKNBNQ7rLjU-120" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-122" value="yes" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="MM6UWNh_vaKNBNQ7rLjU-121" connectable="0" vertex="1">
+          <mxGeometry x="-0.3544" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-131" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="MM6UWNh_vaKNBNQ7rLjU-128" target="MM6UWNh_vaKNBNQ7rLjU-130" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-150" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" parent="1" source="MM6UWNh_vaKNBNQ7rLjU-132" target="MM6UWNh_vaKNBNQ7rLjU-133" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-132" value="Makes off platform payments" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="2090" y="2020" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-144" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="MM6UWNh_vaKNBNQ7rLjU-138" target="MM6UWNh_vaKNBNQ7rLjU-128" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-145" value="no" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="MM6UWNh_vaKNBNQ7rLjU-144" connectable="0" vertex="1">
+          <mxGeometry x="-0.4457" y="-1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-146" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="MM6UWNh_vaKNBNQ7rLjU-138" target="MM6UWNh_vaKNBNQ7rLjU-142" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-147" value="yes" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="MM6UWNh_vaKNBNQ7rLjU-146" connectable="0" vertex="1">
+          <mxGeometry x="0.2165" y="-1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-153" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="MM6UWNh_vaKNBNQ7rLjU-151" target="MM6UWNh_vaKNBNQ7rLjU-132" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-154" value="yes" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="MM6UWNh_vaKNBNQ7rLjU-153" connectable="0" vertex="1">
+          <mxGeometry x="0.2464" y="1" relative="1" as="geometry">
+            <mxPoint x="-1" y="-5" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-157" value="&lt;h1 style=&quot;margin-top: 0px;&quot;&gt;1. Dispute during enrollment&lt;/h1&gt;&lt;p&gt;We need to keep in mind that&amp;nbsp; admins can also be abusive.&amp;nbsp;&lt;/p&gt;&lt;p&gt;As such, agent should have the ability to file a dispute during their enrollment.&lt;/p&gt;&lt;p&gt;Additionally it might not be abuse but i need for help/qa too.&lt;/p&gt;" style="text;html=1;whiteSpace=wrap;overflow=hidden;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="850" y="1800" width="380" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-112" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" parent="1" source="MM6UWNh_vaKNBNQ7rLjU-104" target="MM6UWNh_vaKNBNQ7rLjU-113" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1520" y="1720" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-119" value="no" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="MM6UWNh_vaKNBNQ7rLjU-112" connectable="0" vertex="1">
+          <mxGeometry x="-0.1038" y="-1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-142" value="&lt;div&gt;update agent profile:&lt;/div&gt;&lt;div&gt;status - active&lt;/div&gt;&lt;div&gt;balance - 20&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="2710" y="1610" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-164" value="&lt;div&gt;update ledger_request&lt;/div&gt;&lt;div&gt;Status - DONE&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="2860" y="1610" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-165" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="MM6UWNh_vaKNBNQ7rLjU-142" target="MM6UWNh_vaKNBNQ7rLjU-164" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="MM6UWNh_vaKNBNQ7rLjU-138" target="2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="5" value="&lt;h1&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;2. Balance history&lt;/span&gt;&lt;/h1&gt;&lt;h1&gt;&lt;span style=&quot;background-color: initial; font-size: 12px; font-weight: normal;&quot;&gt;We also would need to introduce balance history to capture changes on hold, release etc&lt;/span&gt;&lt;/h1&gt;" style="text;html=1;strokeColor=none;fillColor=none;spacing=5;spacingTop=-20;whiteSpace=wrap;overflow=hidden;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="850" y="1960" width="350" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="7" value="&lt;h1&gt;Agent enrollment&lt;/h1&gt;&lt;p&gt;&lt;/p&gt;" style="text;html=1;strokeColor=none;fillColor=none;spacing=5;spacingTop=-20;whiteSpace=wrap;overflow=hidden;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="1897.5" y="1110" width="230" height="40" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

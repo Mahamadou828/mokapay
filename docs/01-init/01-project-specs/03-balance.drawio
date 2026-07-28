@@ -1,0 +1,116 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Page-1" id="8dxL8PTCNLcFgzkRcHbU">
+    <mxGraphModel dx="3381" dy="1340" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-166" parent="1" style="text;html=1;whiteSpace=wrap;overflow=hidden;rounded=0;" value="&lt;h1 style=&quot;margin-top: 0px;&quot;&gt;Some Balance life cycle&lt;/h1&gt;" vertex="1">
+          <mxGeometry height="40" width="290" x="310" y="10" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-167" parent="1" style="text;html=1;whiteSpace=wrap;overflow=hidden;rounded=0;" value="&lt;h1 style=&quot;margin-top: 0px;&quot;&gt;1. Agent ask for withdrawal&lt;/h1&gt;" vertex="1">
+          <mxGeometry height="40" width="360" x="20" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-170" edge="1" parent="1" source="MM6UWNh_vaKNBNQ7rLjU-168" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="MM6UWNh_vaKNBNQ7rLjU-169">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-168" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Withdrawal request" vertex="1">
+          <mxGeometry height="60" width="120" x="100" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-173" edge="1" parent="1" source="MM6UWNh_vaKNBNQ7rLjU-169" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="MM6UWNh_vaKNBNQ7rLjU-172" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-169" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="&lt;div&gt;Agent create:&amp;nbsp;&lt;/div&gt;&lt;div&gt;leager_request&lt;/div&gt;&lt;div&gt;type - WITHDRAWAL&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="120" x="100" y="210" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-175" edge="1" parent="1" source="MM6UWNh_vaKNBNQ7rLjU-172" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="MM6UWNh_vaKNBNQ7rLjU-174" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-176" connectable="0" parent="MM6UWNh_vaKNBNQ7rLjU-175" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="Yes" vertex="1">
+          <mxGeometry relative="1" x="0.201" y="-2" as="geometry">
+            <mxPoint x="-8" y="-17" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-178" edge="1" parent="1" source="MM6UWNh_vaKNBNQ7rLjU-172" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="MM6UWNh_vaKNBNQ7rLjU-177" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-172" parent="1" style="rhombus;whiteSpace=wrap;html=1;" value="&lt;div&gt;amount&lt;/div&gt;&lt;div&gt;&amp;gt;&amp;nbsp;&lt;/div&gt;&lt;div&gt;available&lt;/div&gt;" vertex="1">
+          <mxGeometry height="90" width="90" x="115" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-174" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="error: insufficient fund" vertex="1">
+          <mxGeometry height="60" width="120" x="260" y="315" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-182" edge="1" parent="1" source="MM6UWNh_vaKNBNQ7rLjU-177" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="MM6UWNh_vaKNBNQ7rLjU-179" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-177" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="increase agent hold balance" vertex="1">
+          <mxGeometry height="60" width="120" x="100" y="420" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-183" edge="1" parent="1" source="MM6UWNh_vaKNBNQ7rLjU-179" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="MM6UWNh_vaKNBNQ7rLjU-180" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-179" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Admin performs out of platform payment" vertex="1">
+          <mxGeometry height="60" width="120" x="100" y="530" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-184" edge="1" parent="1" source="MM6UWNh_vaKNBNQ7rLjU-180" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="MM6UWNh_vaKNBNQ7rLjU-181" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-180" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Calculate new agent balance" vertex="1">
+          <mxGeometry height="60" width="120" x="100" y="630" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-181" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="close request" vertex="1">
+          <mxGeometry height="60" width="120" x="100" y="730" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-185" parent="1" style="text;html=1;whiteSpace=wrap;overflow=hidden;rounded=0;" value="&lt;h1 style=&quot;margin-top: 0px;&quot;&gt;2. Admin needs to refund a client&lt;/h1&gt;" vertex="1">
+          <mxGeometry height="40" width="400" x="520" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-186" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="refund request" vertex="1">
+          <mxGeometry height="60" width="120" x="660" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-193" edge="1" parent="1" source="MM6UWNh_vaKNBNQ7rLjU-187" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="MM6UWNh_vaKNBNQ7rLjU-191" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-187" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="&lt;div&gt;Admin create:&amp;nbsp;&lt;/div&gt;&lt;div&gt;ledger_request&lt;br&gt;type - REFUND&lt;/div&gt;&lt;div&gt;and link a transaction&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="120" x="660" y="210" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-189" edge="1" parent="1" source="MM6UWNh_vaKNBNQ7rLjU-191" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="MM6UWNh_vaKNBNQ7rLjU-192" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-190" connectable="0" parent="MM6UWNh_vaKNBNQ7rLjU-189" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="Yes" vertex="1">
+          <mxGeometry relative="1" x="0.201" y="-2" as="geometry">
+            <mxPoint x="-8" y="-17" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-195" edge="1" parent="1" source="MM6UWNh_vaKNBNQ7rLjU-191" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="MM6UWNh_vaKNBNQ7rLjU-194" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-191" parent="1" style="rhombus;whiteSpace=wrap;html=1;" value="&lt;div&gt;amount&lt;/div&gt;&lt;div&gt;&amp;gt;&amp;nbsp;&lt;/div&gt;&lt;div&gt;available&lt;/div&gt;" vertex="1">
+          <mxGeometry height="90" width="90" x="675" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-192" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="FATAL: insufficient fund&lt;br&gt;WE SHOULD NEVER BE HERE" vertex="1">
+          <mxGeometry height="60" width="120" x="820" y="315" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-197" edge="1" parent="1" source="MM6UWNh_vaKNBNQ7rLjU-194" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="MM6UWNh_vaKNBNQ7rLjU-196" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-194" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Admin performs out of platform payment" vertex="1">
+          <mxGeometry height="60" width="120" x="660" y="420" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-200" edge="1" parent="1" source="MM6UWNh_vaKNBNQ7rLjU-196" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="MM6UWNh_vaKNBNQ7rLjU-198" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-196" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="admin possibly sanction agent" vertex="1">
+          <mxGeometry height="60" width="120" x="660" y="520" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-201" edge="1" parent="1" source="MM6UWNh_vaKNBNQ7rLjU-198" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="MM6UWNh_vaKNBNQ7rLjU-199" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-198" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="transaction that was refunded is marked as refunded" vertex="1">
+          <mxGeometry height="60" width="120" x="660" y="620" as="geometry" />
+        </mxCell>
+        <mxCell id="MM6UWNh_vaKNBNQ7rLjU-199" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="close request" vertex="1">
+          <mxGeometry height="60" width="120" x="660" y="720" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
