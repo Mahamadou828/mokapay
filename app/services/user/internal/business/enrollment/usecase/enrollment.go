@@ -104,19 +104,36 @@ func (u UseCase) Accept(ctx context.Context, accountID, id uuid.UUID, tosVersion
 		return enrollment.Enrollment{}, enrollment.ErrTOSVersionMismatch
 	}
 
-	// The money account exists BEFORE the terms stamp: profile creation
-	// is idempotent (AlreadyExists = success), so if the accept below
-	// fails the candidate simply retries — nothing dangles. The guarantee
-	// funding request itself is admin-created (payment engine policy),
-	// targeting this profile. System passport: the caller is the
-	// candidate, and the payment service only accepts creation from
-	// system or ops.
-	sysCtx := passport.AddToContext(ctx, passport.SystemPassport())
-	if _, err := u.moka.Payment.Admin.CreateAgentProfile(sysCtx, &paymentv1.CreateAgentProfileRequest{
-		AccountId: accountID.String(),
-	}); err != nil && status.Code(err) != codes.AlreadyExists {
+	// The money side exists BEFORE the terms stamp, so if the accept
+	// below fails the candidate simply retries — nothing dangles. Profile
+	// creation runs under the system passport (creation is plumbing, not
+	// a decision) and is idempotent (AlreadyExists = resolve the existing
+	// one).
+	profile, err := u.ensureAgentProfile(ctx, accountID)
+	if err != nil {
 		u.logger.Error(ctx, "Enrollment.Accept: failed to ensure agent profile", "err", err)
 		return enrollment.Enrollment{}, fmt.Errorf("creating agent profile: %w", err)
+	}
+
+	// The guarantee funding request opens on the same accept — no admin
+	// click in between. It rides the CANDIDATE's passport: they are the
+	// accountable creator (they send the money and attach the proof),
+	// and it references this enrollment so Approve can find and settle
+	// it. AlreadyExists = an earlier accept attempt got here — success.
+	if profile.GuaranteeFloor > 0 {
+		if _, err := u.moka.Payment.Ledger.CreateLedgerRequest(ctx, &paymentv1.CreateLedgerRequestRequest{
+			Type:                paymentv1.LedgerRequestType_LEDGER_REQUEST_TYPE_FUNDING,
+			Amount:              profile.GuaranteeFloor,
+			ReferenceEntityType: new(paymentv1.LedgerReferenceType_LEDGER_REFERENCE_TYPE_ENROLLMENT),
+			ReferenceEntityId:   new(id.String()),
+		}); err != nil && status.Code(err) != codes.AlreadyExists {
+			u.logger.Error(ctx, "Enrollment.Accept: failed to open guarantee funding request", "err", err)
+			return enrollment.Enrollment{}, fmt.Errorf("opening guarantee funding request: %w", err)
+		}
+	} else {
+		// A zero floor means no guarantee is owed; Approve will still
+		// require an admin-created request, so surface it in the logs.
+		u.logger.Info(ctx, "Enrollment.Accept: guarantee floor is zero, no funding request opened", "account", accountID)
 	}
 
 	accepted, err := u.repo.Accept(ctx, id.String(), accountID.String(), tosVersion)
@@ -231,6 +248,27 @@ func (u UseCase) Approve(ctx context.Context, decidedBy, id uuid.UUID) (enrollme
 		"Your enrollment has been approved. Welcome aboard!")
 
 	return approved, nil
+}
+
+// ensureAgentProfile creates the candidate's money account, or resolves
+// the existing one — Accept needs the profile either way (its guarantee
+// floor sizes the funding request).
+func (u UseCase) ensureAgentProfile(ctx context.Context, accountID uuid.UUID) (*paymentv1.AgentProfile, error) {
+	sysCtx := passport.AddToContext(ctx, passport.SystemPassport())
+
+	created, err := u.moka.Payment.Admin.CreateAgentProfile(sysCtx, &paymentv1.CreateAgentProfileRequest{
+		AccountId: accountID.String(),
+	})
+	if err == nil {
+		return created, nil
+	}
+	if status.Code(err) != codes.AlreadyExists {
+		return nil, err
+	}
+
+	return u.moka.Payment.Admin.GetAgentProfile(sysCtx, &paymentv1.GetAgentProfileRequest{
+		Selector: &paymentv1.GetAgentProfileRequest_AccountId{AccountId: accountID.String()},
+	})
 }
 
 // settleGuarantee approves the enrollment's guarantee funding request on

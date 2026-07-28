@@ -544,7 +544,8 @@ Authorization: Bearer {{access_token}}
 GET {{host}}/v1/admin/ledger/requests/{{ledger_request_id}}
 Authorization: Bearer {{access_token}}
 
-### Create a request as ops (funding with the enrollment reference)
+### Create a request as ops (funding with the enrollment reference) —
+### escape hatch: accepting the TOS opens this automatically now
 POST {{host}}/v1/admin/ledger/requests
 Content-Type: application/json
 Authorization: Bearer {{access_token}}

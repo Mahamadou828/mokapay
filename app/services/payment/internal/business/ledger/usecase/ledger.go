@@ -72,6 +72,8 @@ func New(l *logger.Logger, db *coredb.Postgres, n Notifier) UseCase {
 // Currently in the system a ledger request can be open by
 // Admin/ops - type: funding ( for an enrollment first time funding ), refund ( for transaction refunds )
 // Agent - funding ( for general balance funding ), Withdrawal ( to remove x amount from his balance )
+// Pending agent - funding only ( the enrollment guarantee, opened
+// automatically when they accept the terms )
 func (u UseCase) CreateLedgerRequest(ctx context.Context, pass *passport.Passport, nr ledger.NewRequest) (ledger.LedgerRequest, error) {
 	if pass == nil {
 		return ledger.LedgerRequest{}, ledger.ErrNotAllowed
@@ -91,8 +93,13 @@ func (u UseCase) CreateLedgerRequest(ctx context.Context, pass *passport.Passpor
 
 	var status ledger.Status
 	switch pass.User.Role {
-	case "agent":
+	case "agent", "pending_agent":
 		if nr.Type != ledger.TypeWithdrawal && nr.Type != ledger.TypeFunding {
+			return ledger.LedgerRequest{}, ledger.ErrInvalidType
+		}
+		// A withdrawal needs an active agent — a candidate only ever
+		// funds (the enrollment guarantee).
+		if pass.User.Role == "pending_agent" && nr.Type != ledger.TypeFunding {
 			return ledger.LedgerRequest{}, ledger.ErrInvalidType
 		}
 		// An agent only ever moves their OWN money: the profile comes

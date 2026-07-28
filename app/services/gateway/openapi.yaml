@@ -438,6 +438,10 @@ paths:
         Stamps the TOS acceptance. tos_version must be the current version —
         a stale one (the client displayed outdated terms) is rejected with
         failed_precondition. Only works while the enrollment is invited.
+        Accepting also opens the guarantee funding request automatically
+        (amount = the profile's guarantee floor, referenced to this
+        enrollment, status pending_agent_action) — no admin step in
+        between; the candidate finds it at GET /v1/agent/ledger/requests.
       operationId: acceptEnrollment
       security:
         - bearerAuth: []
@@ -1753,6 +1757,9 @@ paths:
     post:
       tags: [Ledger]
       summary: Create a request as ops (funding w/ enrollment reference, refund)
+      description: >
+        Escape hatch — the enrollment guarantee request is normally
+        opened automatically when the candidate accepts the terms.
       operationId: createLedgerRequestAdmin
       security:
         - bearerAuth: []
