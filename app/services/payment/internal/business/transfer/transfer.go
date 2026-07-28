@@ -67,7 +67,11 @@ const (
 	StatusDone                      Status = "done"
 	StatusCancelled                 Status = "cancelled"
 	StatusExpired                   Status = "expired"
-	StatusDisputed                  Status = "disputed" // reserved, unreachable v1
+	StatusDisputed                  Status = "disputed"
+	// StatusRefunded is the dispute path's own terminal: the agent was
+	// found at fault, their guarantee was captured and the client is
+	// refunded from it.
+	StatusRefunded Status = "refunded"
 )
 
 // Transfer is the read entity. Every money column was stamped at create

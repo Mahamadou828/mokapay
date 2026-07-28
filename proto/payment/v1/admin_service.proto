@@ -28,6 +28,41 @@ service AdminService {
   // The ops escape hatch: cancel from any open state, releasing the
   // hold when one is placed. Reason required — it lands on the timeline.
   rpc CancelTransferAdmin(CancelTransferAdminRequest) returns (Transfer);
+  // The dispute queue.
+  rpc ListDisputes(ListDisputesRequest) returns (ListDisputesResponse);
+  // THE ruling. The resolution alone decides everything: hold released or
+  // captured, client refunded or not, and the transfer's terminal state.
+  rpc ResolveDispute(ResolveDisputeRequest) returns (Dispute);
+  // The weekly commission payouts, with the status of the ledger request
+  // backing each one.
+  rpc ListCommissionBatches(ListCommissionBatchesRequest) returns (ListCommissionBatchesResponse);
+}
+
+message ListDisputesRequest {
+  optional DisputeStatus status = 1;
+  optional string transfer_id = 2;
+  optional string agent_profile_id = 3;
+  int32 limit = 4;  // 0 = server default
+}
+
+message ListDisputesResponse {
+  repeated Dispute disputes = 1;
+}
+
+message ResolveDisputeRequest {
+  string id = 1;
+  DisputeResolution resolution = 2;
+  optional string note = 3;  // lands on the dispute and the transfer timeline
+}
+
+message ListCommissionBatchesRequest {
+  optional string agent_profile_id = 1;
+  optional CommissionStatus status = 2;
+  int32 limit = 3;  // 0 = server default
+}
+
+message ListCommissionBatchesResponse {
+  repeated CommissionBatch batches = 1;
 }
 
 message ListAllTransfersRequest {

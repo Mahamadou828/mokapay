@@ -14,6 +14,7 @@ import (
 	profilerepo "mokapay.app/app/services/payment/internal/business/agentprofile/repo"
 	"mokapay.app/app/services/payment/internal/business/agentwallet"
 	walletrepo "mokapay.app/app/services/payment/internal/business/agentwallet/repo"
+	commissionrepo "mokapay.app/app/services/payment/internal/business/commission/repo"
 	"mokapay.app/app/services/payment/internal/business/ledger"
 	ledgerrepo "mokapay.app/app/services/payment/internal/business/ledger/repo"
 	"mokapay.app/app/services/payment/internal/business/matching"
@@ -29,12 +30,14 @@ import (
 // fakeJobs records every scheduled job/notification instead of touching
 // River — the DB side of each usecase call still runs for real.
 type fakeJobs struct {
-	mu       sync.Mutex
-	matches  []uuid.UUID
-	expiries []uuid.UUID
-	timeouts []uuid.UUID
-	confirms []uuid.UUID
-	notified []string // eventType
+	mu          sync.Mutex
+	matches     []uuid.UUID
+	expiries    []uuid.UUID
+	timeouts    []uuid.UUID
+	payouts     []uuid.UUID
+	confirms    []uuid.UUID
+	evaluations []uuid.UUID
+	notified    []string // eventType
 }
 
 func (f *fakeJobs) ScheduleMatch(_ context.Context, _ pgx.Tx, id uuid.UUID) error {
@@ -58,10 +61,24 @@ func (f *fakeJobs) SchedulePaymentTimeout(_ context.Context, _ pgx.Tx, id uuid.U
 	return nil
 }
 
+func (f *fakeJobs) SchedulePayoutTimeout(_ context.Context, _ pgx.Tx, id uuid.UUID, _ time.Time) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.payouts = append(f.payouts, id)
+	return nil
+}
+
 func (f *fakeJobs) ScheduleAutoConfirm(_ context.Context, _ pgx.Tx, id uuid.UUID, _ time.Time) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.confirms = append(f.confirms, id)
+	return nil
+}
+
+func (f *fakeJobs) ScheduleComplianceEvaluation(_ context.Context, _ pgx.Tx, id uuid.UUID) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.evaluations = append(f.evaluations, id)
 	return nil
 }
 
@@ -85,14 +102,16 @@ func (f *fakeJobs) count(event string) int {
 }
 
 type harness struct {
-	transfers transferuc.UseCase
-	matching  matchinguc.UseCase
-	profiles  profilerepo.Store
-	wallets   walletrepo.Store
-	requests  ledgerrepo.Store
-	jobs      *fakeJobs
-	db        *coredb.Postgres
-	log       *logger.Logger
+	transfers   transferuc.UseCase
+	matching    matchinguc.UseCase
+	profiles    profilerepo.Store
+	wallets     walletrepo.Store
+	requests    ledgerrepo.Store
+	commissions commissionrepo.Store
+
+	jobs *fakeJobs
+	db   *coredb.Postgres
+	log  *logger.Logger
 }
 
 func newHarness(t *testing.T) harness {
@@ -125,6 +144,7 @@ func newHarness(t *testing.T) harness {
 			FeeFXBps:         200,
 			MarginBps:        50,
 			MaxAmount:        1_000_000_000,
+			PayoutTimeout:    6 * time.Hour,
 			AutoConfirmAfter: 24 * time.Hour,
 		}),
 		matching: matchinguc.New(log, db, jobs, matchinguc.Config{
@@ -134,12 +154,13 @@ func newHarness(t *testing.T) harness {
 			MatchDeadline:  30 * time.Minute,
 			PaymentTimeout: 24 * time.Hour,
 		}),
-		profiles: profilerepo.New(db),
-		wallets:  walletrepo.New(db),
-		requests: ledgerrepo.New(db),
-		jobs:     jobs,
-		db:       db,
-		log:      log,
+		profiles:    profilerepo.New(db),
+		wallets:     walletrepo.New(db),
+		requests:    ledgerrepo.New(db),
+		commissions: commissionrepo.New(db),
+		jobs:        jobs,
+		db:          db,
+		log:         log,
 	}
 }
 
@@ -293,6 +314,11 @@ func TestFullTransferFlow(t *testing.T) {
 	if h.jobs.count("transfer.client_paid") != 1 {
 		t.Fatalf("client_paid notifications = %d, want 1 (replay must not re-notify)", h.jobs.count("transfer.client_paid"))
 	}
+	// The client is now out their money: the agent's payout clock starts,
+	// and running it out auto-disputes rather than cancels.
+	if len(h.jobs.payouts) != 1 || h.jobs.payouts[0] != created.ID {
+		t.Fatalf("payout timeout jobs = %v, want one for %s", h.jobs.payouts, created.ID)
+	}
 
 	// Proof 2: payout done — auto-confirm armed.
 	if _, err := h.transfers.ApplyProof(ctx, created.ID, transfer.StatusPendingClientConfirmation, uuid.New()); err != nil {
@@ -311,9 +337,43 @@ func TestFullTransferFlow(t *testing.T) {
 		t.Fatalf("profile after done = %+v", p)
 	}
 
-	// The stale auto-confirm timer no-ops.
+	// Reaching done pays the agent: the accrual commits with the
+	// completion, splitting the fee 60/30/10 for the agent, the platform
+	// and the guarantee fund.
+	accrued, err := h.commissions.GetByTransfer(ctx, created.ID.String())
+	if err != nil {
+		t.Fatalf("commission after done: %v", err)
+	}
+	if accrued.AgentProfileID != agent.ID || accrued.FeeAmount != done.FeeAmount {
+		t.Fatalf("accrual = agent %s / fee %d, want %s / %d",
+			accrued.AgentProfileID, accrued.FeeAmount, agent.ID, done.FeeAmount)
+	}
+	if accrued.AgentAmount+accrued.PlatformAmount+accrued.GuaranteeFundAmount != done.FeeAmount {
+		t.Fatalf("accrual split %+v does not re-add to the fee %d", accrued, done.FeeAmount)
+	}
+	// The FX margin is the platform's, kept in the to_currency — never
+	// folded into the fee split.
+	if accrued.MarginAmount != done.MarginAmount || accrued.MarginCurrency != done.ToCurrency {
+		t.Fatalf("accrual margin = %d %s, want %d %s",
+			accrued.MarginAmount, accrued.MarginCurrency, done.MarginAmount, done.ToCurrency)
+	}
+
+	// Reaching done also hands the movement to compliance — enqueued with
+	// the completion, evaluated afterwards, and never able to affect it.
+	if len(h.jobs.evaluations) != 1 || h.jobs.evaluations[0] != created.ID {
+		t.Fatalf("compliance evaluation jobs = %v, want one for %s", h.jobs.evaluations, created.ID)
+	}
+
+	// The stale auto-confirm timer no-ops — and cannot double-book the
+	// commission or the evaluation on its way through.
 	if err := h.transfers.HandleAutoConfirm(ctx, created.ID); err != nil {
 		t.Fatalf("stale HandleAutoConfirm: %v", err)
+	}
+	if again, err := h.commissions.GetByTransfer(ctx, created.ID.String()); err != nil || again.ID != accrued.ID {
+		t.Fatalf("commission after the stale timer = %+v, %v — must be the same single row", again, err)
+	}
+	if len(h.jobs.evaluations) != 1 {
+		t.Fatalf("compliance evaluation jobs after the stale timer = %v, want still one", h.jobs.evaluations)
 	}
 }
 

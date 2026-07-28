@@ -19,6 +19,8 @@ import (
 	walletrepo "mokapay.app/app/services/payment/internal/business/agentwallet/repo"
 	"mokapay.app/app/services/payment/internal/business/beneficiary"
 	benrepo "mokapay.app/app/services/payment/internal/business/beneficiary/repo"
+	"mokapay.app/app/services/payment/internal/business/commission"
+	commissionrepo "mokapay.app/app/services/payment/internal/business/commission/repo"
 	"mokapay.app/app/services/payment/internal/business/transfer"
 	"mokapay.app/app/services/payment/internal/business/transfer/repo"
 	"mokapay.app/app/services/payment/internal/integration/fxrate"
@@ -33,7 +35,9 @@ import (
 // Implemented by the events package.
 type Jobs interface {
 	ScheduleMatch(ctx context.Context, tx pgx.Tx, transferID uuid.UUID) error
+	SchedulePayoutTimeout(ctx context.Context, tx pgx.Tx, transferID uuid.UUID, at time.Time) error
 	ScheduleAutoConfirm(ctx context.Context, tx pgx.Tx, transferID uuid.UUID, at time.Time) error
+	ScheduleComplianceEvaluation(ctx context.Context, tx pgx.Tx, transferID uuid.UUID) error
 	Notify(ctx context.Context, tx pgx.Tx, to, eventType, title, message string) error
 }
 
@@ -45,6 +49,7 @@ type Config struct {
 	FeeFXBps         int32
 	MarginBps        int32
 	MaxAmount        int64
+	PayoutTimeout    time.Duration
 	AutoConfirmAfter time.Duration
 }
 
@@ -55,6 +60,7 @@ type UseCase struct {
 	beneficiaries benrepo.Store
 	wallets       walletrepo.Store
 	profiles      profilerepo.Store
+	commissions   commissionrepo.Store
 	fx            fxrate.Provider
 	jobs          Jobs
 	cfg           Config
@@ -68,6 +74,7 @@ func New(l *logger.Logger, db *coredb.Postgres, fx fxrate.Provider, jobs Jobs, c
 		beneficiaries: benrepo.New(db),
 		wallets:       walletrepo.New(db),
 		profiles:      profilerepo.New(db),
+		commissions:   commissionrepo.New(db),
 		fx:            fx,
 		jobs:          jobs,
 		cfg:           cfg,
@@ -370,6 +377,12 @@ func (u UseCase) ApplyProof(ctx context.Context, id uuid.UUID, newStatus transfe
 			if terr != nil {
 				return terr
 			}
+			// The client's money has left their hands: the agent now has a
+			// window to pay out, and missing it auto-disputes rather than
+			// cancels (the hold must stay put — somebody IS out money now).
+			if err := u.jobs.SchedulePayoutTimeout(ctx, tx, updated.ID, time.Now().Add(u.cfg.PayoutTimeout)); err != nil {
+				return err
+			}
 			agent, aerr := u.profiles.Get(ctx, updated.AgentProfileID.String())
 			if aerr != nil {
 				return aerr
@@ -410,7 +423,8 @@ func (u UseCase) ApplyProof(ctx context.Context, id uuid.UUID, newStatus transfe
 }
 
 // Confirm is the client's receipt confirmation — the only human path to
-// done; releases the agent's hold in the same statement.
+// done; releases the agent's hold and accrues their commission in the
+// same commit.
 func (u UseCase) Confirm(ctx context.Context, clientID, id uuid.UUID) (transfer.Transfer, error) {
 	t, err := u.transfers.Get(ctx, id.String())
 	if err != nil {
@@ -424,6 +438,9 @@ func (u UseCase) Confirm(ctx context.Context, clientID, id uuid.UUID) (transfer.
 	if err := u.db.BeginPgx(ctx, func(tx pgx.Tx) error {
 		done, err = u.transfers.WithTx(tx).Complete(ctx, id.String(), new(clientID), nil)
 		if err != nil {
+			return err
+		}
+		if err := u.onCompleted(ctx, tx, done); err != nil {
 			return err
 		}
 		agent, aerr := u.profiles.Get(ctx, done.AgentProfileID.String())
@@ -533,6 +550,9 @@ func (u UseCase) HandleAutoConfirm(ctx context.Context, id uuid.UUID) error {
 			}
 			return err
 		}
+		if err := u.onCompleted(ctx, tx, done); err != nil {
+			return err
+		}
 		agent, aerr := u.profiles.Get(ctx, done.AgentProfileID.String())
 		if aerr != nil {
 			return aerr
@@ -544,6 +564,40 @@ func (u UseCase) HandleAutoConfirm(ctx context.Context, id uuid.UUID) error {
 		u.logger.Error(ctx, "Transfer.HandleAutoConfirm: failed", "err", err)
 		return err
 	}
+	return nil
+}
+
+// onCompleted books everything that rides a transfer reaching done, inside
+// the transaction that completed it: the agent's commission accrual and
+// the AML evaluation of the movement.
+//
+// The evaluation is a job, never a call: it commits with the completion
+// and runs afterwards, so compliance can be slow, down or wrong without any
+// of it reaching the client who just confirmed their transfer.
+func (u UseCase) onCompleted(ctx context.Context, tx pgx.Tx, t transfer.Transfer) error {
+	if err := u.accrue(ctx, tx, t); err != nil {
+		return err
+	}
+
+	return u.jobs.ScheduleComplianceEvaluation(ctx, tx, t.ID)
+}
+
+// accrue books the agent's commission for a transfer that just reached
+// done, inside the transaction that completed it — the accrual can never
+// exist without the completion, nor the completion without the accrual.
+// An already-accrued transfer is success, not an error: the UNIQUE on
+// transfer_fk is the entire double-booking guard, which is why this
+// service needs no commission backfill script.
+func (u UseCase) accrue(ctx context.Context, tx pgx.Tx, t transfer.Transfer) error {
+	nc, err := commission.NewAccrual(t, time.Now())
+	if err != nil {
+		return err
+	}
+	if _, err := u.commissions.WithTx(tx).Accrue(ctx, nc); err != nil &&
+		!errors.Is(err, commission.ErrCommissionExists) {
+		return err
+	}
+
 	return nil
 }
 

@@ -464,22 +464,26 @@ const (
 	TransferStatus_TRANSFER_STATUS_DONE                        TransferStatus = 6
 	TransferStatus_TRANSFER_STATUS_CANCELLED                   TransferStatus = 7
 	TransferStatus_TRANSFER_STATUS_EXPIRED                     TransferStatus = 8
-	TransferStatus_TRANSFER_STATUS_DISPUTED                    TransferStatus = 9 // reserved, unreachable v1
+	TransferStatus_TRANSFER_STATUS_DISPUTED                    TransferStatus = 9
+	// The dispute path's own terminal: agent at fault, guarantee captured,
+	// client refunded from it.
+	TransferStatus_TRANSFER_STATUS_REFUNDED TransferStatus = 10
 )
 
 // Enum value maps for TransferStatus.
 var (
 	TransferStatus_name = map[int32]string{
-		0: "TRANSFER_STATUS_UNSPECIFIED",
-		1: "TRANSFER_STATUS_PENDING_MATCH",
-		2: "TRANSFER_STATUS_PENDING_AGENT_APPROVAL",
-		3: "TRANSFER_STATUS_PENDING_CLIENT_TRANSFER",
-		4: "TRANSFER_STATUS_PENDING_AGENT_TRANSFER",
-		5: "TRANSFER_STATUS_PENDING_CLIENT_CONFIRMATION",
-		6: "TRANSFER_STATUS_DONE",
-		7: "TRANSFER_STATUS_CANCELLED",
-		8: "TRANSFER_STATUS_EXPIRED",
-		9: "TRANSFER_STATUS_DISPUTED",
+		0:  "TRANSFER_STATUS_UNSPECIFIED",
+		1:  "TRANSFER_STATUS_PENDING_MATCH",
+		2:  "TRANSFER_STATUS_PENDING_AGENT_APPROVAL",
+		3:  "TRANSFER_STATUS_PENDING_CLIENT_TRANSFER",
+		4:  "TRANSFER_STATUS_PENDING_AGENT_TRANSFER",
+		5:  "TRANSFER_STATUS_PENDING_CLIENT_CONFIRMATION",
+		6:  "TRANSFER_STATUS_DONE",
+		7:  "TRANSFER_STATUS_CANCELLED",
+		8:  "TRANSFER_STATUS_EXPIRED",
+		9:  "TRANSFER_STATUS_DISPUTED",
+		10: "TRANSFER_STATUS_REFUNDED",
 	}
 	TransferStatus_value = map[string]int32{
 		"TRANSFER_STATUS_UNSPECIFIED":                 0,
@@ -492,6 +496,7 @@ var (
 		"TRANSFER_STATUS_CANCELLED":                   7,
 		"TRANSFER_STATUS_EXPIRED":                     8,
 		"TRANSFER_STATUS_DISPUTED":                    9,
+		"TRANSFER_STATUS_REFUNDED":                    10,
 	}
 )
 
@@ -578,6 +583,323 @@ func (x OfferStatus) Number() protoreflect.EnumNumber {
 // Deprecated: Use OfferStatus.Descriptor instead.
 func (OfferStatus) EnumDescriptor() ([]byte, []int) {
 	return file_payment_v1_shared_message_proto_rawDescGZIP(), []int{9}
+}
+
+// Derived, never stored: unbatched is `accrued`, batched becomes `paid`
+// once the batch's ledger request settles.
+type CommissionStatus int32
+
+const (
+	CommissionStatus_COMMISSION_STATUS_UNSPECIFIED CommissionStatus = 0
+	CommissionStatus_COMMISSION_STATUS_ACCRUED     CommissionStatus = 1
+	CommissionStatus_COMMISSION_STATUS_BATCHED     CommissionStatus = 2
+	CommissionStatus_COMMISSION_STATUS_PAID        CommissionStatus = 3
+)
+
+// Enum value maps for CommissionStatus.
+var (
+	CommissionStatus_name = map[int32]string{
+		0: "COMMISSION_STATUS_UNSPECIFIED",
+		1: "COMMISSION_STATUS_ACCRUED",
+		2: "COMMISSION_STATUS_BATCHED",
+		3: "COMMISSION_STATUS_PAID",
+	}
+	CommissionStatus_value = map[string]int32{
+		"COMMISSION_STATUS_UNSPECIFIED": 0,
+		"COMMISSION_STATUS_ACCRUED":     1,
+		"COMMISSION_STATUS_BATCHED":     2,
+		"COMMISSION_STATUS_PAID":        3,
+	}
+)
+
+func (x CommissionStatus) Enum() *CommissionStatus {
+	p := new(CommissionStatus)
+	*p = x
+	return p
+}
+
+func (x CommissionStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (CommissionStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_payment_v1_shared_message_proto_enumTypes[10].Descriptor()
+}
+
+func (CommissionStatus) Type() protoreflect.EnumType {
+	return &file_payment_v1_shared_message_proto_enumTypes[10]
+}
+
+func (x CommissionStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use CommissionStatus.Descriptor instead.
+func (CommissionStatus) EnumDescriptor() ([]byte, []int) {
+	return file_payment_v1_shared_message_proto_rawDescGZIP(), []int{10}
+}
+
+type DisputeParty int32
+
+const (
+	DisputeParty_DISPUTE_PARTY_UNSPECIFIED DisputeParty = 0
+	DisputeParty_DISPUTE_PARTY_CLIENT      DisputeParty = 1
+	DisputeParty_DISPUTE_PARTY_AGENT       DisputeParty = 2
+	DisputeParty_DISPUTE_PARTY_SYSTEM      DisputeParty = 3 // the payout-timeout auto-dispute
+)
+
+// Enum value maps for DisputeParty.
+var (
+	DisputeParty_name = map[int32]string{
+		0: "DISPUTE_PARTY_UNSPECIFIED",
+		1: "DISPUTE_PARTY_CLIENT",
+		2: "DISPUTE_PARTY_AGENT",
+		3: "DISPUTE_PARTY_SYSTEM",
+	}
+	DisputeParty_value = map[string]int32{
+		"DISPUTE_PARTY_UNSPECIFIED": 0,
+		"DISPUTE_PARTY_CLIENT":      1,
+		"DISPUTE_PARTY_AGENT":       2,
+		"DISPUTE_PARTY_SYSTEM":      3,
+	}
+)
+
+func (x DisputeParty) Enum() *DisputeParty {
+	p := new(DisputeParty)
+	*p = x
+	return p
+}
+
+func (x DisputeParty) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (DisputeParty) Descriptor() protoreflect.EnumDescriptor {
+	return file_payment_v1_shared_message_proto_enumTypes[11].Descriptor()
+}
+
+func (DisputeParty) Type() protoreflect.EnumType {
+	return &file_payment_v1_shared_message_proto_enumTypes[11]
+}
+
+func (x DisputeParty) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use DisputeParty.Descriptor instead.
+func (DisputeParty) EnumDescriptor() ([]byte, []int) {
+	return file_payment_v1_shared_message_proto_rawDescGZIP(), []int{11}
+}
+
+type DisputeReason int32
+
+const (
+	DisputeReason_DISPUTE_REASON_UNSPECIFIED            DisputeReason = 0
+	DisputeReason_DISPUTE_REASON_AGENT_NOT_PAID         DisputeReason = 1
+	DisputeReason_DISPUTE_REASON_RECIPIENT_NOT_RECEIVED DisputeReason = 2
+	DisputeReason_DISPUTE_REASON_CLIENT_FRAUD           DisputeReason = 3
+	DisputeReason_DISPUTE_REASON_OTHER                  DisputeReason = 4
+)
+
+// Enum value maps for DisputeReason.
+var (
+	DisputeReason_name = map[int32]string{
+		0: "DISPUTE_REASON_UNSPECIFIED",
+		1: "DISPUTE_REASON_AGENT_NOT_PAID",
+		2: "DISPUTE_REASON_RECIPIENT_NOT_RECEIVED",
+		3: "DISPUTE_REASON_CLIENT_FRAUD",
+		4: "DISPUTE_REASON_OTHER",
+	}
+	DisputeReason_value = map[string]int32{
+		"DISPUTE_REASON_UNSPECIFIED":            0,
+		"DISPUTE_REASON_AGENT_NOT_PAID":         1,
+		"DISPUTE_REASON_RECIPIENT_NOT_RECEIVED": 2,
+		"DISPUTE_REASON_CLIENT_FRAUD":           3,
+		"DISPUTE_REASON_OTHER":                  4,
+	}
+)
+
+func (x DisputeReason) Enum() *DisputeReason {
+	p := new(DisputeReason)
+	*p = x
+	return p
+}
+
+func (x DisputeReason) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (DisputeReason) Descriptor() protoreflect.EnumDescriptor {
+	return file_payment_v1_shared_message_proto_enumTypes[12].Descriptor()
+}
+
+func (DisputeReason) Type() protoreflect.EnumType {
+	return &file_payment_v1_shared_message_proto_enumTypes[12]
+}
+
+func (x DisputeReason) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use DisputeReason.Descriptor instead.
+func (DisputeReason) EnumDescriptor() ([]byte, []int) {
+	return file_payment_v1_shared_message_proto_rawDescGZIP(), []int{12}
+}
+
+type DisputeStatus int32
+
+const (
+	DisputeStatus_DISPUTE_STATUS_UNSPECIFIED DisputeStatus = 0
+	DisputeStatus_DISPUTE_STATUS_OPEN        DisputeStatus = 1
+	DisputeStatus_DISPUTE_STATUS_RESOLVED    DisputeStatus = 2
+)
+
+// Enum value maps for DisputeStatus.
+var (
+	DisputeStatus_name = map[int32]string{
+		0: "DISPUTE_STATUS_UNSPECIFIED",
+		1: "DISPUTE_STATUS_OPEN",
+		2: "DISPUTE_STATUS_RESOLVED",
+	}
+	DisputeStatus_value = map[string]int32{
+		"DISPUTE_STATUS_UNSPECIFIED": 0,
+		"DISPUTE_STATUS_OPEN":        1,
+		"DISPUTE_STATUS_RESOLVED":    2,
+	}
+)
+
+func (x DisputeStatus) Enum() *DisputeStatus {
+	p := new(DisputeStatus)
+	*p = x
+	return p
+}
+
+func (x DisputeStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (DisputeStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_payment_v1_shared_message_proto_enumTypes[13].Descriptor()
+}
+
+func (DisputeStatus) Type() protoreflect.EnumType {
+	return &file_payment_v1_shared_message_proto_enumTypes[13]
+}
+
+func (x DisputeStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use DisputeStatus.Descriptor instead.
+func (DisputeStatus) EnumDescriptor() ([]byte, []int) {
+	return file_payment_v1_shared_message_proto_rawDescGZIP(), []int{13}
+}
+
+// The admin ruling. Each value fixes the whole money outcome: hold
+// released or captured, client refunded or not, and where the transfer
+// lands.
+type DisputeResolution int32
+
+const (
+	DisputeResolution_DISPUTE_RESOLUTION_UNSPECIFIED  DisputeResolution = 0
+	DisputeResolution_DISPUTE_RESOLUTION_AGENT_RIGHT  DisputeResolution = 1 // release, no refund, done
+	DisputeResolution_DISPUTE_RESOLUTION_AGENT_FAULT  DisputeResolution = 2 // capture, refund the client, refunded
+	DisputeResolution_DISPUTE_RESOLUTION_CLIENT_FRAUD DisputeResolution = 3 // release, no refund, done
+	DisputeResolution_DISPUTE_RESOLUTION_NO_FAULT     DisputeResolution = 4 // release, no refund, cancelled
+)
+
+// Enum value maps for DisputeResolution.
+var (
+	DisputeResolution_name = map[int32]string{
+		0: "DISPUTE_RESOLUTION_UNSPECIFIED",
+		1: "DISPUTE_RESOLUTION_AGENT_RIGHT",
+		2: "DISPUTE_RESOLUTION_AGENT_FAULT",
+		3: "DISPUTE_RESOLUTION_CLIENT_FRAUD",
+		4: "DISPUTE_RESOLUTION_NO_FAULT",
+	}
+	DisputeResolution_value = map[string]int32{
+		"DISPUTE_RESOLUTION_UNSPECIFIED":  0,
+		"DISPUTE_RESOLUTION_AGENT_RIGHT":  1,
+		"DISPUTE_RESOLUTION_AGENT_FAULT":  2,
+		"DISPUTE_RESOLUTION_CLIENT_FRAUD": 3,
+		"DISPUTE_RESOLUTION_NO_FAULT":     4,
+	}
+)
+
+func (x DisputeResolution) Enum() *DisputeResolution {
+	p := new(DisputeResolution)
+	*p = x
+	return p
+}
+
+func (x DisputeResolution) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (DisputeResolution) Descriptor() protoreflect.EnumDescriptor {
+	return file_payment_v1_shared_message_proto_enumTypes[14].Descriptor()
+}
+
+func (DisputeResolution) Type() protoreflect.EnumType {
+	return &file_payment_v1_shared_message_proto_enumTypes[14]
+}
+
+func (x DisputeResolution) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use DisputeResolution.Descriptor instead.
+func (DisputeResolution) EnumDescriptor() ([]byte, []int) {
+	return file_payment_v1_shared_message_proto_rawDescGZIP(), []int{14}
+}
+
+type HoldOutcome int32
+
+const (
+	HoldOutcome_HOLD_OUTCOME_UNSPECIFIED HoldOutcome = 0
+	HoldOutcome_HOLD_OUTCOME_RELEASED    HoldOutcome = 1
+	HoldOutcome_HOLD_OUTCOME_CAPTURED    HoldOutcome = 2
+)
+
+// Enum value maps for HoldOutcome.
+var (
+	HoldOutcome_name = map[int32]string{
+		0: "HOLD_OUTCOME_UNSPECIFIED",
+		1: "HOLD_OUTCOME_RELEASED",
+		2: "HOLD_OUTCOME_CAPTURED",
+	}
+	HoldOutcome_value = map[string]int32{
+		"HOLD_OUTCOME_UNSPECIFIED": 0,
+		"HOLD_OUTCOME_RELEASED":    1,
+		"HOLD_OUTCOME_CAPTURED":    2,
+	}
+)
+
+func (x HoldOutcome) Enum() *HoldOutcome {
+	p := new(HoldOutcome)
+	*p = x
+	return p
+}
+
+func (x HoldOutcome) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (HoldOutcome) Descriptor() protoreflect.EnumDescriptor {
+	return file_payment_v1_shared_message_proto_enumTypes[15].Descriptor()
+}
+
+func (HoldOutcome) Type() protoreflect.EnumType {
+	return &file_payment_v1_shared_message_proto_enumTypes[15]
+}
+
+func (x HoldOutcome) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use HoldOutcome.Descriptor instead.
+func (HoldOutcome) EnumDescriptor() ([]byte, []int) {
+	return file_payment_v1_shared_message_proto_rawDescGZIP(), []int{15}
 }
 
 // The agent's money account. balance moves only through the ledger;
@@ -1772,6 +2094,521 @@ func (x *AgentWallet) GetAcceptsCdf() bool {
 	return false
 }
 
+// One transfer's accrual: the 60/30/10 split of the fee (flat for every
+// agent level) plus the FX margin, which is 100% platform. The fee shares
+// are in the transfer's from_currency and the margin in its to_currency —
+// they are deliberately never added together.
+type Commission struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	Id                  string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	TransferId          string                 `protobuf:"bytes,2,opt,name=transfer_id,json=transferId,proto3" json:"transfer_id,omitempty"`
+	TransferReference   string                 `protobuf:"bytes,3,opt,name=transfer_reference,json=transferReference,proto3" json:"transfer_reference,omitempty"`
+	AgentProfileId      string                 `protobuf:"bytes,4,opt,name=agent_profile_id,json=agentProfileId,proto3" json:"agent_profile_id,omitempty"`
+	FeeCurrency         Currency               `protobuf:"varint,5,opt,name=fee_currency,json=feeCurrency,proto3,enum=payment.v1.Currency" json:"fee_currency,omitempty"`
+	FeeAmount           int64                  `protobuf:"varint,6,opt,name=fee_amount,json=feeAmount,proto3" json:"fee_amount,omitempty"`
+	AgentAmount         int64                  `protobuf:"varint,7,opt,name=agent_amount,json=agentAmount,proto3" json:"agent_amount,omitempty"`                           // 60% of the fee
+	PlatformAmount      int64                  `protobuf:"varint,8,opt,name=platform_amount,json=platformAmount,proto3" json:"platform_amount,omitempty"`                  // 30% of the fee
+	GuaranteeFundAmount int64                  `protobuf:"varint,9,opt,name=guarantee_fund_amount,json=guaranteeFundAmount,proto3" json:"guarantee_fund_amount,omitempty"` // the remaining ~10%
+	MarginCurrency      Currency               `protobuf:"varint,10,opt,name=margin_currency,json=marginCurrency,proto3,enum=payment.v1.Currency" json:"margin_currency,omitempty"`
+	MarginAmount        int64                  `protobuf:"varint,11,opt,name=margin_amount,json=marginAmount,proto3" json:"margin_amount,omitempty"` // 100% platform, on top
+	// What the weekly batch credits: the agent's share in the guarantee
+	// balance's denomination (USD minor units), converted at the transfer's
+	// own locked rate.
+	PayableAmount  int64                  `protobuf:"varint,12,opt,name=payable_amount,json=payableAmount,proto3" json:"payable_amount,omitempty"`
+	AccountingWeek string                 `protobuf:"bytes,13,opt,name=accounting_week,json=accountingWeek,proto3" json:"accounting_week,omitempty"` // YYYY-MM-DD, the Tuesday opening the week
+	BatchId        *string                `protobuf:"bytes,14,opt,name=batch_id,json=batchId,proto3,oneof" json:"batch_id,omitempty"`                // absent until the weekly run picks it up
+	Status         CommissionStatus       `protobuf:"varint,15,opt,name=status,proto3,enum=payment.v1.CommissionStatus" json:"status,omitempty"`
+	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,16,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt      *timestamppb.Timestamp `protobuf:"bytes,17,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *Commission) Reset() {
+	*x = Commission{}
+	mi := &file_payment_v1_shared_message_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Commission) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Commission) ProtoMessage() {}
+
+func (x *Commission) ProtoReflect() protoreflect.Message {
+	mi := &file_payment_v1_shared_message_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Commission.ProtoReflect.Descriptor instead.
+func (*Commission) Descriptor() ([]byte, []int) {
+	return file_payment_v1_shared_message_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *Commission) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Commission) GetTransferId() string {
+	if x != nil {
+		return x.TransferId
+	}
+	return ""
+}
+
+func (x *Commission) GetTransferReference() string {
+	if x != nil {
+		return x.TransferReference
+	}
+	return ""
+}
+
+func (x *Commission) GetAgentProfileId() string {
+	if x != nil {
+		return x.AgentProfileId
+	}
+	return ""
+}
+
+func (x *Commission) GetFeeCurrency() Currency {
+	if x != nil {
+		return x.FeeCurrency
+	}
+	return Currency_CURRENCY_UNSPECIFIED
+}
+
+func (x *Commission) GetFeeAmount() int64 {
+	if x != nil {
+		return x.FeeAmount
+	}
+	return 0
+}
+
+func (x *Commission) GetAgentAmount() int64 {
+	if x != nil {
+		return x.AgentAmount
+	}
+	return 0
+}
+
+func (x *Commission) GetPlatformAmount() int64 {
+	if x != nil {
+		return x.PlatformAmount
+	}
+	return 0
+}
+
+func (x *Commission) GetGuaranteeFundAmount() int64 {
+	if x != nil {
+		return x.GuaranteeFundAmount
+	}
+	return 0
+}
+
+func (x *Commission) GetMarginCurrency() Currency {
+	if x != nil {
+		return x.MarginCurrency
+	}
+	return Currency_CURRENCY_UNSPECIFIED
+}
+
+func (x *Commission) GetMarginAmount() int64 {
+	if x != nil {
+		return x.MarginAmount
+	}
+	return 0
+}
+
+func (x *Commission) GetPayableAmount() int64 {
+	if x != nil {
+		return x.PayableAmount
+	}
+	return 0
+}
+
+func (x *Commission) GetAccountingWeek() string {
+	if x != nil {
+		return x.AccountingWeek
+	}
+	return ""
+}
+
+func (x *Commission) GetBatchId() string {
+	if x != nil && x.BatchId != nil {
+		return *x.BatchId
+	}
+	return ""
+}
+
+func (x *Commission) GetStatus() CommissionStatus {
+	if x != nil {
+		return x.Status
+	}
+	return CommissionStatus_COMMISSION_STATUS_UNSPECIFIED
+}
+
+func (x *Commission) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *Commission) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+// One agent's weekly payout: the accruals of an accounting week grouped
+// behind a single `commission` ledger request. Approving that request is
+// what actually moves the balance.
+type CommissionBatch struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Id               string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	AgentProfileId   string                 `protobuf:"bytes,2,opt,name=agent_profile_id,json=agentProfileId,proto3" json:"agent_profile_id,omitempty"`
+	AccountingWeek   string                 `protobuf:"bytes,3,opt,name=accounting_week,json=accountingWeek,proto3" json:"accounting_week,omitempty"` // YYYY-MM-DD
+	CommissionCount  int32                  `protobuf:"varint,4,opt,name=commission_count,json=commissionCount,proto3" json:"commission_count,omitempty"`
+	TotalAmount      int64                  `protobuf:"varint,5,opt,name=total_amount,json=totalAmount,proto3" json:"total_amount,omitempty"` // USD minor units
+	LedgerRequestId  string                 `protobuf:"bytes,6,opt,name=ledger_request_id,json=ledgerRequestId,proto3" json:"ledger_request_id,omitempty"`
+	LedgerRequestRef string                 `protobuf:"bytes,7,opt,name=ledger_request_ref,json=ledgerRequestRef,proto3" json:"ledger_request_ref,omitempty"` // COM-2026-000042
+	Status           CommissionStatus       `protobuf:"varint,8,opt,name=status,proto3,enum=payment.v1.CommissionStatus" json:"status,omitempty"`
+	CreatedAt        *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt        *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *CommissionBatch) Reset() {
+	*x = CommissionBatch{}
+	mi := &file_payment_v1_shared_message_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CommissionBatch) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CommissionBatch) ProtoMessage() {}
+
+func (x *CommissionBatch) ProtoReflect() protoreflect.Message {
+	mi := &file_payment_v1_shared_message_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CommissionBatch.ProtoReflect.Descriptor instead.
+func (*CommissionBatch) Descriptor() ([]byte, []int) {
+	return file_payment_v1_shared_message_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *CommissionBatch) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *CommissionBatch) GetAgentProfileId() string {
+	if x != nil {
+		return x.AgentProfileId
+	}
+	return ""
+}
+
+func (x *CommissionBatch) GetAccountingWeek() string {
+	if x != nil {
+		return x.AccountingWeek
+	}
+	return ""
+}
+
+func (x *CommissionBatch) GetCommissionCount() int32 {
+	if x != nil {
+		return x.CommissionCount
+	}
+	return 0
+}
+
+func (x *CommissionBatch) GetTotalAmount() int64 {
+	if x != nil {
+		return x.TotalAmount
+	}
+	return 0
+}
+
+func (x *CommissionBatch) GetLedgerRequestId() string {
+	if x != nil {
+		return x.LedgerRequestId
+	}
+	return ""
+}
+
+func (x *CommissionBatch) GetLedgerRequestRef() string {
+	if x != nil {
+		return x.LedgerRequestRef
+	}
+	return ""
+}
+
+func (x *CommissionBatch) GetStatus() CommissionStatus {
+	if x != nil {
+		return x.Status
+	}
+	return CommissionStatus_COMMISSION_STATUS_UNSPECIFIED
+}
+
+func (x *CommissionBatch) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *CommissionBatch) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+// A contested transfer. While the dispute is open the transfer sits in
+// `disputed` and the agent's guarantee STAYS held — it is the collateral
+// that funds the fix.
+type Dispute struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	TransferId        string                 `protobuf:"bytes,2,opt,name=transfer_id,json=transferId,proto3" json:"transfer_id,omitempty"`
+	TransferReference string                 `protobuf:"bytes,3,opt,name=transfer_reference,json=transferReference,proto3" json:"transfer_reference,omitempty"`
+	ClientId          string                 `protobuf:"bytes,4,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
+	AgentProfileId    *string                `protobuf:"bytes,5,opt,name=agent_profile_id,json=agentProfileId,proto3,oneof" json:"agent_profile_id,omitempty"`
+	OpenedByParty     DisputeParty           `protobuf:"varint,6,opt,name=opened_by_party,json=openedByParty,proto3,enum=payment.v1.DisputeParty" json:"opened_by_party,omitempty"`
+	OpenedBy          *string                `protobuf:"bytes,7,opt,name=opened_by,json=openedBy,proto3,oneof" json:"opened_by,omitempty"` // absent = system auto-dispute
+	Reason            DisputeReason          `protobuf:"varint,8,opt,name=reason,proto3,enum=payment.v1.DisputeReason" json:"reason,omitempty"`
+	Details           *string                `protobuf:"bytes,9,opt,name=details,proto3,oneof" json:"details,omitempty"`
+	// Snapshot taken when the transfer froze.
+	FromStatus     TransferStatus     `protobuf:"varint,10,opt,name=from_status,json=fromStatus,proto3,enum=payment.v1.TransferStatus" json:"from_status,omitempty"`
+	HoldAmount     int64              `protobuf:"varint,11,opt,name=hold_amount,json=holdAmount,proto3" json:"hold_amount,omitempty"` // USD minor units, frozen while open
+	RefundCurrency Currency           `protobuf:"varint,12,opt,name=refund_currency,json=refundCurrency,proto3,enum=payment.v1.Currency" json:"refund_currency,omitempty"`
+	RefundAmount   int64              `protobuf:"varint,13,opt,name=refund_amount,json=refundAmount,proto3" json:"refund_amount,omitempty"` // what the client would be owed back
+	Status         DisputeStatus      `protobuf:"varint,14,opt,name=status,proto3,enum=payment.v1.DisputeStatus" json:"status,omitempty"`
+	Resolution     *DisputeResolution `protobuf:"varint,15,opt,name=resolution,proto3,enum=payment.v1.DisputeResolution,oneof" json:"resolution,omitempty"`
+	HoldOutcome    *HoldOutcome       `protobuf:"varint,16,opt,name=hold_outcome,json=holdOutcome,proto3,enum=payment.v1.HoldOutcome,oneof" json:"hold_outcome,omitempty"`
+	ResolutionNote *string            `protobuf:"bytes,17,opt,name=resolution_note,json=resolutionNote,proto3,oneof" json:"resolution_note,omitempty"`
+	// The capture's ledger request, on agent_fault.
+	DeductionLedgerRequestId *string                `protobuf:"bytes,18,opt,name=deduction_ledger_request_id,json=deductionLedgerRequestId,proto3,oneof" json:"deduction_ledger_request_id,omitempty"`
+	ResolvedBy               *string                `protobuf:"bytes,19,opt,name=resolved_by,json=resolvedBy,proto3,oneof" json:"resolved_by,omitempty"`
+	ResolvedAt               *timestamppb.Timestamp `protobuf:"bytes,20,opt,name=resolved_at,json=resolvedAt,proto3,oneof" json:"resolved_at,omitempty"`
+	CreatedAt                *timestamppb.Timestamp `protobuf:"bytes,21,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt                *timestamppb.Timestamp `protobuf:"bytes,22,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
+}
+
+func (x *Dispute) Reset() {
+	*x = Dispute{}
+	mi := &file_payment_v1_shared_message_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Dispute) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Dispute) ProtoMessage() {}
+
+func (x *Dispute) ProtoReflect() protoreflect.Message {
+	mi := &file_payment_v1_shared_message_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Dispute.ProtoReflect.Descriptor instead.
+func (*Dispute) Descriptor() ([]byte, []int) {
+	return file_payment_v1_shared_message_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *Dispute) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Dispute) GetTransferId() string {
+	if x != nil {
+		return x.TransferId
+	}
+	return ""
+}
+
+func (x *Dispute) GetTransferReference() string {
+	if x != nil {
+		return x.TransferReference
+	}
+	return ""
+}
+
+func (x *Dispute) GetClientId() string {
+	if x != nil {
+		return x.ClientId
+	}
+	return ""
+}
+
+func (x *Dispute) GetAgentProfileId() string {
+	if x != nil && x.AgentProfileId != nil {
+		return *x.AgentProfileId
+	}
+	return ""
+}
+
+func (x *Dispute) GetOpenedByParty() DisputeParty {
+	if x != nil {
+		return x.OpenedByParty
+	}
+	return DisputeParty_DISPUTE_PARTY_UNSPECIFIED
+}
+
+func (x *Dispute) GetOpenedBy() string {
+	if x != nil && x.OpenedBy != nil {
+		return *x.OpenedBy
+	}
+	return ""
+}
+
+func (x *Dispute) GetReason() DisputeReason {
+	if x != nil {
+		return x.Reason
+	}
+	return DisputeReason_DISPUTE_REASON_UNSPECIFIED
+}
+
+func (x *Dispute) GetDetails() string {
+	if x != nil && x.Details != nil {
+		return *x.Details
+	}
+	return ""
+}
+
+func (x *Dispute) GetFromStatus() TransferStatus {
+	if x != nil {
+		return x.FromStatus
+	}
+	return TransferStatus_TRANSFER_STATUS_UNSPECIFIED
+}
+
+func (x *Dispute) GetHoldAmount() int64 {
+	if x != nil {
+		return x.HoldAmount
+	}
+	return 0
+}
+
+func (x *Dispute) GetRefundCurrency() Currency {
+	if x != nil {
+		return x.RefundCurrency
+	}
+	return Currency_CURRENCY_UNSPECIFIED
+}
+
+func (x *Dispute) GetRefundAmount() int64 {
+	if x != nil {
+		return x.RefundAmount
+	}
+	return 0
+}
+
+func (x *Dispute) GetStatus() DisputeStatus {
+	if x != nil {
+		return x.Status
+	}
+	return DisputeStatus_DISPUTE_STATUS_UNSPECIFIED
+}
+
+func (x *Dispute) GetResolution() DisputeResolution {
+	if x != nil && x.Resolution != nil {
+		return *x.Resolution
+	}
+	return DisputeResolution_DISPUTE_RESOLUTION_UNSPECIFIED
+}
+
+func (x *Dispute) GetHoldOutcome() HoldOutcome {
+	if x != nil && x.HoldOutcome != nil {
+		return *x.HoldOutcome
+	}
+	return HoldOutcome_HOLD_OUTCOME_UNSPECIFIED
+}
+
+func (x *Dispute) GetResolutionNote() string {
+	if x != nil && x.ResolutionNote != nil {
+		return *x.ResolutionNote
+	}
+	return ""
+}
+
+func (x *Dispute) GetDeductionLedgerRequestId() string {
+	if x != nil && x.DeductionLedgerRequestId != nil {
+		return *x.DeductionLedgerRequestId
+	}
+	return ""
+}
+
+func (x *Dispute) GetResolvedBy() string {
+	if x != nil && x.ResolvedBy != nil {
+		return *x.ResolvedBy
+	}
+	return ""
+}
+
+func (x *Dispute) GetResolvedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ResolvedAt
+	}
+	return nil
+}
+
+func (x *Dispute) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *Dispute) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
 // A stateless quote: nothing persisted — the rate locks at
 // CreateTransfer, and the cache TTL bounds the drift in between.
 type Quote struct {
@@ -1791,7 +2628,7 @@ type Quote struct {
 
 func (x *Quote) Reset() {
 	*x = Quote{}
-	mi := &file_payment_v1_shared_message_proto_msgTypes[9]
+	mi := &file_payment_v1_shared_message_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1803,7 +2640,7 @@ func (x *Quote) String() string {
 func (*Quote) ProtoMessage() {}
 
 func (x *Quote) ProtoReflect() protoreflect.Message {
-	mi := &file_payment_v1_shared_message_proto_msgTypes[9]
+	mi := &file_payment_v1_shared_message_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1816,7 +2653,7 @@ func (x *Quote) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Quote.ProtoReflect.Descriptor instead.
 func (*Quote) Descriptor() ([]byte, []int) {
-	return file_payment_v1_shared_message_proto_rawDescGZIP(), []int{9}
+	return file_payment_v1_shared_message_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *Quote) GetFromCurrency() Currency {
@@ -2062,7 +2899,90 @@ const file_payment_v1_shared_message_proto_rawDesc = "" +
 	"\vaccepts_usd\x18\b \x01(\bR\n" +
 	"acceptsUsd\x12\x1f\n" +
 	"\vaccepts_cdf\x18\t \x01(\bR\n" +
-	"acceptsCdfJ\x04\b\x04\x10\x05\"\xd9\x02\n" +
+	"acceptsCdfJ\x04\b\x04\x10\x05\"\xfb\x05\n" +
+	"\n" +
+	"Commission\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
+	"\vtransfer_id\x18\x02 \x01(\tR\n" +
+	"transferId\x12-\n" +
+	"\x12transfer_reference\x18\x03 \x01(\tR\x11transferReference\x12(\n" +
+	"\x10agent_profile_id\x18\x04 \x01(\tR\x0eagentProfileId\x127\n" +
+	"\ffee_currency\x18\x05 \x01(\x0e2\x14.payment.v1.CurrencyR\vfeeCurrency\x12\x1d\n" +
+	"\n" +
+	"fee_amount\x18\x06 \x01(\x03R\tfeeAmount\x12!\n" +
+	"\fagent_amount\x18\a \x01(\x03R\vagentAmount\x12'\n" +
+	"\x0fplatform_amount\x18\b \x01(\x03R\x0eplatformAmount\x122\n" +
+	"\x15guarantee_fund_amount\x18\t \x01(\x03R\x13guaranteeFundAmount\x12=\n" +
+	"\x0fmargin_currency\x18\n" +
+	" \x01(\x0e2\x14.payment.v1.CurrencyR\x0emarginCurrency\x12#\n" +
+	"\rmargin_amount\x18\v \x01(\x03R\fmarginAmount\x12%\n" +
+	"\x0epayable_amount\x18\f \x01(\x03R\rpayableAmount\x12'\n" +
+	"\x0faccounting_week\x18\r \x01(\tR\x0eaccountingWeek\x12\x1e\n" +
+	"\bbatch_id\x18\x0e \x01(\tH\x00R\abatchId\x88\x01\x01\x124\n" +
+	"\x06status\x18\x0f \x01(\x0e2\x1c.payment.v1.CommissionStatusR\x06status\x129\n" +
+	"\n" +
+	"created_at\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\x11 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\v\n" +
+	"\t_batch_id\"\xc8\x03\n" +
+	"\x0fCommissionBatch\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12(\n" +
+	"\x10agent_profile_id\x18\x02 \x01(\tR\x0eagentProfileId\x12'\n" +
+	"\x0faccounting_week\x18\x03 \x01(\tR\x0eaccountingWeek\x12)\n" +
+	"\x10commission_count\x18\x04 \x01(\x05R\x0fcommissionCount\x12!\n" +
+	"\ftotal_amount\x18\x05 \x01(\x03R\vtotalAmount\x12*\n" +
+	"\x11ledger_request_id\x18\x06 \x01(\tR\x0fledgerRequestId\x12,\n" +
+	"\x12ledger_request_ref\x18\a \x01(\tR\x10ledgerRequestRef\x124\n" +
+	"\x06status\x18\b \x01(\x0e2\x1c.payment.v1.CommissionStatusR\x06status\x129\n" +
+	"\n" +
+	"created_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xd8\t\n" +
+	"\aDispute\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
+	"\vtransfer_id\x18\x02 \x01(\tR\n" +
+	"transferId\x12-\n" +
+	"\x12transfer_reference\x18\x03 \x01(\tR\x11transferReference\x12\x1b\n" +
+	"\tclient_id\x18\x04 \x01(\tR\bclientId\x12-\n" +
+	"\x10agent_profile_id\x18\x05 \x01(\tH\x00R\x0eagentProfileId\x88\x01\x01\x12@\n" +
+	"\x0fopened_by_party\x18\x06 \x01(\x0e2\x18.payment.v1.DisputePartyR\ropenedByParty\x12 \n" +
+	"\topened_by\x18\a \x01(\tH\x01R\bopenedBy\x88\x01\x01\x121\n" +
+	"\x06reason\x18\b \x01(\x0e2\x19.payment.v1.DisputeReasonR\x06reason\x12\x1d\n" +
+	"\adetails\x18\t \x01(\tH\x02R\adetails\x88\x01\x01\x12;\n" +
+	"\vfrom_status\x18\n" +
+	" \x01(\x0e2\x1a.payment.v1.TransferStatusR\n" +
+	"fromStatus\x12\x1f\n" +
+	"\vhold_amount\x18\v \x01(\x03R\n" +
+	"holdAmount\x12=\n" +
+	"\x0frefund_currency\x18\f \x01(\x0e2\x14.payment.v1.CurrencyR\x0erefundCurrency\x12#\n" +
+	"\rrefund_amount\x18\r \x01(\x03R\frefundAmount\x121\n" +
+	"\x06status\x18\x0e \x01(\x0e2\x19.payment.v1.DisputeStatusR\x06status\x12B\n" +
+	"\n" +
+	"resolution\x18\x0f \x01(\x0e2\x1d.payment.v1.DisputeResolutionH\x03R\n" +
+	"resolution\x88\x01\x01\x12?\n" +
+	"\fhold_outcome\x18\x10 \x01(\x0e2\x17.payment.v1.HoldOutcomeH\x04R\vholdOutcome\x88\x01\x01\x12,\n" +
+	"\x0fresolution_note\x18\x11 \x01(\tH\x05R\x0eresolutionNote\x88\x01\x01\x12B\n" +
+	"\x1bdeduction_ledger_request_id\x18\x12 \x01(\tH\x06R\x18deductionLedgerRequestId\x88\x01\x01\x12$\n" +
+	"\vresolved_by\x18\x13 \x01(\tH\aR\n" +
+	"resolvedBy\x88\x01\x01\x12@\n" +
+	"\vresolved_at\x18\x14 \x01(\v2\x1a.google.protobuf.TimestampH\bR\n" +
+	"resolvedAt\x88\x01\x01\x129\n" +
+	"\n" +
+	"created_at\x18\x15 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\x16 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x13\n" +
+	"\x11_agent_profile_idB\f\n" +
+	"\n" +
+	"_opened_byB\n" +
+	"\n" +
+	"\b_detailsB\r\n" +
+	"\v_resolutionB\x0f\n" +
+	"\r_hold_outcomeB\x12\n" +
+	"\x10_resolution_noteB\x1e\n" +
+	"\x1c_deduction_ledger_request_idB\x0e\n" +
+	"\f_resolved_byB\x0e\n" +
+	"\f_resolved_at\"\xd9\x02\n" +
 	"\x05Quote\x129\n" +
 	"\rfrom_currency\x18\x01 \x01(\x0e2\x14.payment.v1.CurrencyR\ffromCurrency\x12\x1f\n" +
 	"\vfrom_amount\x18\x02 \x01(\x03R\n" +
@@ -2120,7 +3040,7 @@ const file_payment_v1_shared_message_proto_rawDesc = "" +
 	"\x14OPERATOR_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15OPERATOR_ORANGE_MONEY\x10\x01\x12\x13\n" +
 	"\x0fOPERATOR_M_PESA\x10\x02\x12\x19\n" +
-	"\x15OPERATOR_AIRTEL_MONEY\x10\x03*\xfe\x02\n" +
+	"\x15OPERATOR_AIRTEL_MONEY\x10\x03*\x9c\x03\n" +
 	"\x0eTransferStatus\x12\x1f\n" +
 	"\x1bTRANSFER_STATUS_UNSPECIFIED\x10\x00\x12!\n" +
 	"\x1dTRANSFER_STATUS_PENDING_MATCH\x10\x01\x12*\n" +
@@ -2131,14 +3051,46 @@ const file_payment_v1_shared_message_proto_rawDesc = "" +
 	"\x14TRANSFER_STATUS_DONE\x10\x06\x12\x1d\n" +
 	"\x19TRANSFER_STATUS_CANCELLED\x10\a\x12\x1b\n" +
 	"\x17TRANSFER_STATUS_EXPIRED\x10\b\x12\x1c\n" +
-	"\x18TRANSFER_STATUS_DISPUTED\x10\t*\xae\x01\n" +
+	"\x18TRANSFER_STATUS_DISPUTED\x10\t\x12\x1c\n" +
+	"\x18TRANSFER_STATUS_REFUNDED\x10\n" +
+	"*\xae\x01\n" +
 	"\vOfferStatus\x12\x1c\n" +
 	"\x18OFFER_STATUS_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14OFFER_STATUS_OFFERED\x10\x01\x12\x19\n" +
 	"\x15OFFER_STATUS_ACCEPTED\x10\x02\x12\x19\n" +
 	"\x15OFFER_STATUS_DECLINED\x10\x03\x12\x17\n" +
 	"\x13OFFER_STATUS_VOIDED\x10\x04\x12\x18\n" +
-	"\x14OFFER_STATUS_EXPIRED\x10\x05B\x9e\x01\n" +
+	"\x14OFFER_STATUS_EXPIRED\x10\x05*\x8f\x01\n" +
+	"\x10CommissionStatus\x12!\n" +
+	"\x1dCOMMISSION_STATUS_UNSPECIFIED\x10\x00\x12\x1d\n" +
+	"\x19COMMISSION_STATUS_ACCRUED\x10\x01\x12\x1d\n" +
+	"\x19COMMISSION_STATUS_BATCHED\x10\x02\x12\x1a\n" +
+	"\x16COMMISSION_STATUS_PAID\x10\x03*z\n" +
+	"\fDisputeParty\x12\x1d\n" +
+	"\x19DISPUTE_PARTY_UNSPECIFIED\x10\x00\x12\x18\n" +
+	"\x14DISPUTE_PARTY_CLIENT\x10\x01\x12\x17\n" +
+	"\x13DISPUTE_PARTY_AGENT\x10\x02\x12\x18\n" +
+	"\x14DISPUTE_PARTY_SYSTEM\x10\x03*\xb8\x01\n" +
+	"\rDisputeReason\x12\x1e\n" +
+	"\x1aDISPUTE_REASON_UNSPECIFIED\x10\x00\x12!\n" +
+	"\x1dDISPUTE_REASON_AGENT_NOT_PAID\x10\x01\x12)\n" +
+	"%DISPUTE_REASON_RECIPIENT_NOT_RECEIVED\x10\x02\x12\x1f\n" +
+	"\x1bDISPUTE_REASON_CLIENT_FRAUD\x10\x03\x12\x18\n" +
+	"\x14DISPUTE_REASON_OTHER\x10\x04*e\n" +
+	"\rDisputeStatus\x12\x1e\n" +
+	"\x1aDISPUTE_STATUS_UNSPECIFIED\x10\x00\x12\x17\n" +
+	"\x13DISPUTE_STATUS_OPEN\x10\x01\x12\x1b\n" +
+	"\x17DISPUTE_STATUS_RESOLVED\x10\x02*\xc5\x01\n" +
+	"\x11DisputeResolution\x12\"\n" +
+	"\x1eDISPUTE_RESOLUTION_UNSPECIFIED\x10\x00\x12\"\n" +
+	"\x1eDISPUTE_RESOLUTION_AGENT_RIGHT\x10\x01\x12\"\n" +
+	"\x1eDISPUTE_RESOLUTION_AGENT_FAULT\x10\x02\x12#\n" +
+	"\x1fDISPUTE_RESOLUTION_CLIENT_FRAUD\x10\x03\x12\x1f\n" +
+	"\x1bDISPUTE_RESOLUTION_NO_FAULT\x10\x04*a\n" +
+	"\vHoldOutcome\x12\x1c\n" +
+	"\x18HOLD_OUTCOME_UNSPECIFIED\x10\x00\x12\x19\n" +
+	"\x15HOLD_OUTCOME_RELEASED\x10\x01\x12\x19\n" +
+	"\x15HOLD_OUTCOME_CAPTURED\x10\x02B\x9e\x01\n" +
 	"\x0ecom.payment.v1B\x12SharedMessageProtoP\x01Z/mokapay.app/proto/codebase/payment/v1;paymentv1\xa2\x02\x03PXX\xaa\x02\n" +
 	"Payment.V1\xca\x02\n" +
 	"Payment\\V1\xe2\x02\x16Payment\\V1\\GPBMetadata\xea\x02\vPayment::V1b\x06proto3"
@@ -2155,8 +3107,8 @@ func file_payment_v1_shared_message_proto_rawDescGZIP() []byte {
 	return file_payment_v1_shared_message_proto_rawDescData
 }
 
-var file_payment_v1_shared_message_proto_enumTypes = make([]protoimpl.EnumInfo, 10)
-var file_payment_v1_shared_message_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_payment_v1_shared_message_proto_enumTypes = make([]protoimpl.EnumInfo, 16)
+var file_payment_v1_shared_message_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_payment_v1_shared_message_proto_goTypes = []any{
 	(AgentProfileStatus)(0),       // 0: payment.v1.AgentProfileStatus
 	(AgentLevel)(0),               // 1: payment.v1.AgentLevel
@@ -2168,64 +3120,91 @@ var file_payment_v1_shared_message_proto_goTypes = []any{
 	(Operator)(0),                 // 7: payment.v1.Operator
 	(TransferStatus)(0),           // 8: payment.v1.TransferStatus
 	(OfferStatus)(0),              // 9: payment.v1.OfferStatus
-	(*AgentProfile)(nil),          // 10: payment.v1.AgentProfile
-	(*LedgerRequest)(nil),         // 11: payment.v1.LedgerRequest
-	(*LedgerLine)(nil),            // 12: payment.v1.LedgerLine
-	(*AgentPaymentDetails)(nil),   // 13: payment.v1.AgentPaymentDetails
-	(*Transfer)(nil),              // 14: payment.v1.Transfer
-	(*TransferEvent)(nil),         // 15: payment.v1.TransferEvent
-	(*Offer)(nil),                 // 16: payment.v1.Offer
-	(*Beneficiary)(nil),           // 17: payment.v1.Beneficiary
-	(*AgentWallet)(nil),           // 18: payment.v1.AgentWallet
-	(*Quote)(nil),                 // 19: payment.v1.Quote
-	(*timestamppb.Timestamp)(nil), // 20: google.protobuf.Timestamp
+	(CommissionStatus)(0),         // 10: payment.v1.CommissionStatus
+	(DisputeParty)(0),             // 11: payment.v1.DisputeParty
+	(DisputeReason)(0),            // 12: payment.v1.DisputeReason
+	(DisputeStatus)(0),            // 13: payment.v1.DisputeStatus
+	(DisputeResolution)(0),        // 14: payment.v1.DisputeResolution
+	(HoldOutcome)(0),              // 15: payment.v1.HoldOutcome
+	(*AgentProfile)(nil),          // 16: payment.v1.AgentProfile
+	(*LedgerRequest)(nil),         // 17: payment.v1.LedgerRequest
+	(*LedgerLine)(nil),            // 18: payment.v1.LedgerLine
+	(*AgentPaymentDetails)(nil),   // 19: payment.v1.AgentPaymentDetails
+	(*Transfer)(nil),              // 20: payment.v1.Transfer
+	(*TransferEvent)(nil),         // 21: payment.v1.TransferEvent
+	(*Offer)(nil),                 // 22: payment.v1.Offer
+	(*Beneficiary)(nil),           // 23: payment.v1.Beneficiary
+	(*AgentWallet)(nil),           // 24: payment.v1.AgentWallet
+	(*Commission)(nil),            // 25: payment.v1.Commission
+	(*CommissionBatch)(nil),       // 26: payment.v1.CommissionBatch
+	(*Dispute)(nil),               // 27: payment.v1.Dispute
+	(*Quote)(nil),                 // 28: payment.v1.Quote
+	(*timestamppb.Timestamp)(nil), // 29: google.protobuf.Timestamp
 }
 var file_payment_v1_shared_message_proto_depIdxs = []int32{
 	0,  // 0: payment.v1.AgentProfile.status:type_name -> payment.v1.AgentProfileStatus
 	1,  // 1: payment.v1.AgentProfile.level:type_name -> payment.v1.AgentLevel
-	20, // 2: payment.v1.AgentProfile.created_at:type_name -> google.protobuf.Timestamp
-	20, // 3: payment.v1.AgentProfile.updated_at:type_name -> google.protobuf.Timestamp
+	29, // 2: payment.v1.AgentProfile.created_at:type_name -> google.protobuf.Timestamp
+	29, // 3: payment.v1.AgentProfile.updated_at:type_name -> google.protobuf.Timestamp
 	2,  // 4: payment.v1.LedgerRequest.type:type_name -> payment.v1.LedgerRequestType
 	4,  // 5: payment.v1.LedgerRequest.direction:type_name -> payment.v1.LedgerDirection
 	3,  // 6: payment.v1.LedgerRequest.status:type_name -> payment.v1.LedgerRequestStatus
 	5,  // 7: payment.v1.LedgerRequest.reference_entity_type:type_name -> payment.v1.LedgerReferenceType
-	20, // 8: payment.v1.LedgerRequest.decided_at:type_name -> google.protobuf.Timestamp
-	20, // 9: payment.v1.LedgerRequest.created_at:type_name -> google.protobuf.Timestamp
-	20, // 10: payment.v1.LedgerRequest.updated_at:type_name -> google.protobuf.Timestamp
-	20, // 11: payment.v1.LedgerLine.created_at:type_name -> google.protobuf.Timestamp
+	29, // 8: payment.v1.LedgerRequest.decided_at:type_name -> google.protobuf.Timestamp
+	29, // 9: payment.v1.LedgerRequest.created_at:type_name -> google.protobuf.Timestamp
+	29, // 10: payment.v1.LedgerRequest.updated_at:type_name -> google.protobuf.Timestamp
+	29, // 11: payment.v1.LedgerLine.created_at:type_name -> google.protobuf.Timestamp
 	7,  // 12: payment.v1.AgentPaymentDetails.operator:type_name -> payment.v1.Operator
 	7,  // 13: payment.v1.Transfer.recipient_operator:type_name -> payment.v1.Operator
 	6,  // 14: payment.v1.Transfer.from_currency:type_name -> payment.v1.Currency
 	7,  // 15: payment.v1.Transfer.from_operator:type_name -> payment.v1.Operator
 	6,  // 16: payment.v1.Transfer.to_currency:type_name -> payment.v1.Currency
 	8,  // 17: payment.v1.Transfer.status:type_name -> payment.v1.TransferStatus
-	13, // 18: payment.v1.Transfer.agent_payment_details:type_name -> payment.v1.AgentPaymentDetails
-	20, // 19: payment.v1.Transfer.created_at:type_name -> google.protobuf.Timestamp
-	20, // 20: payment.v1.Transfer.updated_at:type_name -> google.protobuf.Timestamp
+	19, // 18: payment.v1.Transfer.agent_payment_details:type_name -> payment.v1.AgentPaymentDetails
+	29, // 19: payment.v1.Transfer.created_at:type_name -> google.protobuf.Timestamp
+	29, // 20: payment.v1.Transfer.updated_at:type_name -> google.protobuf.Timestamp
 	8,  // 21: payment.v1.TransferEvent.from_status:type_name -> payment.v1.TransferStatus
 	8,  // 22: payment.v1.TransferEvent.to_status:type_name -> payment.v1.TransferStatus
-	20, // 23: payment.v1.TransferEvent.created_at:type_name -> google.protobuf.Timestamp
+	29, // 23: payment.v1.TransferEvent.created_at:type_name -> google.protobuf.Timestamp
 	9,  // 24: payment.v1.Offer.status:type_name -> payment.v1.OfferStatus
-	20, // 25: payment.v1.Offer.expires_at:type_name -> google.protobuf.Timestamp
-	20, // 26: payment.v1.Offer.decided_at:type_name -> google.protobuf.Timestamp
-	20, // 27: payment.v1.Offer.created_at:type_name -> google.protobuf.Timestamp
+	29, // 25: payment.v1.Offer.expires_at:type_name -> google.protobuf.Timestamp
+	29, // 26: payment.v1.Offer.decided_at:type_name -> google.protobuf.Timestamp
+	29, // 27: payment.v1.Offer.created_at:type_name -> google.protobuf.Timestamp
 	6,  // 28: payment.v1.Offer.from_currency:type_name -> payment.v1.Currency
 	7,  // 29: payment.v1.Offer.from_operator:type_name -> payment.v1.Operator
 	6,  // 30: payment.v1.Offer.to_currency:type_name -> payment.v1.Currency
 	7,  // 31: payment.v1.Offer.recipient_operator:type_name -> payment.v1.Operator
 	7,  // 32: payment.v1.Beneficiary.operator:type_name -> payment.v1.Operator
-	20, // 33: payment.v1.Beneficiary.created_at:type_name -> google.protobuf.Timestamp
-	20, // 34: payment.v1.Beneficiary.updated_at:type_name -> google.protobuf.Timestamp
+	29, // 33: payment.v1.Beneficiary.created_at:type_name -> google.protobuf.Timestamp
+	29, // 34: payment.v1.Beneficiary.updated_at:type_name -> google.protobuf.Timestamp
 	7,  // 35: payment.v1.AgentWallet.operator:type_name -> payment.v1.Operator
-	20, // 36: payment.v1.AgentWallet.created_at:type_name -> google.protobuf.Timestamp
-	20, // 37: payment.v1.AgentWallet.updated_at:type_name -> google.protobuf.Timestamp
-	6,  // 38: payment.v1.Quote.from_currency:type_name -> payment.v1.Currency
-	6,  // 39: payment.v1.Quote.to_currency:type_name -> payment.v1.Currency
-	40, // [40:40] is the sub-list for method output_type
-	40, // [40:40] is the sub-list for method input_type
-	40, // [40:40] is the sub-list for extension type_name
-	40, // [40:40] is the sub-list for extension extendee
-	0,  // [0:40] is the sub-list for field type_name
+	29, // 36: payment.v1.AgentWallet.created_at:type_name -> google.protobuf.Timestamp
+	29, // 37: payment.v1.AgentWallet.updated_at:type_name -> google.protobuf.Timestamp
+	6,  // 38: payment.v1.Commission.fee_currency:type_name -> payment.v1.Currency
+	6,  // 39: payment.v1.Commission.margin_currency:type_name -> payment.v1.Currency
+	10, // 40: payment.v1.Commission.status:type_name -> payment.v1.CommissionStatus
+	29, // 41: payment.v1.Commission.created_at:type_name -> google.protobuf.Timestamp
+	29, // 42: payment.v1.Commission.updated_at:type_name -> google.protobuf.Timestamp
+	10, // 43: payment.v1.CommissionBatch.status:type_name -> payment.v1.CommissionStatus
+	29, // 44: payment.v1.CommissionBatch.created_at:type_name -> google.protobuf.Timestamp
+	29, // 45: payment.v1.CommissionBatch.updated_at:type_name -> google.protobuf.Timestamp
+	11, // 46: payment.v1.Dispute.opened_by_party:type_name -> payment.v1.DisputeParty
+	12, // 47: payment.v1.Dispute.reason:type_name -> payment.v1.DisputeReason
+	8,  // 48: payment.v1.Dispute.from_status:type_name -> payment.v1.TransferStatus
+	6,  // 49: payment.v1.Dispute.refund_currency:type_name -> payment.v1.Currency
+	13, // 50: payment.v1.Dispute.status:type_name -> payment.v1.DisputeStatus
+	14, // 51: payment.v1.Dispute.resolution:type_name -> payment.v1.DisputeResolution
+	15, // 52: payment.v1.Dispute.hold_outcome:type_name -> payment.v1.HoldOutcome
+	29, // 53: payment.v1.Dispute.resolved_at:type_name -> google.protobuf.Timestamp
+	29, // 54: payment.v1.Dispute.created_at:type_name -> google.protobuf.Timestamp
+	29, // 55: payment.v1.Dispute.updated_at:type_name -> google.protobuf.Timestamp
+	6,  // 56: payment.v1.Quote.from_currency:type_name -> payment.v1.Currency
+	6,  // 57: payment.v1.Quote.to_currency:type_name -> payment.v1.Currency
+	58, // [58:58] is the sub-list for method output_type
+	58, // [58:58] is the sub-list for method input_type
+	58, // [58:58] is the sub-list for extension type_name
+	58, // [58:58] is the sub-list for extension extendee
+	0,  // [0:58] is the sub-list for field type_name
 }
 
 func init() { file_payment_v1_shared_message_proto_init() }
@@ -2240,13 +3219,15 @@ func file_payment_v1_shared_message_proto_init() {
 	file_payment_v1_shared_message_proto_msgTypes[6].OneofWrappers = []any{}
 	file_payment_v1_shared_message_proto_msgTypes[7].OneofWrappers = []any{}
 	file_payment_v1_shared_message_proto_msgTypes[9].OneofWrappers = []any{}
+	file_payment_v1_shared_message_proto_msgTypes[11].OneofWrappers = []any{}
+	file_payment_v1_shared_message_proto_msgTypes[12].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_payment_v1_shared_message_proto_rawDesc), len(file_payment_v1_shared_message_proto_rawDesc)),
-			NumEnums:      10,
-			NumMessages:   10,
+			NumEnums:      16,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

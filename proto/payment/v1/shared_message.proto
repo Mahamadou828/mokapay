@@ -135,7 +135,10 @@ enum TransferStatus {
   TRANSFER_STATUS_DONE = 6;
   TRANSFER_STATUS_CANCELLED = 7;
   TRANSFER_STATUS_EXPIRED = 8;
-  TRANSFER_STATUS_DISPUTED = 9;  // reserved, unreachable v1
+  TRANSFER_STATUS_DISPUTED = 9;
+  // The dispute path's own terminal: agent at fault, guarantee captured,
+  // client refunded from it.
+  TRANSFER_STATUS_REFUNDED = 10;
 }
 
 enum OfferStatus {
@@ -250,6 +253,133 @@ message AgentWallet {
   google.protobuf.Timestamp updated_at = 7;
   bool accepts_usd = 8;
   bool accepts_cdf = 9;
+}
+
+// ---------------------------------------------------------------------------
+// Commissions (values mirror the commission_status DB enum — conversion is
+// a plain cast).
+
+// Derived, never stored: unbatched is `accrued`, batched becomes `paid`
+// once the batch's ledger request settles.
+enum CommissionStatus {
+  COMMISSION_STATUS_UNSPECIFIED = 0;
+  COMMISSION_STATUS_ACCRUED = 1;
+  COMMISSION_STATUS_BATCHED = 2;
+  COMMISSION_STATUS_PAID = 3;
+}
+
+// One transfer's accrual: the 60/30/10 split of the fee (flat for every
+// agent level) plus the FX margin, which is 100% platform. The fee shares
+// are in the transfer's from_currency and the margin in its to_currency —
+// they are deliberately never added together.
+message Commission {
+  string id = 1;
+  string transfer_id = 2;
+  string transfer_reference = 3;
+  string agent_profile_id = 4;
+  Currency fee_currency = 5;
+  int64 fee_amount = 6;
+  int64 agent_amount = 7;            // 60% of the fee
+  int64 platform_amount = 8;         // 30% of the fee
+  int64 guarantee_fund_amount = 9;   // the remaining ~10%
+  Currency margin_currency = 10;
+  int64 margin_amount = 11;          // 100% platform, on top
+  // What the weekly batch credits: the agent's share in the guarantee
+  // balance's denomination (USD minor units), converted at the transfer's
+  // own locked rate.
+  int64 payable_amount = 12;
+  string accounting_week = 13;       // YYYY-MM-DD, the Tuesday opening the week
+  optional string batch_id = 14;     // absent until the weekly run picks it up
+  CommissionStatus status = 15;
+  google.protobuf.Timestamp created_at = 16;
+  google.protobuf.Timestamp updated_at = 17;
+}
+
+// One agent's weekly payout: the accruals of an accounting week grouped
+// behind a single `commission` ledger request. Approving that request is
+// what actually moves the balance.
+message CommissionBatch {
+  string id = 1;
+  string agent_profile_id = 2;
+  string accounting_week = 3;   // YYYY-MM-DD
+  int32 commission_count = 4;
+  int64 total_amount = 5;       // USD minor units
+  string ledger_request_id = 6;
+  string ledger_request_ref = 7;  // COM-2026-000042
+  CommissionStatus status = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}
+
+// ---------------------------------------------------------------------------
+// Disputes (values mirror the dispute_* and hold_outcome DB enums).
+
+enum DisputeParty {
+  DISPUTE_PARTY_UNSPECIFIED = 0;
+  DISPUTE_PARTY_CLIENT = 1;
+  DISPUTE_PARTY_AGENT = 2;
+  DISPUTE_PARTY_SYSTEM = 3;  // the payout-timeout auto-dispute
+}
+
+enum DisputeReason {
+  DISPUTE_REASON_UNSPECIFIED = 0;
+  DISPUTE_REASON_AGENT_NOT_PAID = 1;
+  DISPUTE_REASON_RECIPIENT_NOT_RECEIVED = 2;
+  DISPUTE_REASON_CLIENT_FRAUD = 3;
+  DISPUTE_REASON_OTHER = 4;
+}
+
+enum DisputeStatus {
+  DISPUTE_STATUS_UNSPECIFIED = 0;
+  DISPUTE_STATUS_OPEN = 1;
+  DISPUTE_STATUS_RESOLVED = 2;
+}
+
+// The admin ruling. Each value fixes the whole money outcome: hold
+// released or captured, client refunded or not, and where the transfer
+// lands.
+enum DisputeResolution {
+  DISPUTE_RESOLUTION_UNSPECIFIED = 0;
+  DISPUTE_RESOLUTION_AGENT_RIGHT = 1;   // release, no refund, done
+  DISPUTE_RESOLUTION_AGENT_FAULT = 2;   // capture, refund the client, refunded
+  DISPUTE_RESOLUTION_CLIENT_FRAUD = 3;  // release, no refund, done
+  DISPUTE_RESOLUTION_NO_FAULT = 4;      // release, no refund, cancelled
+}
+
+enum HoldOutcome {
+  HOLD_OUTCOME_UNSPECIFIED = 0;
+  HOLD_OUTCOME_RELEASED = 1;
+  HOLD_OUTCOME_CAPTURED = 2;
+}
+
+// A contested transfer. While the dispute is open the transfer sits in
+// `disputed` and the agent's guarantee STAYS held — it is the collateral
+// that funds the fix.
+message Dispute {
+  string id = 1;
+  string transfer_id = 2;
+  string transfer_reference = 3;
+  string client_id = 4;
+  optional string agent_profile_id = 5;
+  DisputeParty opened_by_party = 6;
+  optional string opened_by = 7;   // absent = system auto-dispute
+  DisputeReason reason = 8;
+  optional string details = 9;
+  // Snapshot taken when the transfer froze.
+  TransferStatus from_status = 10;
+  int64 hold_amount = 11;          // USD minor units, frozen while open
+  Currency refund_currency = 12;
+  int64 refund_amount = 13;        // what the client would be owed back
+  DisputeStatus status = 14;
+  optional DisputeResolution resolution = 15;
+  optional HoldOutcome hold_outcome = 16;
+  optional string resolution_note = 17;
+  // The capture's ledger request, on agent_fault.
+  optional string deduction_ledger_request_id = 18;
+  optional string resolved_by = 19;
+  optional google.protobuf.Timestamp resolved_at = 20;
+  google.protobuf.Timestamp created_at = 21;
+  google.protobuf.Timestamp updated_at = 22;
 }
 
 // A stateless quote: nothing persisted — the rate locks at

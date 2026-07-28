@@ -23,8 +23,9 @@ type Config struct {
 		MaxEventWorkers int
 	}
 	Client struct {
-		UserGRPCPort string
-		FileGRPCPort string
+		UserGRPCPort       string
+		FileGRPCPort       string
+		ComplianceGRPCPort string
 	}
 	Redis struct {
 		Host string
@@ -46,7 +47,20 @@ type Config struct {
 		MaxRounds        int32
 		MatchDeadline    time.Duration
 		PaymentTimeout   time.Duration
+		PayoutTimeout    time.Duration
 		AutoConfirmAfter time.Duration
+	}
+	Commission struct {
+		// The weekly payout slot (UTC). Accounting weeks run Tue→Mon and
+		// are settled the following Tuesday.
+		PayoutWeekday time.Weekday
+		PayoutHour    int
+	}
+	Compliance struct {
+		// Timezone is the IANA zone the AML night-time window
+		// (23:00–05:00 local) is counted in — the market's clock, not the
+		// server's UTC.
+		Timezone string
 	}
 	Deposit struct {
 		// ChannelsJSON is the official receiving-account catalogue (JSON
@@ -79,6 +93,7 @@ func newConfig() Config {
 
 	cfg.Client.UserGRPCPort = config.GetEnv("USER_GRPC_PORT", "localhost:50051")
 	cfg.Client.FileGRPCPort = config.GetEnv("FILE_GRPC_PORT", "localhost:50052")
+	cfg.Client.ComplianceGRPCPort = config.GetEnv("COMPLIANCE_GRPC_PORT", "localhost:50054")
 
 	cfg.Redis.Host = config.GetEnv("REDIS_HOST", "localhost")
 	cfg.Redis.Port = config.GetEnv("REDIS_PORT", "6379")
@@ -99,7 +114,21 @@ func newConfig() Config {
 	cfg.Transfer.MaxRounds = int32(config.GetEnvAsInt("MATCH_MAX_ROUNDS", 10))
 	cfg.Transfer.MatchDeadline = config.GetEnvAsTimeDuration("MATCH_DEADLINE", 30*time.Minute)
 	cfg.Transfer.PaymentTimeout = config.GetEnvAsTimeDuration("PAYMENT_TIMEOUT", 24*time.Hour)
+	// The agent's payout window, counted from the client's funding proof.
+	// Shorter than the client's: at this point the client is already out
+	// their money, and running out auto-disputes rather than cancels.
+	cfg.Transfer.PayoutTimeout = config.GetEnvAsTimeDuration("PAYOUT_TIMEOUT", 6*time.Hour)
 	cfg.Transfer.AutoConfirmAfter = config.GetEnvAsTimeDuration("AUTO_CONFIRM_AFTER", 24*time.Hour)
+
+	// Tuesday 06:00 UTC — the plan's weekly payout slot; the run itself is
+	// idempotent, so the exact moment is operational, not load-bearing.
+	cfg.Commission.PayoutWeekday = time.Tuesday
+	cfg.Commission.PayoutHour = config.GetEnvAsInt("COMMISSION_PAYOUT_HOUR", 6)
+
+	// The DRC market's own clock. Only the AML night-time count reads it
+	// today; an unparseable zone is Postgres's error to raise, on the query
+	// that uses it, rather than a silent fallback to UTC.
+	cfg.Compliance.Timezone = config.GetEnv("COMPLIANCE_TIMEZONE", "Africa/Kinshasa")
 
 	// Default: the one account that exists today (design G2). Add entries
 	// as real receiving accounts open — the client renders whatever the

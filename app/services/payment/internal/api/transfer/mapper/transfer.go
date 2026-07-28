@@ -65,6 +65,7 @@ var statusFromProto = map[paymentv1.TransferStatus]transfer.Status{
 	paymentv1.TransferStatus_TRANSFER_STATUS_CANCELLED:                   transfer.StatusCancelled,
 	paymentv1.TransferStatus_TRANSFER_STATUS_EXPIRED:                     transfer.StatusExpired,
 	paymentv1.TransferStatus_TRANSFER_STATUS_DISPUTED:                    transfer.StatusDisputed,
+	paymentv1.TransferStatus_TRANSFER_STATUS_REFUNDED:                    transfer.StatusRefunded,
 }
 
 var statusToProto = map[transfer.Status]paymentv1.TransferStatus{
@@ -77,6 +78,7 @@ var statusToProto = map[transfer.Status]paymentv1.TransferStatus{
 	transfer.StatusCancelled:                 paymentv1.TransferStatus_TRANSFER_STATUS_CANCELLED,
 	transfer.StatusExpired:                   paymentv1.TransferStatus_TRANSFER_STATUS_EXPIRED,
 	transfer.StatusDisputed:                  paymentv1.TransferStatus_TRANSFER_STATUS_DISPUTED,
+	transfer.StatusRefunded:                  paymentv1.TransferStatus_TRANSFER_STATUS_REFUNDED,
 }
 
 func StatusFromProto(s paymentv1.TransferStatus) transfer.Status {

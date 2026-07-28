@@ -22,6 +22,282 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type ListDisputesRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Status         *DisputeStatus         `protobuf:"varint,1,opt,name=status,proto3,enum=payment.v1.DisputeStatus,oneof" json:"status,omitempty"`
+	TransferId     *string                `protobuf:"bytes,2,opt,name=transfer_id,json=transferId,proto3,oneof" json:"transfer_id,omitempty"`
+	AgentProfileId *string                `protobuf:"bytes,3,opt,name=agent_profile_id,json=agentProfileId,proto3,oneof" json:"agent_profile_id,omitempty"`
+	Limit          int32                  `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"` // 0 = server default
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ListDisputesRequest) Reset() {
+	*x = ListDisputesRequest{}
+	mi := &file_payment_v1_admin_service_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListDisputesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListDisputesRequest) ProtoMessage() {}
+
+func (x *ListDisputesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_payment_v1_admin_service_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListDisputesRequest.ProtoReflect.Descriptor instead.
+func (*ListDisputesRequest) Descriptor() ([]byte, []int) {
+	return file_payment_v1_admin_service_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *ListDisputesRequest) GetStatus() DisputeStatus {
+	if x != nil && x.Status != nil {
+		return *x.Status
+	}
+	return DisputeStatus_DISPUTE_STATUS_UNSPECIFIED
+}
+
+func (x *ListDisputesRequest) GetTransferId() string {
+	if x != nil && x.TransferId != nil {
+		return *x.TransferId
+	}
+	return ""
+}
+
+func (x *ListDisputesRequest) GetAgentProfileId() string {
+	if x != nil && x.AgentProfileId != nil {
+		return *x.AgentProfileId
+	}
+	return ""
+}
+
+func (x *ListDisputesRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+type ListDisputesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Disputes      []*Dispute             `protobuf:"bytes,1,rep,name=disputes,proto3" json:"disputes,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListDisputesResponse) Reset() {
+	*x = ListDisputesResponse{}
+	mi := &file_payment_v1_admin_service_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListDisputesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListDisputesResponse) ProtoMessage() {}
+
+func (x *ListDisputesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_payment_v1_admin_service_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListDisputesResponse.ProtoReflect.Descriptor instead.
+func (*ListDisputesResponse) Descriptor() ([]byte, []int) {
+	return file_payment_v1_admin_service_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *ListDisputesResponse) GetDisputes() []*Dispute {
+	if x != nil {
+		return x.Disputes
+	}
+	return nil
+}
+
+type ResolveDisputeRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Resolution    DisputeResolution      `protobuf:"varint,2,opt,name=resolution,proto3,enum=payment.v1.DisputeResolution" json:"resolution,omitempty"`
+	Note          *string                `protobuf:"bytes,3,opt,name=note,proto3,oneof" json:"note,omitempty"` // lands on the dispute and the transfer timeline
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResolveDisputeRequest) Reset() {
+	*x = ResolveDisputeRequest{}
+	mi := &file_payment_v1_admin_service_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResolveDisputeRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResolveDisputeRequest) ProtoMessage() {}
+
+func (x *ResolveDisputeRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_payment_v1_admin_service_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResolveDisputeRequest.ProtoReflect.Descriptor instead.
+func (*ResolveDisputeRequest) Descriptor() ([]byte, []int) {
+	return file_payment_v1_admin_service_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *ResolveDisputeRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ResolveDisputeRequest) GetResolution() DisputeResolution {
+	if x != nil {
+		return x.Resolution
+	}
+	return DisputeResolution_DISPUTE_RESOLUTION_UNSPECIFIED
+}
+
+func (x *ResolveDisputeRequest) GetNote() string {
+	if x != nil && x.Note != nil {
+		return *x.Note
+	}
+	return ""
+}
+
+type ListCommissionBatchesRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	AgentProfileId *string                `protobuf:"bytes,1,opt,name=agent_profile_id,json=agentProfileId,proto3,oneof" json:"agent_profile_id,omitempty"`
+	Status         *CommissionStatus      `protobuf:"varint,2,opt,name=status,proto3,enum=payment.v1.CommissionStatus,oneof" json:"status,omitempty"`
+	Limit          int32                  `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"` // 0 = server default
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ListCommissionBatchesRequest) Reset() {
+	*x = ListCommissionBatchesRequest{}
+	mi := &file_payment_v1_admin_service_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListCommissionBatchesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListCommissionBatchesRequest) ProtoMessage() {}
+
+func (x *ListCommissionBatchesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_payment_v1_admin_service_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListCommissionBatchesRequest.ProtoReflect.Descriptor instead.
+func (*ListCommissionBatchesRequest) Descriptor() ([]byte, []int) {
+	return file_payment_v1_admin_service_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *ListCommissionBatchesRequest) GetAgentProfileId() string {
+	if x != nil && x.AgentProfileId != nil {
+		return *x.AgentProfileId
+	}
+	return ""
+}
+
+func (x *ListCommissionBatchesRequest) GetStatus() CommissionStatus {
+	if x != nil && x.Status != nil {
+		return *x.Status
+	}
+	return CommissionStatus_COMMISSION_STATUS_UNSPECIFIED
+}
+
+func (x *ListCommissionBatchesRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+type ListCommissionBatchesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Batches       []*CommissionBatch     `protobuf:"bytes,1,rep,name=batches,proto3" json:"batches,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListCommissionBatchesResponse) Reset() {
+	*x = ListCommissionBatchesResponse{}
+	mi := &file_payment_v1_admin_service_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListCommissionBatchesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListCommissionBatchesResponse) ProtoMessage() {}
+
+func (x *ListCommissionBatchesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_payment_v1_admin_service_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListCommissionBatchesResponse.ProtoReflect.Descriptor instead.
+func (*ListCommissionBatchesResponse) Descriptor() ([]byte, []int) {
+	return file_payment_v1_admin_service_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *ListCommissionBatchesResponse) GetBatches() []*CommissionBatch {
+	if x != nil {
+		return x.Batches
+	}
+	return nil
+}
+
 type ListAllTransfersRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Status        *TransferStatus        `protobuf:"varint,1,opt,name=status,proto3,enum=payment.v1.TransferStatus,oneof" json:"status,omitempty"`
@@ -32,7 +308,7 @@ type ListAllTransfersRequest struct {
 
 func (x *ListAllTransfersRequest) Reset() {
 	*x = ListAllTransfersRequest{}
-	mi := &file_payment_v1_admin_service_proto_msgTypes[0]
+	mi := &file_payment_v1_admin_service_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -44,7 +320,7 @@ func (x *ListAllTransfersRequest) String() string {
 func (*ListAllTransfersRequest) ProtoMessage() {}
 
 func (x *ListAllTransfersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_payment_v1_admin_service_proto_msgTypes[0]
+	mi := &file_payment_v1_admin_service_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -57,7 +333,7 @@ func (x *ListAllTransfersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAllTransfersRequest.ProtoReflect.Descriptor instead.
 func (*ListAllTransfersRequest) Descriptor() ([]byte, []int) {
-	return file_payment_v1_admin_service_proto_rawDescGZIP(), []int{0}
+	return file_payment_v1_admin_service_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *ListAllTransfersRequest) GetStatus() TransferStatus {
@@ -84,7 +360,7 @@ type CancelTransferAdminRequest struct {
 
 func (x *CancelTransferAdminRequest) Reset() {
 	*x = CancelTransferAdminRequest{}
-	mi := &file_payment_v1_admin_service_proto_msgTypes[1]
+	mi := &file_payment_v1_admin_service_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -96,7 +372,7 @@ func (x *CancelTransferAdminRequest) String() string {
 func (*CancelTransferAdminRequest) ProtoMessage() {}
 
 func (x *CancelTransferAdminRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_payment_v1_admin_service_proto_msgTypes[1]
+	mi := &file_payment_v1_admin_service_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -109,7 +385,7 @@ func (x *CancelTransferAdminRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelTransferAdminRequest.ProtoReflect.Descriptor instead.
 func (*CancelTransferAdminRequest) Descriptor() ([]byte, []int) {
-	return file_payment_v1_admin_service_proto_rawDescGZIP(), []int{1}
+	return file_payment_v1_admin_service_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *CancelTransferAdminRequest) GetId() string {
@@ -138,7 +414,7 @@ type CreateAgentProfileRequest struct {
 
 func (x *CreateAgentProfileRequest) Reset() {
 	*x = CreateAgentProfileRequest{}
-	mi := &file_payment_v1_admin_service_proto_msgTypes[2]
+	mi := &file_payment_v1_admin_service_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -150,7 +426,7 @@ func (x *CreateAgentProfileRequest) String() string {
 func (*CreateAgentProfileRequest) ProtoMessage() {}
 
 func (x *CreateAgentProfileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_payment_v1_admin_service_proto_msgTypes[2]
+	mi := &file_payment_v1_admin_service_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -163,7 +439,7 @@ func (x *CreateAgentProfileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateAgentProfileRequest.ProtoReflect.Descriptor instead.
 func (*CreateAgentProfileRequest) Descriptor() ([]byte, []int) {
-	return file_payment_v1_admin_service_proto_rawDescGZIP(), []int{2}
+	return file_payment_v1_admin_service_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *CreateAgentProfileRequest) GetAccountId() string {
@@ -208,7 +484,7 @@ type GetAgentProfileRequest struct {
 
 func (x *GetAgentProfileRequest) Reset() {
 	*x = GetAgentProfileRequest{}
-	mi := &file_payment_v1_admin_service_proto_msgTypes[3]
+	mi := &file_payment_v1_admin_service_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -220,7 +496,7 @@ func (x *GetAgentProfileRequest) String() string {
 func (*GetAgentProfileRequest) ProtoMessage() {}
 
 func (x *GetAgentProfileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_payment_v1_admin_service_proto_msgTypes[3]
+	mi := &file_payment_v1_admin_service_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -233,7 +509,7 @@ func (x *GetAgentProfileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAgentProfileRequest.ProtoReflect.Descriptor instead.
 func (*GetAgentProfileRequest) Descriptor() ([]byte, []int) {
-	return file_payment_v1_admin_service_proto_rawDescGZIP(), []int{3}
+	return file_payment_v1_admin_service_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *GetAgentProfileRequest) GetSelector() isGetAgentProfileRequest_Selector {
@@ -286,7 +562,7 @@ type ActivateAgentProfileRequest struct {
 
 func (x *ActivateAgentProfileRequest) Reset() {
 	*x = ActivateAgentProfileRequest{}
-	mi := &file_payment_v1_admin_service_proto_msgTypes[4]
+	mi := &file_payment_v1_admin_service_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -298,7 +574,7 @@ func (x *ActivateAgentProfileRequest) String() string {
 func (*ActivateAgentProfileRequest) ProtoMessage() {}
 
 func (x *ActivateAgentProfileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_payment_v1_admin_service_proto_msgTypes[4]
+	mi := &file_payment_v1_admin_service_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -311,7 +587,7 @@ func (x *ActivateAgentProfileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ActivateAgentProfileRequest.ProtoReflect.Descriptor instead.
 func (*ActivateAgentProfileRequest) Descriptor() ([]byte, []int) {
-	return file_payment_v1_admin_service_proto_rawDescGZIP(), []int{4}
+	return file_payment_v1_admin_service_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ActivateAgentProfileRequest) GetId() string {
@@ -330,7 +606,7 @@ type SuspendAgentProfileRequest struct {
 
 func (x *SuspendAgentProfileRequest) Reset() {
 	*x = SuspendAgentProfileRequest{}
-	mi := &file_payment_v1_admin_service_proto_msgTypes[5]
+	mi := &file_payment_v1_admin_service_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -342,7 +618,7 @@ func (x *SuspendAgentProfileRequest) String() string {
 func (*SuspendAgentProfileRequest) ProtoMessage() {}
 
 func (x *SuspendAgentProfileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_payment_v1_admin_service_proto_msgTypes[5]
+	mi := &file_payment_v1_admin_service_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -355,7 +631,7 @@ func (x *SuspendAgentProfileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SuspendAgentProfileRequest.ProtoReflect.Descriptor instead.
 func (*SuspendAgentProfileRequest) Descriptor() ([]byte, []int) {
-	return file_payment_v1_admin_service_proto_rawDescGZIP(), []int{5}
+	return file_payment_v1_admin_service_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *SuspendAgentProfileRequest) GetId() string {
@@ -374,7 +650,7 @@ type DeleteAgentProfileRequest struct {
 
 func (x *DeleteAgentProfileRequest) Reset() {
 	*x = DeleteAgentProfileRequest{}
-	mi := &file_payment_v1_admin_service_proto_msgTypes[6]
+	mi := &file_payment_v1_admin_service_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -386,7 +662,7 @@ func (x *DeleteAgentProfileRequest) String() string {
 func (*DeleteAgentProfileRequest) ProtoMessage() {}
 
 func (x *DeleteAgentProfileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_payment_v1_admin_service_proto_msgTypes[6]
+	mi := &file_payment_v1_admin_service_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -399,7 +675,7 @@ func (x *DeleteAgentProfileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteAgentProfileRequest.ProtoReflect.Descriptor instead.
 func (*DeleteAgentProfileRequest) Descriptor() ([]byte, []int) {
-	return file_payment_v1_admin_service_proto_rawDescGZIP(), []int{6}
+	return file_payment_v1_admin_service_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *DeleteAgentProfileRequest) GetId() string {
@@ -414,7 +690,33 @@ var File_payment_v1_admin_service_proto protoreflect.FileDescriptor
 const file_payment_v1_admin_service_proto_rawDesc = "" +
 	"\n" +
 	"\x1epayment/v1/admin_service.proto\x12\n" +
-	"payment.v1\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fpayment/v1/shared_message.proto\x1a!payment/v1/transfer_service.proto\"s\n" +
+	"payment.v1\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fpayment/v1/shared_message.proto\x1a!payment/v1/transfer_service.proto\"\xe8\x01\n" +
+	"\x13ListDisputesRequest\x126\n" +
+	"\x06status\x18\x01 \x01(\x0e2\x19.payment.v1.DisputeStatusH\x00R\x06status\x88\x01\x01\x12$\n" +
+	"\vtransfer_id\x18\x02 \x01(\tH\x01R\n" +
+	"transferId\x88\x01\x01\x12-\n" +
+	"\x10agent_profile_id\x18\x03 \x01(\tH\x02R\x0eagentProfileId\x88\x01\x01\x12\x14\n" +
+	"\x05limit\x18\x04 \x01(\x05R\x05limitB\t\n" +
+	"\a_statusB\x0e\n" +
+	"\f_transfer_idB\x13\n" +
+	"\x11_agent_profile_id\"G\n" +
+	"\x14ListDisputesResponse\x12/\n" +
+	"\bdisputes\x18\x01 \x03(\v2\x13.payment.v1.DisputeR\bdisputes\"\x88\x01\n" +
+	"\x15ResolveDisputeRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12=\n" +
+	"\n" +
+	"resolution\x18\x02 \x01(\x0e2\x1d.payment.v1.DisputeResolutionR\n" +
+	"resolution\x12\x17\n" +
+	"\x04note\x18\x03 \x01(\tH\x00R\x04note\x88\x01\x01B\a\n" +
+	"\x05_note\"\xbe\x01\n" +
+	"\x1cListCommissionBatchesRequest\x12-\n" +
+	"\x10agent_profile_id\x18\x01 \x01(\tH\x00R\x0eagentProfileId\x88\x01\x01\x129\n" +
+	"\x06status\x18\x02 \x01(\x0e2\x1c.payment.v1.CommissionStatusH\x01R\x06status\x88\x01\x01\x12\x14\n" +
+	"\x05limit\x18\x03 \x01(\x05R\x05limitB\x13\n" +
+	"\x11_agent_profile_idB\t\n" +
+	"\a_status\"V\n" +
+	"\x1dListCommissionBatchesResponse\x125\n" +
+	"\abatches\x18\x01 \x03(\v2\x1b.payment.v1.CommissionBatchR\abatches\"s\n" +
 	"\x17ListAllTransfersRequest\x127\n" +
 	"\x06status\x18\x01 \x01(\x0e2\x1a.payment.v1.TransferStatusH\x00R\x06status\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limitB\t\n" +
@@ -442,7 +744,7 @@ const file_payment_v1_admin_service_proto_rawDesc = "" +
 	"\x1aSuspendAgentProfileRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"+\n" +
 	"\x19DeleteAgentProfileRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id2\xf0\x04\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id2\xfb\x06\n" +
 	"\fAdminService\x12U\n" +
 	"\x12CreateAgentProfile\x12%.payment.v1.CreateAgentProfileRequest\x1a\x18.payment.v1.AgentProfile\x12O\n" +
 	"\x0fGetAgentProfile\x12\".payment.v1.GetAgentProfileRequest\x1a\x18.payment.v1.AgentProfile\x12Y\n" +
@@ -450,7 +752,10 @@ const file_payment_v1_admin_service_proto_rawDesc = "" +
 	"\x13SuspendAgentProfile\x12&.payment.v1.SuspendAgentProfileRequest\x1a\x18.payment.v1.AgentProfile\x12S\n" +
 	"\x12DeleteAgentProfile\x12%.payment.v1.DeleteAgentProfileRequest\x1a\x16.google.protobuf.Empty\x12Z\n" +
 	"\x10ListAllTransfers\x12#.payment.v1.ListAllTransfersRequest\x1a!.payment.v1.ListTransfersResponse\x12S\n" +
-	"\x13CancelTransferAdmin\x12&.payment.v1.CancelTransferAdminRequest\x1a\x14.payment.v1.TransferB\x9d\x01\n" +
+	"\x13CancelTransferAdmin\x12&.payment.v1.CancelTransferAdminRequest\x1a\x14.payment.v1.Transfer\x12Q\n" +
+	"\fListDisputes\x12\x1f.payment.v1.ListDisputesRequest\x1a .payment.v1.ListDisputesResponse\x12H\n" +
+	"\x0eResolveDispute\x12!.payment.v1.ResolveDisputeRequest\x1a\x13.payment.v1.Dispute\x12l\n" +
+	"\x15ListCommissionBatches\x12(.payment.v1.ListCommissionBatchesRequest\x1a).payment.v1.ListCommissionBatchesResponseB\x9d\x01\n" +
 	"\x0ecom.payment.v1B\x11AdminServiceProtoP\x01Z/mokapay.app/proto/codebase/payment/v1;paymentv1\xa2\x02\x03PXX\xaa\x02\n" +
 	"Payment.V1\xca\x02\n" +
 	"Payment\\V1\xe2\x02\x16Payment\\V1\\GPBMetadata\xea\x02\vPayment::V1b\x06proto3"
@@ -467,42 +772,63 @@ func file_payment_v1_admin_service_proto_rawDescGZIP() []byte {
 	return file_payment_v1_admin_service_proto_rawDescData
 }
 
-var file_payment_v1_admin_service_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_payment_v1_admin_service_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_payment_v1_admin_service_proto_goTypes = []any{
-	(*ListAllTransfersRequest)(nil),     // 0: payment.v1.ListAllTransfersRequest
-	(*CancelTransferAdminRequest)(nil),  // 1: payment.v1.CancelTransferAdminRequest
-	(*CreateAgentProfileRequest)(nil),   // 2: payment.v1.CreateAgentProfileRequest
-	(*GetAgentProfileRequest)(nil),      // 3: payment.v1.GetAgentProfileRequest
-	(*ActivateAgentProfileRequest)(nil), // 4: payment.v1.ActivateAgentProfileRequest
-	(*SuspendAgentProfileRequest)(nil),  // 5: payment.v1.SuspendAgentProfileRequest
-	(*DeleteAgentProfileRequest)(nil),   // 6: payment.v1.DeleteAgentProfileRequest
-	(TransferStatus)(0),                 // 7: payment.v1.TransferStatus
-	(*AgentProfile)(nil),                // 8: payment.v1.AgentProfile
-	(*emptypb.Empty)(nil),               // 9: google.protobuf.Empty
-	(*ListTransfersResponse)(nil),       // 10: payment.v1.ListTransfersResponse
-	(*Transfer)(nil),                    // 11: payment.v1.Transfer
+	(*ListDisputesRequest)(nil),           // 0: payment.v1.ListDisputesRequest
+	(*ListDisputesResponse)(nil),          // 1: payment.v1.ListDisputesResponse
+	(*ResolveDisputeRequest)(nil),         // 2: payment.v1.ResolveDisputeRequest
+	(*ListCommissionBatchesRequest)(nil),  // 3: payment.v1.ListCommissionBatchesRequest
+	(*ListCommissionBatchesResponse)(nil), // 4: payment.v1.ListCommissionBatchesResponse
+	(*ListAllTransfersRequest)(nil),       // 5: payment.v1.ListAllTransfersRequest
+	(*CancelTransferAdminRequest)(nil),    // 6: payment.v1.CancelTransferAdminRequest
+	(*CreateAgentProfileRequest)(nil),     // 7: payment.v1.CreateAgentProfileRequest
+	(*GetAgentProfileRequest)(nil),        // 8: payment.v1.GetAgentProfileRequest
+	(*ActivateAgentProfileRequest)(nil),   // 9: payment.v1.ActivateAgentProfileRequest
+	(*SuspendAgentProfileRequest)(nil),    // 10: payment.v1.SuspendAgentProfileRequest
+	(*DeleteAgentProfileRequest)(nil),     // 11: payment.v1.DeleteAgentProfileRequest
+	(DisputeStatus)(0),                    // 12: payment.v1.DisputeStatus
+	(*Dispute)(nil),                       // 13: payment.v1.Dispute
+	(DisputeResolution)(0),                // 14: payment.v1.DisputeResolution
+	(CommissionStatus)(0),                 // 15: payment.v1.CommissionStatus
+	(*CommissionBatch)(nil),               // 16: payment.v1.CommissionBatch
+	(TransferStatus)(0),                   // 17: payment.v1.TransferStatus
+	(*AgentProfile)(nil),                  // 18: payment.v1.AgentProfile
+	(*emptypb.Empty)(nil),                 // 19: google.protobuf.Empty
+	(*ListTransfersResponse)(nil),         // 20: payment.v1.ListTransfersResponse
+	(*Transfer)(nil),                      // 21: payment.v1.Transfer
 }
 var file_payment_v1_admin_service_proto_depIdxs = []int32{
-	7,  // 0: payment.v1.ListAllTransfersRequest.status:type_name -> payment.v1.TransferStatus
-	2,  // 1: payment.v1.AdminService.CreateAgentProfile:input_type -> payment.v1.CreateAgentProfileRequest
-	3,  // 2: payment.v1.AdminService.GetAgentProfile:input_type -> payment.v1.GetAgentProfileRequest
-	4,  // 3: payment.v1.AdminService.ActivateAgentProfile:input_type -> payment.v1.ActivateAgentProfileRequest
-	5,  // 4: payment.v1.AdminService.SuspendAgentProfile:input_type -> payment.v1.SuspendAgentProfileRequest
-	6,  // 5: payment.v1.AdminService.DeleteAgentProfile:input_type -> payment.v1.DeleteAgentProfileRequest
-	0,  // 6: payment.v1.AdminService.ListAllTransfers:input_type -> payment.v1.ListAllTransfersRequest
-	1,  // 7: payment.v1.AdminService.CancelTransferAdmin:input_type -> payment.v1.CancelTransferAdminRequest
-	8,  // 8: payment.v1.AdminService.CreateAgentProfile:output_type -> payment.v1.AgentProfile
-	8,  // 9: payment.v1.AdminService.GetAgentProfile:output_type -> payment.v1.AgentProfile
-	8,  // 10: payment.v1.AdminService.ActivateAgentProfile:output_type -> payment.v1.AgentProfile
-	8,  // 11: payment.v1.AdminService.SuspendAgentProfile:output_type -> payment.v1.AgentProfile
-	9,  // 12: payment.v1.AdminService.DeleteAgentProfile:output_type -> google.protobuf.Empty
-	10, // 13: payment.v1.AdminService.ListAllTransfers:output_type -> payment.v1.ListTransfersResponse
-	11, // 14: payment.v1.AdminService.CancelTransferAdmin:output_type -> payment.v1.Transfer
-	8,  // [8:15] is the sub-list for method output_type
-	1,  // [1:8] is the sub-list for method input_type
-	1,  // [1:1] is the sub-list for extension type_name
-	1,  // [1:1] is the sub-list for extension extendee
-	0,  // [0:1] is the sub-list for field type_name
+	12, // 0: payment.v1.ListDisputesRequest.status:type_name -> payment.v1.DisputeStatus
+	13, // 1: payment.v1.ListDisputesResponse.disputes:type_name -> payment.v1.Dispute
+	14, // 2: payment.v1.ResolveDisputeRequest.resolution:type_name -> payment.v1.DisputeResolution
+	15, // 3: payment.v1.ListCommissionBatchesRequest.status:type_name -> payment.v1.CommissionStatus
+	16, // 4: payment.v1.ListCommissionBatchesResponse.batches:type_name -> payment.v1.CommissionBatch
+	17, // 5: payment.v1.ListAllTransfersRequest.status:type_name -> payment.v1.TransferStatus
+	7,  // 6: payment.v1.AdminService.CreateAgentProfile:input_type -> payment.v1.CreateAgentProfileRequest
+	8,  // 7: payment.v1.AdminService.GetAgentProfile:input_type -> payment.v1.GetAgentProfileRequest
+	9,  // 8: payment.v1.AdminService.ActivateAgentProfile:input_type -> payment.v1.ActivateAgentProfileRequest
+	10, // 9: payment.v1.AdminService.SuspendAgentProfile:input_type -> payment.v1.SuspendAgentProfileRequest
+	11, // 10: payment.v1.AdminService.DeleteAgentProfile:input_type -> payment.v1.DeleteAgentProfileRequest
+	5,  // 11: payment.v1.AdminService.ListAllTransfers:input_type -> payment.v1.ListAllTransfersRequest
+	6,  // 12: payment.v1.AdminService.CancelTransferAdmin:input_type -> payment.v1.CancelTransferAdminRequest
+	0,  // 13: payment.v1.AdminService.ListDisputes:input_type -> payment.v1.ListDisputesRequest
+	2,  // 14: payment.v1.AdminService.ResolveDispute:input_type -> payment.v1.ResolveDisputeRequest
+	3,  // 15: payment.v1.AdminService.ListCommissionBatches:input_type -> payment.v1.ListCommissionBatchesRequest
+	18, // 16: payment.v1.AdminService.CreateAgentProfile:output_type -> payment.v1.AgentProfile
+	18, // 17: payment.v1.AdminService.GetAgentProfile:output_type -> payment.v1.AgentProfile
+	18, // 18: payment.v1.AdminService.ActivateAgentProfile:output_type -> payment.v1.AgentProfile
+	18, // 19: payment.v1.AdminService.SuspendAgentProfile:output_type -> payment.v1.AgentProfile
+	19, // 20: payment.v1.AdminService.DeleteAgentProfile:output_type -> google.protobuf.Empty
+	20, // 21: payment.v1.AdminService.ListAllTransfers:output_type -> payment.v1.ListTransfersResponse
+	21, // 22: payment.v1.AdminService.CancelTransferAdmin:output_type -> payment.v1.Transfer
+	1,  // 23: payment.v1.AdminService.ListDisputes:output_type -> payment.v1.ListDisputesResponse
+	13, // 24: payment.v1.AdminService.ResolveDispute:output_type -> payment.v1.Dispute
+	4,  // 25: payment.v1.AdminService.ListCommissionBatches:output_type -> payment.v1.ListCommissionBatchesResponse
+	16, // [16:26] is the sub-list for method output_type
+	6,  // [6:16] is the sub-list for method input_type
+	6,  // [6:6] is the sub-list for extension type_name
+	6,  // [6:6] is the sub-list for extension extendee
+	0,  // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_payment_v1_admin_service_proto_init() }
@@ -514,7 +840,10 @@ func file_payment_v1_admin_service_proto_init() {
 	file_payment_v1_transfer_service_proto_init()
 	file_payment_v1_admin_service_proto_msgTypes[0].OneofWrappers = []any{}
 	file_payment_v1_admin_service_proto_msgTypes[2].OneofWrappers = []any{}
-	file_payment_v1_admin_service_proto_msgTypes[3].OneofWrappers = []any{
+	file_payment_v1_admin_service_proto_msgTypes[3].OneofWrappers = []any{}
+	file_payment_v1_admin_service_proto_msgTypes[5].OneofWrappers = []any{}
+	file_payment_v1_admin_service_proto_msgTypes[7].OneofWrappers = []any{}
+	file_payment_v1_admin_service_proto_msgTypes[8].OneofWrappers = []any{
 		(*GetAgentProfileRequest_Id)(nil),
 		(*GetAgentProfileRequest_AccountId)(nil),
 	}
@@ -524,7 +853,7 @@ func file_payment_v1_admin_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_payment_v1_admin_service_proto_rawDesc), len(file_payment_v1_admin_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

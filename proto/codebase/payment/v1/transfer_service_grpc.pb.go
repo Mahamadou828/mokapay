@@ -29,6 +29,7 @@ const (
 	TransferService_ListTransferFiles_FullMethodName     = "/payment.v1.TransferService/ListTransferFiles"
 	TransferService_ConfirmReceipt_FullMethodName        = "/payment.v1.TransferService/ConfirmReceipt"
 	TransferService_CancelTransfer_FullMethodName        = "/payment.v1.TransferService/CancelTransfer"
+	TransferService_OpenDispute_FullMethodName           = "/payment.v1.TransferService/OpenDispute"
 	TransferService_ListBeneficiaries_FullMethodName     = "/payment.v1.TransferService/ListBeneficiaries"
 	TransferService_AddBeneficiary_FullMethodName        = "/payment.v1.TransferService/AddBeneficiary"
 	TransferService_UpdateBeneficiary_FullMethodName     = "/payment.v1.TransferService/UpdateBeneficiary"
@@ -62,6 +63,10 @@ type TransferServiceClient interface {
 	ConfirmReceipt(ctx context.Context, in *ConfirmReceiptRequest, opts ...grpc.CallOption) (*Transfer, error)
 	// Owner cancel, pre-accept only (no hold yet).
 	CancelTransfer(ctx context.Context, in *CancelTransferRequest, opts ...grpc.CallOption) (*Transfer, error)
+	// Freeze a contested transfer. Callable by either party of a
+	// post-accept transfer (the owner, or the assigned agent claiming
+	// client fraud); the agent's guarantee stays held until ops rules.
+	OpenDispute(ctx context.Context, in *OpenDisputeRequest, opts ...grpc.CallOption) (*Dispute, error)
 	ListBeneficiaries(ctx context.Context, in *ListBeneficiariesRequest, opts ...grpc.CallOption) (*ListBeneficiariesResponse, error)
 	// Save a recipient ahead of any transfer (D7). Idempotent on the
 	// caller's (phone) pair: re-adding a live one refreshes its details —
@@ -173,6 +178,16 @@ func (c *transferServiceClient) CancelTransfer(ctx context.Context, in *CancelTr
 	return out, nil
 }
 
+func (c *transferServiceClient) OpenDispute(ctx context.Context, in *OpenDisputeRequest, opts ...grpc.CallOption) (*Dispute, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Dispute)
+	err := c.cc.Invoke(ctx, TransferService_OpenDispute_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *transferServiceClient) ListBeneficiaries(ctx context.Context, in *ListBeneficiariesRequest, opts ...grpc.CallOption) (*ListBeneficiariesResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListBeneficiariesResponse)
@@ -249,6 +264,10 @@ type TransferServiceServer interface {
 	ConfirmReceipt(context.Context, *ConfirmReceiptRequest) (*Transfer, error)
 	// Owner cancel, pre-accept only (no hold yet).
 	CancelTransfer(context.Context, *CancelTransferRequest) (*Transfer, error)
+	// Freeze a contested transfer. Callable by either party of a
+	// post-accept transfer (the owner, or the assigned agent claiming
+	// client fraud); the agent's guarantee stays held until ops rules.
+	OpenDispute(context.Context, *OpenDisputeRequest) (*Dispute, error)
 	ListBeneficiaries(context.Context, *ListBeneficiariesRequest) (*ListBeneficiariesResponse, error)
 	// Save a recipient ahead of any transfer (D7). Idempotent on the
 	// caller's (phone) pair: re-adding a live one refreshes its details —
@@ -296,6 +315,9 @@ func (UnimplementedTransferServiceServer) ConfirmReceipt(context.Context, *Confi
 }
 func (UnimplementedTransferServiceServer) CancelTransfer(context.Context, *CancelTransferRequest) (*Transfer, error) {
 	return nil, status.Error(codes.Unimplemented, "method CancelTransfer not implemented")
+}
+func (UnimplementedTransferServiceServer) OpenDispute(context.Context, *OpenDisputeRequest) (*Dispute, error) {
+	return nil, status.Error(codes.Unimplemented, "method OpenDispute not implemented")
 }
 func (UnimplementedTransferServiceServer) ListBeneficiaries(context.Context, *ListBeneficiariesRequest) (*ListBeneficiariesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListBeneficiaries not implemented")
@@ -495,6 +517,24 @@ func _TransferService_CancelTransfer_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TransferService_OpenDispute_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(OpenDisputeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TransferServiceServer).OpenDispute(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TransferService_OpenDispute_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TransferServiceServer).OpenDispute(ctx, req.(*OpenDisputeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _TransferService_ListBeneficiaries_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListBeneficiariesRequest)
 	if err := dec(in); err != nil {
@@ -627,6 +667,10 @@ var TransferService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CancelTransfer",
 			Handler:    _TransferService_CancelTransfer_Handler,
+		},
+		{
+			MethodName: "OpenDispute",
+			Handler:    _TransferService_OpenDispute_Handler,
 		},
 		{
 			MethodName: "ListBeneficiaries",

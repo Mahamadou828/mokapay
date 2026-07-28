@@ -14,6 +14,10 @@ import (
 	transfermapper "mokapay.app/app/services/payment/internal/api/transfer/mapper"
 	"mokapay.app/app/services/payment/internal/business/agentprofile"
 	"mokapay.app/app/services/payment/internal/business/agentprofile/usecase"
+	"mokapay.app/app/services/payment/internal/business/commission"
+	commissionuc "mokapay.app/app/services/payment/internal/business/commission/usecase"
+	"mokapay.app/app/services/payment/internal/business/dispute"
+	disputeuc "mokapay.app/app/services/payment/internal/business/dispute/usecase"
 	"mokapay.app/app/services/payment/internal/business/transfer"
 	transferuc "mokapay.app/app/services/payment/internal/business/transfer/usecase"
 	"mokapay.app/app/services/payment/internal/sdk/grpcerr"
@@ -25,13 +29,21 @@ import (
 type Handler struct {
 	paymentv1.UnimplementedAdminServiceServer
 
-	logger    *logger.Logger
-	uc        usecase.UseCase
-	transfers transferuc.UseCase
+	logger      *logger.Logger
+	uc          usecase.UseCase
+	transfers   transferuc.UseCase
+	disputes    disputeuc.UseCase
+	commissions commissionuc.UseCase
 }
 
-func NewHandler(l *logger.Logger, uc usecase.UseCase, transfers transferuc.UseCase) *Handler {
-	return &Handler{logger: l, uc: uc, transfers: transfers}
+func NewHandler(l *logger.Logger, uc usecase.UseCase, transfers transferuc.UseCase, disputes disputeuc.UseCase, commissions commissionuc.UseCase) *Handler {
+	return &Handler{
+		logger:      l,
+		uc:          uc,
+		transfers:   transfers,
+		disputes:    disputes,
+		commissions: commissions,
+	}
 }
 
 // ListAllTransfers is the ops worklist.
@@ -82,6 +94,105 @@ func (h *Handler) CancelTransferAdmin(ctx context.Context, req *paymentv1.Cancel
 	}
 
 	return transfermapper.TransferToProto(transferuc.TransferView{Transfer: cancelled}), nil
+}
+
+// ListDisputes is the ops dispute queue.
+func (h *Handler) ListDisputes(ctx context.Context, req *paymentv1.ListDisputesRequest) (*paymentv1.ListDisputesResponse, error) {
+	if _, err := identity.RequireSystemOrRoles(ctx, "ops", "admin"); err != nil {
+		return nil, err
+	}
+
+	var f dispute.Filter
+	if req.Status != nil {
+		if s := transfermapper.DisputeStatusFromProto(*req.Status); s != "" {
+			f.Status = new(s)
+		}
+	}
+	if req.TransferId != nil {
+		id, err := uuid.Parse(*req.TransferId)
+		if err != nil {
+			return nil, status.Error(codes.InvalidArgument, "invalid transfer id")
+		}
+		f.TransferID = new(id)
+	}
+	if req.AgentProfileId != nil {
+		id, err := uuid.Parse(*req.AgentProfileId)
+		if err != nil {
+			return nil, status.Error(codes.InvalidArgument, "invalid agent profile id")
+		}
+		f.AgentProfileID = new(id)
+	}
+
+	list, err := h.disputes.List(ctx, f, req.Limit)
+	if err != nil {
+		return nil, grpcerr.Map(err)
+	}
+
+	out := make([]*paymentv1.Dispute, 0, len(list))
+	for _, d := range list {
+		out = append(out, transfermapper.DisputeToProto(d))
+	}
+
+	return &paymentv1.ListDisputesResponse{Disputes: out}, nil
+}
+
+// ResolveDispute: ops-only. The ruling moves real money (a release or a
+// capture of the agent's guarantee), so it needs an accountable human —
+// no system bypass.
+func (h *Handler) ResolveDispute(ctx context.Context, req *paymentv1.ResolveDisputeRequest) (*paymentv1.Dispute, error) {
+	adminID, err := identity.RequireRoles(ctx, "ops", "admin")
+	if err != nil {
+		return nil, err
+	}
+
+	id, err := uuid.Parse(req.Id)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid dispute id")
+	}
+	resolution := transfermapper.ResolutionFromProto(req.Resolution)
+	if resolution == "" {
+		return nil, status.Error(codes.InvalidArgument, "resolution is required")
+	}
+
+	resolved, err := h.disputes.Resolve(ctx, adminID, id, resolution, req.Note)
+	if err != nil {
+		return nil, grpcerr.Map(err)
+	}
+
+	return transfermapper.DisputeToProto(resolved), nil
+}
+
+// ListCommissionBatches is the ops payout view.
+func (h *Handler) ListCommissionBatches(ctx context.Context, req *paymentv1.ListCommissionBatchesRequest) (*paymentv1.ListCommissionBatchesResponse, error) {
+	if _, err := identity.RequireSystemOrRoles(ctx, "ops", "admin"); err != nil {
+		return nil, err
+	}
+
+	var f commission.BatchFilter
+	if req.AgentProfileId != nil {
+		id, err := uuid.Parse(*req.AgentProfileId)
+		if err != nil {
+			return nil, status.Error(codes.InvalidArgument, "invalid agent profile id")
+		}
+		f.AgentProfileID = new(id)
+	}
+	if req.Status != nil {
+		if s := mapper.CommissionStatusFromProto(*req.Status); s != "" {
+			f.Status = new(s)
+		}
+	}
+
+	list, err := h.commissions.ListBatches(ctx, f, req.Limit)
+	if err != nil {
+		return nil, grpcerr.Map(err)
+	}
+
+	out := make([]*paymentv1.CommissionBatch, 0, len(list))
+	for _, b := range list {
+		out = append(out, mapper.CommissionBatchToProto(b))
+	}
+
+	return &paymentv1.ListCommissionBatchesResponse{Batches: out}, nil
 }
 
 func (h *Handler) CreateAgentProfile(ctx context.Context, req *paymentv1.CreateAgentProfileRequest) (*paymentv1.AgentProfile, error) {

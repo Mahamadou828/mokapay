@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/riverqueue/river"
+	disputeuc "mokapay.app/app/services/payment/internal/business/dispute/usecase"
 	"mokapay.app/app/services/payment/internal/business/matching"
 	matchinguc "mokapay.app/app/services/payment/internal/business/matching/usecase"
 	transferrepo "mokapay.app/app/services/payment/internal/business/transfer/repo"
@@ -62,18 +63,25 @@ func (w *OffersExpireWorker) Work(ctx context.Context, job *river.Job[OffersExpi
 	return nil
 }
 
-// PaymentTimeoutWorker fires when the client's payment window elapses;
-// stale clocks (the proof arrived first) no-op inside the usecase.
+// PaymentTimeoutWorker fires when one of the two off-platform payment
+// windows elapses; stale clocks (the proof arrived first) no-op inside
+// the usecases. The payout stage ends in a dispute, not a cancellation —
+// the client already parted with their money, so the hold must stay put
+// until an admin rules.
 type PaymentTimeoutWorker struct {
 	river.WorkerDefaults[PaymentTimeoutArg]
-	UC     transferuc.UseCase
-	Logger *logger.Logger
+	UC       transferuc.UseCase
+	Disputes disputeuc.UseCase
+	Logger   *logger.Logger
 }
 
 func (w *PaymentTimeoutWorker) Work(ctx context.Context, job *river.Job[PaymentTimeoutArg]) error {
 	id, err := uuid.Parse(job.Args.TransferID)
 	if err != nil {
 		return nil
+	}
+	if job.Args.Stage == StagePayout {
+		return w.Disputes.HandlePayoutTimeout(ctx, id)
 	}
 	return w.UC.HandlePaymentTimeout(ctx, id)
 }
