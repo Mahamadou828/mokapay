@@ -57,12 +57,23 @@ proto:
 	buf generate
 
 # ==============================================================================
-# Local infrastructure (compose)
+# Local infrastructure (compose): stores + backend services, host ports on.
 start:
 	docker compose up -d --build
 
 stop:
 	docker compose down
+
+# ==============================================================================
+# Dev-server deployment (frontends + nginx edge, no host ports on stores).
+# After `make deploy`, expose it on the tailnet:
+#   tailscale serve --bg --https=443  http://localhost:80    # mobile + API
+#   tailscale serve --bg --https=8443 http://localhost:81    # admin + API
+deploy:
+	docker compose -f infra/compose/dev/docker-compose.yml up -d --build
+
+deploy-stop:
+	docker compose -f infra/compose/dev/docker-compose.yml down
 
 # ==============================================================================
 # creating a design doc folder (see .claude/rules/docs.md)

@@ -32,21 +32,23 @@ export `COMPOSE_FILE` (from `vars.env`) so plain `docker compose` works inside
 them.
 
 ```bash
-make start                    # docker compose up -d --build (stores + all services + UIs + edge nginx)
+make start                    # LOCAL: stores + backend services (host ports on), no frontends
 make stop                     # docker compose down
-# manually: docker compose -f infra/compose/docker-compose.yml up -d
+make deploy                   # DEV SERVER: full stack incl. UIs + nginx edge, no host ports on stores
+make deploy-stop
 ```
 
-The compose stack is the deployment: an nginx edge (`proxy`) routes by
-hostname (`app.<domain>` → mobile web app, `admin.<domain>` → back-office,
-`${MOKAPAY_DOMAIN:-localhost}`) and by port for single-hostname frontings —
-host port `${MOKAPAY_HTTP_PORT:-80}` defaults to the mobile app, host port
-`${MOKAPAY_ADMIN_HTTP_PORT:-81}` to the admin app. `/v1/*` on any of them →
-the gateway (same-origin API, no CORS). Tailscale deployment: `tailscale
-serve --bg --https=443 http://localhost:80` (mobile) + `tailscale serve
---bg --https=8443 http://localhost:81` (admin). Frontends build from the
-shared `infra/compose/ui/Dockerfile`. Object storage is real S3 (file
-service `.env`) — there is no MinIO.
+Two compose files. `infra/compose/docker-compose.yml` is local development:
+stores keep host ports (postgres 5433, redis 6379, gateway 8085) for
+host-run tools; frontends run as Vite dev servers. The deployment lives in
+`infra/compose/dev/docker-compose.yml`: frontends (built from the shared
+`infra/compose/ui/Dockerfile`, `VITE_API_URL=""` → same-origin API, no
+CORS) plus an nginx edge — the stack's only exposed ports. The edge routes
+by hostname (`app.`/`admin.${MOKAPAY_DOMAIN:-localhost}`) and by port
+(`${MOKAPAY_HTTP_PORT:-80}` → mobile app, `${MOKAPAY_ADMIN_HTTP_PORT:-81}`
+→ admin app), `/v1/*` → gateway everywhere. Tailscale fronting: `tailscale
+serve --bg --https=443 http://localhost:80` + `--https=8443
+http://localhost:81`. Object storage is real S3 — there is no MinIO.
 
 ### Running a Go Service
 

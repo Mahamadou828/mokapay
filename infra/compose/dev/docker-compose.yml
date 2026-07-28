@@ -1,0 +1,208 @@
+# The dev-server deployment (tailscale-fronted box). Differences from the
+# local file (../docker-compose.yml):
+#   - frontends + nginx edge are part of the stack
+#   - no host ports on stores/services — everything talks over the compose
+#     networks; the proxy's :80/:81 are the only way in
+#   - no mongodb (nothing uses it) and no minio (object storage is real S3)
+#
+# Run from the repo root:
+#   make deploy          # docker compose -f infra/compose/dev/docker-compose.yml up -d --build
+#   tailscale serve --bg --https=443  http://localhost:80    # mobile + API
+#   tailscale serve --bg --https=8443 http://localhost:81    # admin + API
+name: mokapay
+
+networks:
+  mokapay.infrastructure:
+    driver: bridge
+  mokapay.app:
+    driver: bridge
+
+volumes:
+  postgres_data:
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    networks:
+      - mokapay.infrastructure
+    # Reachable only from the compose networks — tailnet ACLs guard the box,
+    # the network split guards the stores.
+    environment:
+      POSTGRES_USER: mokapay
+      POSTGRES_PASSWORD: mokapay
+      POSTGRES_DB: mokapay
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Init scripts run once on first cluster init; creates per-service databases.
+      - ../postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mokapay"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    networks:
+      - mokapay.infrastructure
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  user:
+    build:
+      context: ../../..
+      dockerfile: app/services/user/Dockerfile
+      args:
+        BUILD_REF: develop
+    command: ["--migrate"]
+    networks:
+      - mokapay.app
+      - mokapay.infrastructure
+    env_file:
+      - ../../../app/services/user/.env
+    # The .env targets host-side local dev; inside compose the stores live on
+    # the infrastructure network under their service names.
+    environment:
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      # Enrollment accept/approve call payment (agent profile, guarantee
+      # opening + settlement). No depends_on: payment already depends on
+      # user, and the gRPC client dials lazily, so ordering resolves itself.
+      PAYMENT_GRPC_PORT: payment:50053
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  file:
+    build:
+      context: ../../..
+      dockerfile: app/services/file/Dockerfile
+      args:
+        BUILD_REF: develop
+    command: ["--migrate"]
+    networks:
+      - mokapay.app
+      - mokapay.infrastructure
+    env_file:
+      - ../../../app/services/file/.env
+    # Object storage is not overridden here: the S3 endpoint the service
+    # signs with is the one the browser is handed.
+    environment:
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      USER_GRPC_PORT: user:50051
+      PAYMENT_GRPC_PORT: payment:50053
+    depends_on:
+      postgres:
+        condition: service_healthy
+      user:
+        condition: service_started
+      payment:
+        condition: service_started
+
+  payment:
+    build:
+      context: ../../..
+      dockerfile: app/services/payment/Dockerfile
+      args:
+        BUILD_REF: develop
+    command: ["--migrate"]
+    networks:
+      - mokapay.app
+      - mokapay.infrastructure
+    env_file:
+      - ../../../app/services/payment/.env
+    environment:
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      USER_GRPC_PORT: user:50051
+      FILE_GRPC_PORT: file:50052
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      user:
+        condition: service_started
+
+  gateway:
+    build:
+      context: ../../..
+      dockerfile: app/services/gateway/Dockerfile
+      args:
+        BUILD_REF: develop
+    networks:
+      - mokapay.app
+    env_file:
+      - ../../../app/services/gateway/.env
+    environment:
+      USER_GRPC_PORT: user:50051
+      PAYMENT_GRPC_PORT: payment:50053
+      FILE_GRPC_PORT: file:50052
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      user:
+        condition: service_started
+      payment:
+        condition: service_started
+      file:
+        condition: service_started
+
+  # ---------------------------------------------------------------------------
+  # Frontends: static Vite builds served by nginx, one image each from the
+  # shared ui/Dockerfile. VITE_API_URL="" bakes relative /v1/... calls —
+  # the edge serves API and app on the same origin, so no CORS.
+  admin-ui:
+    build:
+      context: ../../..
+      dockerfile: infra/compose/ui/Dockerfile
+      args:
+        UI_DIR: app/ui/mokapay-admin
+        VITE_API_URL: ""
+    networks:
+      - mokapay.app
+
+  mobile-ui:
+    build:
+      context: ../../..
+      dockerfile: infra/compose/ui/Dockerfile
+      args:
+        UI_DIR: app/ui/mokapay-mobile
+        VITE_API_URL: ""
+    networks:
+      - mokapay.app
+
+  # The edge: the only ports the outside world talks to. Routes by host
+  # (app.<domain> → mobile-ui, admin.<domain> → admin-ui, /v1/* → gateway)
+  # and by port for single-hostname frontings like tailscale serve:
+  # :80 defaults to the mobile app, :81 to the admin app.
+  proxy:
+    image: nginx:1.29-alpine
+    networks:
+      - mokapay.app
+    ports:
+      - "${MOKAPAY_HTTP_PORT:-80}:80"
+      - "${MOKAPAY_ADMIN_HTTP_PORT:-81}:81"
+    environment:
+      NGINX_DOMAIN: ${MOKAPAY_DOMAIN:-localhost}
+    volumes:
+      - ./proxy/templates:/etc/nginx/templates:ro
+    depends_on:
+      gateway:
+        condition: service_started
+      admin-ui:
+        condition: service_started
+      mobile-ui:
+        condition: service_started

@@ -1,3 +1,8 @@
+# LOCAL DEVELOPMENT stack: stores (host ports for host-run tools) + backend
+# services + gateway on 8085. Frontends run as Vite dev servers, not here.
+# The dev-server deployment (frontends + nginx edge, no host ports on the
+# stores) lives in dev/docker-compose.yml — `make deploy`.
+#
 # Pin the project name: without it compose derives it from this file's
 # directory ("compose"), which would produce generic "compose-*" containers.
 name: mokapay
@@ -181,55 +186,4 @@ services:
       payment:
         condition: service_started
       file:
-        condition: service_started
-
-  # ---------------------------------------------------------------------------
-  # Frontends: static Vite builds served by nginx, one image each from the
-  # shared ui/Dockerfile. VITE_API_URL="" bakes relative /v1/... calls —
-  # the edge proxy serves API and app on the same origin, so no CORS.
-  admin-ui:
-    build:
-      context: ../..
-      dockerfile: infra/compose/ui/Dockerfile
-      args:
-        UI_DIR: app/ui/mokapay-admin
-        VITE_API_URL: ""
-    networks:
-      - mokapay.app
-
-  mobile-ui:
-    build:
-      context: ../..
-      dockerfile: infra/compose/ui/Dockerfile
-      args:
-        UI_DIR: app/ui/mokapay-mobile
-        VITE_API_URL: ""
-    networks:
-      - mokapay.app
-
-  # The edge: the only ports the outside world talks to. Routes by host
-  # (app.<domain> → mobile-ui, admin.<domain> → admin-ui, /v1/* → gateway)
-  # and by port for single-hostname frontings like tailscale serve:
-  # :80 defaults to the mobile app, :81 to the admin app —
-  #   tailscale serve --bg --https=443  http://localhost:80
-  #   tailscale serve --bg --https=8443 http://localhost:81
-  # Default domain "localhost" works in any modern browser with zero DNS
-  # (app.localhost, admin.localhost).
-  proxy:
-    image: nginx:1.29-alpine
-    networks:
-      - mokapay.app
-    ports:
-      - "${MOKAPAY_HTTP_PORT:-80}:80"
-      - "${MOKAPAY_ADMIN_HTTP_PORT:-81}:81"
-    environment:
-      NGINX_DOMAIN: ${MOKAPAY_DOMAIN:-localhost}
-    volumes:
-      - ./proxy/templates:/etc/nginx/templates:ro
-    depends_on:
-      gateway:
-        condition: service_started
-      admin-ui:
-        condition: service_started
-      mobile-ui:
         condition: service_started
