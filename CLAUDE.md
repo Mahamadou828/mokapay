@@ -42,7 +42,7 @@ Two compose files. `infra/compose/docker-compose.yml` is local development:
 stores keep host ports (postgres 5433, redis 6379, gateway 8085) for
 host-run tools; frontends run as Vite dev servers. The deployment lives in
 `infra/compose/dev/docker-compose.yml`: frontends (built from the shared
-`infra/compose/ui/Dockerfile`, `VITE_API_URL=""` → same-origin API, no
+`infra/compose/dev/ui/Dockerfile`, `VITE_API_URL=""` → same-origin API, no
 CORS) plus an nginx edge — the stack's only exposed ports. The edge routes
 by hostname (`app.`/`admin.${MOKAPAY_DOMAIN:-localhost}`) and by port
 (`${MOKAPAY_HTTP_PORT:-80}` → mobile app, `${MOKAPAY_ADMIN_HTTP_PORT:-81}`
