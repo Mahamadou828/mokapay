@@ -167,7 +167,7 @@ services:
   admin-ui:
     build:
       context: ../../..
-      dockerfile: infra/compose/ui/Dockerfile
+      dockerfile: infra/compose/dev/ui/Dockerfile
       args:
         UI_DIR: app/ui/mokapay-admin
         VITE_API_URL: ""
@@ -177,7 +177,7 @@ services:
   mobile-ui:
     build:
       context: ../../..
-      dockerfile: infra/compose/ui/Dockerfile
+      dockerfile: infra/compose/dev/ui/Dockerfile
       args:
         UI_DIR: app/ui/mokapay-mobile
         VITE_API_URL: ""
