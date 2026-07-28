@@ -14,7 +14,7 @@ TEMPO               := grafana/tempo:2.10.0
 LOKI                := grafana/loki:3.7.0
 PROMTAIL            := grafana/promtail:3.6.0
 
-GO_SERVICES := gateway user file payment
+GO_SERVICES := gateway user file payment compliance
 
 .PHONY: docs proto build check-all lint-all test-all tidy start stop
 
@@ -36,6 +36,9 @@ file/%:
 
 payment/%:
 	$(MAKE) -C app/services/payment $(@F)
+
+compliance/%:
+	$(MAKE) -C app/services/compliance $(@F)
 
 # Frontends (submodules under app/ui/)
 mobile/%:
@@ -88,7 +91,7 @@ submodule-update:
 # ==============================================================================
 # Building containers
 # Image builds live in each app's Makefile as `image`; this fans out.
-build: gateway/image user/image file/image payment/image
+build: gateway/image user/image file/image payment/image compliance/image
 
 # ==============================================================================
 # Starting kind cluster

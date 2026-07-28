@@ -6,6 +6,7 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	compliancev1 "mokapay.app/proto/codebase/compliance/v1"
 	filev1 "mokapay.app/proto/codebase/file/v1"
 	paymentv1 "mokapay.app/proto/codebase/payment/v1"
 	userv1 "mokapay.app/proto/codebase/user/v1"
@@ -14,15 +15,17 @@ import (
 type Connection string
 
 const (
-	ConnectionUser    Connection = "user"
-	ConnectionPayment Connection = "payment"
-	ConnectionFile    Connection = "file"
+	ConnectionUser       Connection = "user"
+	ConnectionPayment    Connection = "payment"
+	ConnectionFile       Connection = "file"
+	ConnectionCompliance Connection = "compliance"
 )
 
 type Config struct {
-	UserServiceAddr    string
-	PaymentServiceAddr string
-	FileServiceAddr    string
+	UserServiceAddr       string
+	PaymentServiceAddr    string
+	FileServiceAddr       string
+	ComplianceServiceAddr string
 }
 
 type User struct {
@@ -50,10 +53,21 @@ type File struct {
 	File filev1.FileServiceClient
 }
 
+// Compliance bundles the compliance-service clients: the staff review
+// surface (Admin, mounted on the gateway's ops tier) and the internal rule
+// engine (Compliance — system passport only, called by payment's job, never
+// exposed on the gateway).
+type Compliance struct {
+	conn       *grpc.ClientConn
+	Admin      compliancev1.AdminServiceClient
+	Compliance compliancev1.ComplianceServiceClient
+}
+
 type MokaClient struct {
-	User    *User
-	Payment *Payment
-	File    *File
+	User       *User
+	Payment    *Payment
+	File       *File
+	Compliance *Compliance
 }
 
 func NewMokaClient(config Config, requiredConnection map[Connection]bool) (*MokaClient, error) {
@@ -129,7 +143,30 @@ func NewMokaClient(config Config, requiredConnection map[Connection]bool) (*Moka
 		return nil, errors.New("file connection required")
 	}
 
-	return &MokaClient{User: u, Payment: p, File: f}, nil
+	var c *Compliance
+	if config.ComplianceServiceAddr != "" {
+		conn, err := grpc.NewClient(
+			config.ComplianceServiceAddr,
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+			grpc.WithChainUnaryInterceptor(
+				UnaryClientInterceptor(),
+			),
+		)
+		if err != nil {
+			return nil, err
+		}
+		c = &Compliance{
+			conn:       conn,
+			Admin:      compliancev1.NewAdminServiceClient(conn),
+			Compliance: compliancev1.NewComplianceServiceClient(conn),
+		}
+	}
+
+	if c == nil && requiredConnection[ConnectionCompliance] {
+		return nil, errors.New("compliance connection required")
+	}
+
+	return &MokaClient{User: u, Payment: p, File: f, Compliance: c}, nil
 }
 
 func (c *MokaClient) Close(ctx context.Context) error {
@@ -145,6 +182,11 @@ func (c *MokaClient) Close(ctx context.Context) error {
 	}
 	if c.File != nil {
 		if err := c.File.conn.Close(); err != nil {
+			return err
+		}
+	}
+	if c.Compliance != nil {
+		if err := c.Compliance.conn.Close(); err != nil {
 			return err
 		}
 	}
