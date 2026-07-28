@@ -8,6 +8,7 @@ import (
 	"errors"
 	"net/http"
 
+	complianceapi "mokapay.app/app/services/gateway/internal/api/compliance"
 	paymentapi "mokapay.app/app/services/gateway/internal/api/payment"
 	userapi "mokapay.app/app/services/gateway/internal/api/user"
 	"mokapay.app/app/services/gateway/internal/middleware"
@@ -62,6 +63,11 @@ func Register(cfg Config, log *logger.Logger, s *coreweb.Server) (Close, error) 
 	// -------------------------------------------------------------------------
 	// payment service surface (transfer flow, agent inbox/wallets, ops)
 	paymentapi.NewHandler(log, cfg.Moka).Routes(authed, agent, ops)
+
+	// -------------------------------------------------------------------------
+	// compliance service surface (AML alerts, cases, risk) — ops only. The
+	// rule engine's EvaluateTransfer is service-internal and gets no route.
+	complianceapi.NewHandler(log, cfg.Moka).Routes(ops)
 
 	return func(ctx context.Context) {}, nil
 }
