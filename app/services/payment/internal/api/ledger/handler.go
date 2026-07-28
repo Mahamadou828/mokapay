@@ -32,11 +32,15 @@ func NewHandler(l *logger.Logger, uc usecase.UseCase) *Handler {
 	return &Handler{logger: l, uc: uc}
 }
 
-// isAgent reports whether the caller is an agent-role user passport (the
-// scope-pinning cases).
+// isAgent reports whether the caller is an agent-side user passport (the
+// scope-pinning cases). pending_agent counts: the enrollment guarantee
+// (G2/G3) is read before activation, pinned to their own profile like any
+// agent read — the create path stays closed to them (the usecase switches
+// on the exact role).
 func isAgent(ctx context.Context) bool {
 	pass, err := passport.FromContext(ctx)
-	return err == nil && !pass.IsSystem() && pass.User.Role == "agent"
+	return err == nil && !pass.IsSystem() &&
+		(pass.User.Role == "agent" || pass.User.Role == "pending_agent")
 }
 
 func (h *Handler) CreateLedgerRequest(ctx context.Context, req *paymentv1.CreateLedgerRequestRequest) (*paymentv1.LedgerRequest, error) {
@@ -115,7 +119,7 @@ func (h *Handler) GetLedgerRequestByReference(ctx context.Context, req *paymentv
 }
 
 func (h *Handler) ListLedgerRequests(ctx context.Context, req *paymentv1.ListLedgerRequestsRequest) (*paymentv1.ListLedgerRequestsResponse, error) {
-	callerID, err := identity.RequireSystemOrRoles(ctx, "agent", "ops", "admin")
+	callerID, err := identity.RequireSystemOrRoles(ctx, "agent", "pending_agent", "ops", "admin")
 	if err != nil {
 		return nil, err
 	}
@@ -240,7 +244,7 @@ func (h *Handler) RejectLedgerRequest(ctx context.Context, req *paymentv1.Reject
 }
 
 func (h *Handler) ListLedgerLines(ctx context.Context, req *paymentv1.ListLedgerLinesRequest) (*paymentv1.ListLedgerLinesResponse, error) {
-	callerID, err := identity.RequireSystemOrRoles(ctx, "agent", "ops", "admin")
+	callerID, err := identity.RequireSystemOrRoles(ctx, "agent", "pending_agent", "ops", "admin")
 	if err != nil {
 		return nil, err
 	}
