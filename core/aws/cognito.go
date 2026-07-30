@@ -117,6 +117,23 @@ func (c *Cognito) SignUp(ctx context.Context, phone, pwd string) (sub string, er
 	return "", errors.New("sub not returned")
 }
 
+// SubFromAccessToken extracts the "sub" claim from a Cognito-issued access
+// token without verifying its signature. Only safe when the token came
+// directly from a Cognito response we already trust (e.g. right after
+// Login) and all that's needed is the subject — this deliberately skips
+// the JWKS round-trip ValidateToken does for untrusted, client-supplied
+// tokens.
+func SubFromAccessToken(token string) (string, error) {
+	var claims jwt.RegisteredClaims
+	if _, _, err := jwt.NewParser().ParseUnverified(token, &claims); err != nil {
+		return "", fmt.Errorf("parsing token: %w", err)
+	}
+	if claims.Subject == "" {
+		return "", errors.New("token carries no subject")
+	}
+	return claims.Subject, nil
+}
+
 // Login uses ADMIN_USER_PASSWORD_AUTH to generate an auth token
 func (c *Cognito) Login(ctx context.Context, phone, password string) (accessToken, refreshToken string, expiresIn time.Duration, err error) {
 	out, err := c.client.AdminInitiateAuth(ctx, &cip.AdminInitiateAuthInput{

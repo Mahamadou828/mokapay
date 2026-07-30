@@ -19,6 +19,11 @@ import (
 	transferapi "mokapay.app/app/services/payment/internal/api/transfer"
 	profileuc "mokapay.app/app/services/payment/internal/business/agentprofile/usecase"
 	walletuc "mokapay.app/app/services/payment/internal/business/agentwallet/usecase"
+	commissionevents "mokapay.app/app/services/payment/internal/business/commission/events"
+	commissionuc "mokapay.app/app/services/payment/internal/business/commission/usecase"
+	complianceevents "mokapay.app/app/services/payment/internal/business/compliance/events"
+	complianceuc "mokapay.app/app/services/payment/internal/business/compliance/usecase"
+	disputeuc "mokapay.app/app/services/payment/internal/business/dispute/usecase"
 	"mokapay.app/app/services/payment/internal/business/ledger"
 	"mokapay.app/app/services/payment/internal/business/ledger/events"
 	ledgeruc "mokapay.app/app/services/payment/internal/business/ledger/usecase"
@@ -77,15 +82,20 @@ func Run() error {
 
 	// -------------------------------------------------------------------------
 	// Init the Moka client: the River notify worker pushes through the
-	// user service's NotificationService under a system passport, and the
+	// user service's NotificationService under a system passport, the
 	// transfer surface reads proofs from the file service (party-scoped
-	// reads the file service itself cannot authorize).
+	// reads the file service itself cannot authorize), and the AML job
+	// ships its metrics snapshot to the compliance service (the user
+	// service also answers the one snapshot input payment does not own —
+	// when an account was opened).
 	moka, err := client.NewMokaClient(client.Config{
-		UserServiceAddr: cfg.Client.UserGRPCPort,
-		FileServiceAddr: cfg.Client.FileGRPCPort,
+		UserServiceAddr:       cfg.Client.UserGRPCPort,
+		FileServiceAddr:       cfg.Client.FileGRPCPort,
+		ComplianceServiceAddr: cfg.Client.ComplianceGRPCPort,
 	}, map[client.Connection]bool{
-		client.ConnectionUser: true,
-		client.ConnectionFile: true,
+		client.ConnectionUser:       true,
+		client.ConnectionFile:       true,
+		client.ConnectionCompliance: true,
 	})
 	if err != nil {
 		log.Error(ctx, "startup", "failed to init moka client", "error", err)
@@ -111,11 +121,15 @@ func Run() error {
 	paymentTimeoutWorker := &transferevents.PaymentTimeoutWorker{Logger: log}
 	autoConfirmWorker := &transferevents.AutoConfirmWorker{Logger: log}
 	sweepWorker := &transferevents.SweepWorker{Transfers: transferrepo.New(pg), Logger: log}
+	settleWorker := &commissionevents.SettleWorker{Logger: log}
+	evaluateWorker := &complianceevents.EvaluateWorker{Moka: moka, Logger: log}
 	river.AddWorker(workers, matchWorker)
 	river.AddWorker(workers, offersExpireWorker)
 	river.AddWorker(workers, paymentTimeoutWorker)
 	river.AddWorker(workers, autoConfirmWorker)
 	river.AddWorker(workers, sweepWorker)
+	river.AddWorker(workers, settleWorker)
+	river.AddWorker(workers, evaluateWorker)
 	river.AddWorker(workers, &transferevents.NotifyWorker{Moka: moka, Logger: log})
 
 	riverClient, err := river.NewClient(riverpgxv5.New(pg.PgxPool), &river.Config{
@@ -130,6 +144,20 @@ func Run() error {
 				river.PeriodicInterval(5*time.Minute),
 				func() (river.JobArgs, *river.InsertOpts) {
 					return transferevents.SweepArg{}, nil
+				},
+				nil,
+			),
+			// The weekly commission payout (accounting weeks run Tue→Mon,
+			// settled the following Tuesday). River elects one leader, and
+			// the run itself is idempotent per (agent, week) — a restart or
+			// a manual `settle-commissions` can never pay twice.
+			river.NewPeriodicJob(
+				commissionevents.WeeklySchedule{
+					Weekday: cfg.Commission.PayoutWeekday,
+					Hour:    cfg.Commission.PayoutHour,
+				},
+				func() (river.JobArgs, *river.InsertOpts) {
+					return commissionevents.SettleArg{}, nil
 				},
 				nil,
 			),
@@ -175,7 +203,13 @@ func Run() error {
 		FeeFXBps:         cfg.Transfer.FeeFXBps,
 		MarginBps:        cfg.Transfer.MarginBps,
 		MaxAmount:        cfg.Transfer.MaxAmount,
+		PayoutTimeout:    cfg.Transfer.PayoutTimeout,
 		AutoConfirmAfter: cfg.Transfer.AutoConfirmAfter,
+	})
+	disputeUC := disputeuc.New(log, pg, transferJobs)
+	commissionUC := commissionuc.New(log, pg, transferJobs)
+	complianceUC := complianceuc.New(log, pg, complianceuc.NewUserAccounts(moka), complianceuc.Config{
+		Timezone: cfg.Compliance.Timezone,
 	})
 	matchingUC := matchinguc.New(log, pg, transferJobs, matchinguc.Config{
 		MaxAgents:      cfg.Transfer.MaxAgents,
@@ -191,8 +225,11 @@ func Run() error {
 	matchWorker.UC = matchingUC
 	offersExpireWorker.UC = matchingUC
 	paymentTimeoutWorker.UC = transferUC
+	paymentTimeoutWorker.Disputes = disputeUC
 	autoConfirmWorker.UC = transferUC
 	sweepWorker.River = riverClient
+	settleWorker.UC = commissionUC
+	evaluateWorker.UC = complianceUC
 	if err := riverClient.Start(ctx); err != nil {
 		log.Error(ctx, "startup", "failed to start river client", "error", err)
 		return err
@@ -224,10 +261,10 @@ func Run() error {
 	))
 	reflection.Register(srv)
 
-	paymentv1.RegisterAdminServiceServer(srv, adminapi.NewHandler(log, profileUC, transferUC))
+	paymentv1.RegisterAdminServiceServer(srv, adminapi.NewHandler(log, profileUC, transferUC, disputeUC, commissionUC))
 	paymentv1.RegisterLedgerServiceServer(srv, ledgerapi.NewHandler(log, ledgerUC))
-	paymentv1.RegisterTransferServiceServer(srv, transferapi.NewHandler(log, transferUC, moka.File.File))
-	paymentv1.RegisterAgentServiceServer(srv, agentapi.NewHandler(log, profileUC, matchingUC, transferUC, walletUC, depositChannels))
+	paymentv1.RegisterTransferServiceServer(srv, transferapi.NewHandler(log, transferUC, disputeUC, moka.File.File))
+	paymentv1.RegisterAgentServiceServer(srv, agentapi.NewHandler(log, profileUC, matchingUC, transferUC, walletUC, commissionUC, depositChannels))
 
 	lis, err := net.Listen("tcp", cfg.GRPC.Port)
 	if err != nil {

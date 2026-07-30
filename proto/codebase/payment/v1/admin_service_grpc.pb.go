@@ -20,13 +20,16 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AdminService_CreateAgentProfile_FullMethodName   = "/payment.v1.AdminService/CreateAgentProfile"
-	AdminService_GetAgentProfile_FullMethodName      = "/payment.v1.AdminService/GetAgentProfile"
-	AdminService_ActivateAgentProfile_FullMethodName = "/payment.v1.AdminService/ActivateAgentProfile"
-	AdminService_SuspendAgentProfile_FullMethodName  = "/payment.v1.AdminService/SuspendAgentProfile"
-	AdminService_DeleteAgentProfile_FullMethodName   = "/payment.v1.AdminService/DeleteAgentProfile"
-	AdminService_ListAllTransfers_FullMethodName     = "/payment.v1.AdminService/ListAllTransfers"
-	AdminService_CancelTransferAdmin_FullMethodName  = "/payment.v1.AdminService/CancelTransferAdmin"
+	AdminService_CreateAgentProfile_FullMethodName    = "/payment.v1.AdminService/CreateAgentProfile"
+	AdminService_GetAgentProfile_FullMethodName       = "/payment.v1.AdminService/GetAgentProfile"
+	AdminService_ActivateAgentProfile_FullMethodName  = "/payment.v1.AdminService/ActivateAgentProfile"
+	AdminService_SuspendAgentProfile_FullMethodName   = "/payment.v1.AdminService/SuspendAgentProfile"
+	AdminService_DeleteAgentProfile_FullMethodName    = "/payment.v1.AdminService/DeleteAgentProfile"
+	AdminService_ListAllTransfers_FullMethodName      = "/payment.v1.AdminService/ListAllTransfers"
+	AdminService_CancelTransferAdmin_FullMethodName   = "/payment.v1.AdminService/CancelTransferAdmin"
+	AdminService_ListDisputes_FullMethodName          = "/payment.v1.AdminService/ListDisputes"
+	AdminService_ResolveDispute_FullMethodName        = "/payment.v1.AdminService/ResolveDispute"
+	AdminService_ListCommissionBatches_FullMethodName = "/payment.v1.AdminService/ListCommissionBatches"
 )
 
 // AdminServiceClient is the client API for AdminService service.
@@ -55,6 +58,14 @@ type AdminServiceClient interface {
 	// The ops escape hatch: cancel from any open state, releasing the
 	// hold when one is placed. Reason required — it lands on the timeline.
 	CancelTransferAdmin(ctx context.Context, in *CancelTransferAdminRequest, opts ...grpc.CallOption) (*Transfer, error)
+	// The dispute queue.
+	ListDisputes(ctx context.Context, in *ListDisputesRequest, opts ...grpc.CallOption) (*ListDisputesResponse, error)
+	// THE ruling. The resolution alone decides everything: hold released or
+	// captured, client refunded or not, and the transfer's terminal state.
+	ResolveDispute(ctx context.Context, in *ResolveDisputeRequest, opts ...grpc.CallOption) (*Dispute, error)
+	// The weekly commission payouts, with the status of the ledger request
+	// backing each one.
+	ListCommissionBatches(ctx context.Context, in *ListCommissionBatchesRequest, opts ...grpc.CallOption) (*ListCommissionBatchesResponse, error)
 }
 
 type adminServiceClient struct {
@@ -135,6 +146,36 @@ func (c *adminServiceClient) CancelTransferAdmin(ctx context.Context, in *Cancel
 	return out, nil
 }
 
+func (c *adminServiceClient) ListDisputes(ctx context.Context, in *ListDisputesRequest, opts ...grpc.CallOption) (*ListDisputesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListDisputesResponse)
+	err := c.cc.Invoke(ctx, AdminService_ListDisputes_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) ResolveDispute(ctx context.Context, in *ResolveDisputeRequest, opts ...grpc.CallOption) (*Dispute, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Dispute)
+	err := c.cc.Invoke(ctx, AdminService_ResolveDispute_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) ListCommissionBatches(ctx context.Context, in *ListCommissionBatchesRequest, opts ...grpc.CallOption) (*ListCommissionBatchesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListCommissionBatchesResponse)
+	err := c.cc.Invoke(ctx, AdminService_ListCommissionBatches_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AdminServiceServer is the server API for AdminService service.
 // All implementations must embed UnimplementedAdminServiceServer
 // for forward compatibility.
@@ -161,6 +202,14 @@ type AdminServiceServer interface {
 	// The ops escape hatch: cancel from any open state, releasing the
 	// hold when one is placed. Reason required — it lands on the timeline.
 	CancelTransferAdmin(context.Context, *CancelTransferAdminRequest) (*Transfer, error)
+	// The dispute queue.
+	ListDisputes(context.Context, *ListDisputesRequest) (*ListDisputesResponse, error)
+	// THE ruling. The resolution alone decides everything: hold released or
+	// captured, client refunded or not, and the transfer's terminal state.
+	ResolveDispute(context.Context, *ResolveDisputeRequest) (*Dispute, error)
+	// The weekly commission payouts, with the status of the ledger request
+	// backing each one.
+	ListCommissionBatches(context.Context, *ListCommissionBatchesRequest) (*ListCommissionBatchesResponse, error)
 	mustEmbedUnimplementedAdminServiceServer()
 }
 
@@ -191,6 +240,15 @@ func (UnimplementedAdminServiceServer) ListAllTransfers(context.Context, *ListAl
 }
 func (UnimplementedAdminServiceServer) CancelTransferAdmin(context.Context, *CancelTransferAdminRequest) (*Transfer, error) {
 	return nil, status.Error(codes.Unimplemented, "method CancelTransferAdmin not implemented")
+}
+func (UnimplementedAdminServiceServer) ListDisputes(context.Context, *ListDisputesRequest) (*ListDisputesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListDisputes not implemented")
+}
+func (UnimplementedAdminServiceServer) ResolveDispute(context.Context, *ResolveDisputeRequest) (*Dispute, error) {
+	return nil, status.Error(codes.Unimplemented, "method ResolveDispute not implemented")
+}
+func (UnimplementedAdminServiceServer) ListCommissionBatches(context.Context, *ListCommissionBatchesRequest) (*ListCommissionBatchesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListCommissionBatches not implemented")
 }
 func (UnimplementedAdminServiceServer) mustEmbedUnimplementedAdminServiceServer() {}
 func (UnimplementedAdminServiceServer) testEmbeddedByValue()                      {}
@@ -339,6 +397,60 @@ func _AdminService_CancelTransferAdmin_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AdminService_ListDisputes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListDisputesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).ListDisputes(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_ListDisputes_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).ListDisputes(ctx, req.(*ListDisputesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_ResolveDispute_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResolveDisputeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).ResolveDispute(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_ResolveDispute_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).ResolveDispute(ctx, req.(*ResolveDisputeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_ListCommissionBatches_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListCommissionBatchesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).ListCommissionBatches(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_ListCommissionBatches_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).ListCommissionBatches(ctx, req.(*ListCommissionBatchesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AdminService_ServiceDesc is the grpc.ServiceDesc for AdminService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -373,6 +485,18 @@ var AdminService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CancelTransferAdmin",
 			Handler:    _AdminService_CancelTransferAdmin_Handler,
+		},
+		{
+			MethodName: "ListDisputes",
+			Handler:    _AdminService_ListDisputes_Handler,
+		},
+		{
+			MethodName: "ResolveDispute",
+			Handler:    _AdminService_ResolveDispute_Handler,
+		},
+		{
+			MethodName: "ListCommissionBatches",
+			Handler:    _AdminService_ListCommissionBatches_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

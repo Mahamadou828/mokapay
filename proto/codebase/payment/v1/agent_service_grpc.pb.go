@@ -25,6 +25,7 @@ const (
 	AgentService_AcceptOffer_FullMethodName         = "/payment.v1.AgentService/AcceptOffer"
 	AgentService_DeclineOffer_FullMethodName        = "/payment.v1.AgentService/DeclineOffer"
 	AgentService_ListMyTransfers_FullMethodName     = "/payment.v1.AgentService/ListMyTransfers"
+	AgentService_ListMyCommissions_FullMethodName   = "/payment.v1.AgentService/ListMyCommissions"
 	AgentService_ListMyWallets_FullMethodName       = "/payment.v1.AgentService/ListMyWallets"
 	AgentService_AddWallet_FullMethodName           = "/payment.v1.AgentService/AddWallet"
 	AgentService_RemoveWallet_FullMethodName        = "/payment.v1.AgentService/RemoveWallet"
@@ -51,6 +52,9 @@ type AgentServiceClient interface {
 	// Takes the agent out of this transfer for good.
 	DeclineOffer(ctx context.Context, in *DeclineOfferRequest, opts ...grpc.CallOption) (*Offer, error)
 	ListMyTransfers(ctx context.Context, in *ListMyTransfersRequest, opts ...grpc.CallOption) (*ListTransfersResponse, error)
+	// The agent's earnings: one accrual per completed transfer, with the
+	// status of its weekly payout.
+	ListMyCommissions(ctx context.Context, in *ListMyCommissionsRequest, opts ...grpc.CallOption) (*ListMyCommissionsResponse, error)
 	ListMyWallets(ctx context.Context, in *ListMyWalletsRequest, opts ...grpc.CallOption) (*ListMyWalletsResponse, error)
 	// Self-service wallet declaration (revised 2026-07-27): one wallet per
 	// operator with per-currency acceptance flags; remove then re-add to
@@ -122,6 +126,16 @@ func (c *agentServiceClient) ListMyTransfers(ctx context.Context, in *ListMyTran
 	return out, nil
 }
 
+func (c *agentServiceClient) ListMyCommissions(ctx context.Context, in *ListMyCommissionsRequest, opts ...grpc.CallOption) (*ListMyCommissionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListMyCommissionsResponse)
+	err := c.cc.Invoke(ctx, AgentService_ListMyCommissions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *agentServiceClient) ListMyWallets(ctx context.Context, in *ListMyWalletsRequest, opts ...grpc.CallOption) (*ListMyWalletsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListMyWalletsResponse)
@@ -182,6 +196,9 @@ type AgentServiceServer interface {
 	// Takes the agent out of this transfer for good.
 	DeclineOffer(context.Context, *DeclineOfferRequest) (*Offer, error)
 	ListMyTransfers(context.Context, *ListMyTransfersRequest) (*ListTransfersResponse, error)
+	// The agent's earnings: one accrual per completed transfer, with the
+	// status of its weekly payout.
+	ListMyCommissions(context.Context, *ListMyCommissionsRequest) (*ListMyCommissionsResponse, error)
 	ListMyWallets(context.Context, *ListMyWalletsRequest) (*ListMyWalletsResponse, error)
 	// Self-service wallet declaration (revised 2026-07-27): one wallet per
 	// operator with per-currency acceptance flags; remove then re-add to
@@ -217,6 +234,9 @@ func (UnimplementedAgentServiceServer) DeclineOffer(context.Context, *DeclineOff
 }
 func (UnimplementedAgentServiceServer) ListMyTransfers(context.Context, *ListMyTransfersRequest) (*ListTransfersResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListMyTransfers not implemented")
+}
+func (UnimplementedAgentServiceServer) ListMyCommissions(context.Context, *ListMyCommissionsRequest) (*ListMyCommissionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListMyCommissions not implemented")
 }
 func (UnimplementedAgentServiceServer) ListMyWallets(context.Context, *ListMyWalletsRequest) (*ListMyWalletsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListMyWallets not implemented")
@@ -341,6 +361,24 @@ func _AgentService_ListMyTransfers_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgentService_ListMyCommissions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListMyCommissionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServiceServer).ListMyCommissions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentService_ListMyCommissions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServiceServer).ListMyCommissions(ctx, req.(*ListMyCommissionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AgentService_ListMyWallets_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListMyWalletsRequest)
 	if err := dec(in); err != nil {
@@ -439,6 +477,10 @@ var AgentService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListMyTransfers",
 			Handler:    _AgentService_ListMyTransfers_Handler,
+		},
+		{
+			MethodName: "ListMyCommissions",
+			Handler:    _AgentService_ListMyCommissions_Handler,
 		},
 		{
 			MethodName: "ListMyWallets",

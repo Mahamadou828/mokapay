@@ -294,6 +294,102 @@ func (x *ListMyTransfersRequest) GetLimit() int32 {
 	return 0
 }
 
+type ListMyCommissionsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Status        *CommissionStatus      `protobuf:"varint,1,opt,name=status,proto3,enum=payment.v1.CommissionStatus,oneof" json:"status,omitempty"`
+	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"` // 0 = server default
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListMyCommissionsRequest) Reset() {
+	*x = ListMyCommissionsRequest{}
+	mi := &file_payment_v1_agent_service_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListMyCommissionsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListMyCommissionsRequest) ProtoMessage() {}
+
+func (x *ListMyCommissionsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_payment_v1_agent_service_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListMyCommissionsRequest.ProtoReflect.Descriptor instead.
+func (*ListMyCommissionsRequest) Descriptor() ([]byte, []int) {
+	return file_payment_v1_agent_service_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *ListMyCommissionsRequest) GetStatus() CommissionStatus {
+	if x != nil && x.Status != nil {
+		return *x.Status
+	}
+	return CommissionStatus_COMMISSION_STATUS_UNSPECIFIED
+}
+
+func (x *ListMyCommissionsRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+type ListMyCommissionsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Commissions   []*Commission          `protobuf:"bytes,1,rep,name=commissions,proto3" json:"commissions,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListMyCommissionsResponse) Reset() {
+	*x = ListMyCommissionsResponse{}
+	mi := &file_payment_v1_agent_service_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListMyCommissionsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListMyCommissionsResponse) ProtoMessage() {}
+
+func (x *ListMyCommissionsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_payment_v1_agent_service_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListMyCommissionsResponse.ProtoReflect.Descriptor instead.
+func (*ListMyCommissionsResponse) Descriptor() ([]byte, []int) {
+	return file_payment_v1_agent_service_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *ListMyCommissionsResponse) GetCommissions() []*Commission {
+	if x != nil {
+		return x.Commissions
+	}
+	return nil
+}
+
 type ListMyWalletsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -302,7 +398,7 @@ type ListMyWalletsRequest struct {
 
 func (x *ListMyWalletsRequest) Reset() {
 	*x = ListMyWalletsRequest{}
-	mi := &file_payment_v1_agent_service_proto_msgTypes[6]
+	mi := &file_payment_v1_agent_service_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -314,7 +410,7 @@ func (x *ListMyWalletsRequest) String() string {
 func (*ListMyWalletsRequest) ProtoMessage() {}
 
 func (x *ListMyWalletsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_payment_v1_agent_service_proto_msgTypes[6]
+	mi := &file_payment_v1_agent_service_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -327,7 +423,7 @@ func (x *ListMyWalletsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMyWalletsRequest.ProtoReflect.Descriptor instead.
 func (*ListMyWalletsRequest) Descriptor() ([]byte, []int) {
-	return file_payment_v1_agent_service_proto_rawDescGZIP(), []int{6}
+	return file_payment_v1_agent_service_proto_rawDescGZIP(), []int{8}
 }
 
 type ListMyWalletsResponse struct {
@@ -339,7 +435,7 @@ type ListMyWalletsResponse struct {
 
 func (x *ListMyWalletsResponse) Reset() {
 	*x = ListMyWalletsResponse{}
-	mi := &file_payment_v1_agent_service_proto_msgTypes[7]
+	mi := &file_payment_v1_agent_service_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -351,7 +447,7 @@ func (x *ListMyWalletsResponse) String() string {
 func (*ListMyWalletsResponse) ProtoMessage() {}
 
 func (x *ListMyWalletsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_payment_v1_agent_service_proto_msgTypes[7]
+	mi := &file_payment_v1_agent_service_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -364,7 +460,7 @@ func (x *ListMyWalletsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMyWalletsResponse.ProtoReflect.Descriptor instead.
 func (*ListMyWalletsResponse) Descriptor() ([]byte, []int) {
-	return file_payment_v1_agent_service_proto_rawDescGZIP(), []int{7}
+	return file_payment_v1_agent_service_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ListMyWalletsResponse) GetWallets() []*AgentWallet {
@@ -386,7 +482,7 @@ type AddWalletRequest struct {
 
 func (x *AddWalletRequest) Reset() {
 	*x = AddWalletRequest{}
-	mi := &file_payment_v1_agent_service_proto_msgTypes[8]
+	mi := &file_payment_v1_agent_service_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -398,7 +494,7 @@ func (x *AddWalletRequest) String() string {
 func (*AddWalletRequest) ProtoMessage() {}
 
 func (x *AddWalletRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_payment_v1_agent_service_proto_msgTypes[8]
+	mi := &file_payment_v1_agent_service_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -411,7 +507,7 @@ func (x *AddWalletRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddWalletRequest.ProtoReflect.Descriptor instead.
 func (*AddWalletRequest) Descriptor() ([]byte, []int) {
-	return file_payment_v1_agent_service_proto_rawDescGZIP(), []int{8}
+	return file_payment_v1_agent_service_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *AddWalletRequest) GetOperator() Operator {
@@ -451,7 +547,7 @@ type RemoveWalletRequest struct {
 
 func (x *RemoveWalletRequest) Reset() {
 	*x = RemoveWalletRequest{}
-	mi := &file_payment_v1_agent_service_proto_msgTypes[9]
+	mi := &file_payment_v1_agent_service_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -463,7 +559,7 @@ func (x *RemoveWalletRequest) String() string {
 func (*RemoveWalletRequest) ProtoMessage() {}
 
 func (x *RemoveWalletRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_payment_v1_agent_service_proto_msgTypes[9]
+	mi := &file_payment_v1_agent_service_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -476,7 +572,7 @@ func (x *RemoveWalletRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveWalletRequest.ProtoReflect.Descriptor instead.
 func (*RemoveWalletRequest) Descriptor() ([]byte, []int) {
-	return file_payment_v1_agent_service_proto_rawDescGZIP(), []int{9}
+	return file_payment_v1_agent_service_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *RemoveWalletRequest) GetId() string {
@@ -494,7 +590,7 @@ type ListDepositChannelsRequest struct {
 
 func (x *ListDepositChannelsRequest) Reset() {
 	*x = ListDepositChannelsRequest{}
-	mi := &file_payment_v1_agent_service_proto_msgTypes[10]
+	mi := &file_payment_v1_agent_service_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -506,7 +602,7 @@ func (x *ListDepositChannelsRequest) String() string {
 func (*ListDepositChannelsRequest) ProtoMessage() {}
 
 func (x *ListDepositChannelsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_payment_v1_agent_service_proto_msgTypes[10]
+	mi := &file_payment_v1_agent_service_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -519,7 +615,7 @@ func (x *ListDepositChannelsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListDepositChannelsRequest.ProtoReflect.Descriptor instead.
 func (*ListDepositChannelsRequest) Descriptor() ([]byte, []int) {
-	return file_payment_v1_agent_service_proto_rawDescGZIP(), []int{10}
+	return file_payment_v1_agent_service_proto_rawDescGZIP(), []int{12}
 }
 
 // One official MOKA PAY receiving account. Free-form strings on purpose:
@@ -538,7 +634,7 @@ type DepositChannel struct {
 
 func (x *DepositChannel) Reset() {
 	*x = DepositChannel{}
-	mi := &file_payment_v1_agent_service_proto_msgTypes[11]
+	mi := &file_payment_v1_agent_service_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -550,7 +646,7 @@ func (x *DepositChannel) String() string {
 func (*DepositChannel) ProtoMessage() {}
 
 func (x *DepositChannel) ProtoReflect() protoreflect.Message {
-	mi := &file_payment_v1_agent_service_proto_msgTypes[11]
+	mi := &file_payment_v1_agent_service_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -563,7 +659,7 @@ func (x *DepositChannel) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DepositChannel.ProtoReflect.Descriptor instead.
 func (*DepositChannel) Descriptor() ([]byte, []int) {
-	return file_payment_v1_agent_service_proto_rawDescGZIP(), []int{11}
+	return file_payment_v1_agent_service_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *DepositChannel) GetName() string {
@@ -610,7 +706,7 @@ type ListDepositChannelsResponse struct {
 
 func (x *ListDepositChannelsResponse) Reset() {
 	*x = ListDepositChannelsResponse{}
-	mi := &file_payment_v1_agent_service_proto_msgTypes[12]
+	mi := &file_payment_v1_agent_service_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -622,7 +718,7 @@ func (x *ListDepositChannelsResponse) String() string {
 func (*ListDepositChannelsResponse) ProtoMessage() {}
 
 func (x *ListDepositChannelsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_payment_v1_agent_service_proto_msgTypes[12]
+	mi := &file_payment_v1_agent_service_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -635,7 +731,7 @@ func (x *ListDepositChannelsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListDepositChannelsResponse.ProtoReflect.Descriptor instead.
 func (*ListDepositChannelsResponse) Descriptor() ([]byte, []int) {
-	return file_payment_v1_agent_service_proto_rawDescGZIP(), []int{12}
+	return file_payment_v1_agent_service_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *ListDepositChannelsResponse) GetChannels() []*DepositChannel {
@@ -665,7 +761,13 @@ const file_payment_v1_agent_service_proto_rawDesc = "" +
 	"\x16ListMyTransfersRequest\x127\n" +
 	"\x06status\x18\x01 \x01(\x0e2\x1a.payment.v1.TransferStatusH\x00R\x06status\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limitB\t\n" +
-	"\a_status\"\x16\n" +
+	"\a_status\"v\n" +
+	"\x18ListMyCommissionsRequest\x129\n" +
+	"\x06status\x18\x01 \x01(\x0e2\x1c.payment.v1.CommissionStatusH\x00R\x06status\x88\x01\x01\x12\x14\n" +
+	"\x05limit\x18\x02 \x01(\x05R\x05limitB\t\n" +
+	"\a_status\"U\n" +
+	"\x19ListMyCommissionsResponse\x128\n" +
+	"\vcommissions\x18\x01 \x03(\v2\x16.payment.v1.CommissionR\vcommissions\"\x16\n" +
 	"\x14ListMyWalletsRequest\"J\n" +
 	"\x15ListMyWalletsResponse\x121\n" +
 	"\awallets\x18\x01 \x03(\v2\x17.payment.v1.AgentWalletR\awallets\"\xa4\x01\n" +
@@ -687,13 +789,14 @@ const file_payment_v1_agent_service_proto_rawDesc = "" +
 	"\finstructions\x18\x05 \x01(\tH\x00R\finstructions\x88\x01\x01B\x0f\n" +
 	"\r_instructions\"U\n" +
 	"\x1bListDepositChannelsResponse\x126\n" +
-	"\bchannels\x18\x01 \x03(\v2\x1a.payment.v1.DepositChannelR\bchannels2\xda\x05\n" +
+	"\bchannels\x18\x01 \x03(\v2\x1a.payment.v1.DepositChannelR\bchannels2\xbc\x06\n" +
 	"\fAgentService\x12I\n" +
 	"\fGetMyProfile\x12\x1f.payment.v1.GetMyProfileRequest\x1a\x18.payment.v1.AgentProfile\x12Q\n" +
 	"\fListMyOffers\x12\x1f.payment.v1.ListMyOffersRequest\x1a .payment.v1.ListMyOffersResponse\x12C\n" +
 	"\vAcceptOffer\x12\x1e.payment.v1.AcceptOfferRequest\x1a\x14.payment.v1.Transfer\x12B\n" +
 	"\fDeclineOffer\x12\x1f.payment.v1.DeclineOfferRequest\x1a\x11.payment.v1.Offer\x12X\n" +
-	"\x0fListMyTransfers\x12\".payment.v1.ListMyTransfersRequest\x1a!.payment.v1.ListTransfersResponse\x12T\n" +
+	"\x0fListMyTransfers\x12\".payment.v1.ListMyTransfersRequest\x1a!.payment.v1.ListTransfersResponse\x12`\n" +
+	"\x11ListMyCommissions\x12$.payment.v1.ListMyCommissionsRequest\x1a%.payment.v1.ListMyCommissionsResponse\x12T\n" +
 	"\rListMyWallets\x12 .payment.v1.ListMyWalletsRequest\x1a!.payment.v1.ListMyWalletsResponse\x12B\n" +
 	"\tAddWallet\x12\x1c.payment.v1.AddWalletRequest\x1a\x17.payment.v1.AgentWallet\x12G\n" +
 	"\fRemoveWallet\x12\x1f.payment.v1.RemoveWalletRequest\x1a\x16.google.protobuf.Empty\x12f\n" +
@@ -714,7 +817,7 @@ func file_payment_v1_agent_service_proto_rawDescGZIP() []byte {
 	return file_payment_v1_agent_service_proto_rawDescData
 }
 
-var file_payment_v1_agent_service_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
+var file_payment_v1_agent_service_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_payment_v1_agent_service_proto_goTypes = []any{
 	(*GetMyProfileRequest)(nil),         // 0: payment.v1.GetMyProfileRequest
 	(*ListMyOffersRequest)(nil),         // 1: payment.v1.ListMyOffersRequest
@@ -722,53 +825,61 @@ var file_payment_v1_agent_service_proto_goTypes = []any{
 	(*AcceptOfferRequest)(nil),          // 3: payment.v1.AcceptOfferRequest
 	(*DeclineOfferRequest)(nil),         // 4: payment.v1.DeclineOfferRequest
 	(*ListMyTransfersRequest)(nil),      // 5: payment.v1.ListMyTransfersRequest
-	(*ListMyWalletsRequest)(nil),        // 6: payment.v1.ListMyWalletsRequest
-	(*ListMyWalletsResponse)(nil),       // 7: payment.v1.ListMyWalletsResponse
-	(*AddWalletRequest)(nil),            // 8: payment.v1.AddWalletRequest
-	(*RemoveWalletRequest)(nil),         // 9: payment.v1.RemoveWalletRequest
-	(*ListDepositChannelsRequest)(nil),  // 10: payment.v1.ListDepositChannelsRequest
-	(*DepositChannel)(nil),              // 11: payment.v1.DepositChannel
-	(*ListDepositChannelsResponse)(nil), // 12: payment.v1.ListDepositChannelsResponse
-	(OfferStatus)(0),                    // 13: payment.v1.OfferStatus
-	(*Offer)(nil),                       // 14: payment.v1.Offer
-	(TransferStatus)(0),                 // 15: payment.v1.TransferStatus
-	(*AgentWallet)(nil),                 // 16: payment.v1.AgentWallet
-	(Operator)(0),                       // 17: payment.v1.Operator
-	(*AgentProfile)(nil),                // 18: payment.v1.AgentProfile
-	(*Transfer)(nil),                    // 19: payment.v1.Transfer
-	(*ListTransfersResponse)(nil),       // 20: payment.v1.ListTransfersResponse
-	(*emptypb.Empty)(nil),               // 21: google.protobuf.Empty
+	(*ListMyCommissionsRequest)(nil),    // 6: payment.v1.ListMyCommissionsRequest
+	(*ListMyCommissionsResponse)(nil),   // 7: payment.v1.ListMyCommissionsResponse
+	(*ListMyWalletsRequest)(nil),        // 8: payment.v1.ListMyWalletsRequest
+	(*ListMyWalletsResponse)(nil),       // 9: payment.v1.ListMyWalletsResponse
+	(*AddWalletRequest)(nil),            // 10: payment.v1.AddWalletRequest
+	(*RemoveWalletRequest)(nil),         // 11: payment.v1.RemoveWalletRequest
+	(*ListDepositChannelsRequest)(nil),  // 12: payment.v1.ListDepositChannelsRequest
+	(*DepositChannel)(nil),              // 13: payment.v1.DepositChannel
+	(*ListDepositChannelsResponse)(nil), // 14: payment.v1.ListDepositChannelsResponse
+	(OfferStatus)(0),                    // 15: payment.v1.OfferStatus
+	(*Offer)(nil),                       // 16: payment.v1.Offer
+	(TransferStatus)(0),                 // 17: payment.v1.TransferStatus
+	(CommissionStatus)(0),               // 18: payment.v1.CommissionStatus
+	(*Commission)(nil),                  // 19: payment.v1.Commission
+	(*AgentWallet)(nil),                 // 20: payment.v1.AgentWallet
+	(Operator)(0),                       // 21: payment.v1.Operator
+	(*AgentProfile)(nil),                // 22: payment.v1.AgentProfile
+	(*Transfer)(nil),                    // 23: payment.v1.Transfer
+	(*ListTransfersResponse)(nil),       // 24: payment.v1.ListTransfersResponse
+	(*emptypb.Empty)(nil),               // 25: google.protobuf.Empty
 }
 var file_payment_v1_agent_service_proto_depIdxs = []int32{
-	13, // 0: payment.v1.ListMyOffersRequest.status:type_name -> payment.v1.OfferStatus
-	14, // 1: payment.v1.ListMyOffersResponse.offers:type_name -> payment.v1.Offer
-	15, // 2: payment.v1.ListMyTransfersRequest.status:type_name -> payment.v1.TransferStatus
-	16, // 3: payment.v1.ListMyWalletsResponse.wallets:type_name -> payment.v1.AgentWallet
-	17, // 4: payment.v1.AddWalletRequest.operator:type_name -> payment.v1.Operator
-	11, // 5: payment.v1.ListDepositChannelsResponse.channels:type_name -> payment.v1.DepositChannel
-	0,  // 6: payment.v1.AgentService.GetMyProfile:input_type -> payment.v1.GetMyProfileRequest
-	1,  // 7: payment.v1.AgentService.ListMyOffers:input_type -> payment.v1.ListMyOffersRequest
-	3,  // 8: payment.v1.AgentService.AcceptOffer:input_type -> payment.v1.AcceptOfferRequest
-	4,  // 9: payment.v1.AgentService.DeclineOffer:input_type -> payment.v1.DeclineOfferRequest
-	5,  // 10: payment.v1.AgentService.ListMyTransfers:input_type -> payment.v1.ListMyTransfersRequest
-	6,  // 11: payment.v1.AgentService.ListMyWallets:input_type -> payment.v1.ListMyWalletsRequest
-	8,  // 12: payment.v1.AgentService.AddWallet:input_type -> payment.v1.AddWalletRequest
-	9,  // 13: payment.v1.AgentService.RemoveWallet:input_type -> payment.v1.RemoveWalletRequest
-	10, // 14: payment.v1.AgentService.ListDepositChannels:input_type -> payment.v1.ListDepositChannelsRequest
-	18, // 15: payment.v1.AgentService.GetMyProfile:output_type -> payment.v1.AgentProfile
-	2,  // 16: payment.v1.AgentService.ListMyOffers:output_type -> payment.v1.ListMyOffersResponse
-	19, // 17: payment.v1.AgentService.AcceptOffer:output_type -> payment.v1.Transfer
-	14, // 18: payment.v1.AgentService.DeclineOffer:output_type -> payment.v1.Offer
-	20, // 19: payment.v1.AgentService.ListMyTransfers:output_type -> payment.v1.ListTransfersResponse
-	7,  // 20: payment.v1.AgentService.ListMyWallets:output_type -> payment.v1.ListMyWalletsResponse
-	16, // 21: payment.v1.AgentService.AddWallet:output_type -> payment.v1.AgentWallet
-	21, // 22: payment.v1.AgentService.RemoveWallet:output_type -> google.protobuf.Empty
-	12, // 23: payment.v1.AgentService.ListDepositChannels:output_type -> payment.v1.ListDepositChannelsResponse
-	15, // [15:24] is the sub-list for method output_type
-	6,  // [6:15] is the sub-list for method input_type
-	6,  // [6:6] is the sub-list for extension type_name
-	6,  // [6:6] is the sub-list for extension extendee
-	0,  // [0:6] is the sub-list for field type_name
+	15, // 0: payment.v1.ListMyOffersRequest.status:type_name -> payment.v1.OfferStatus
+	16, // 1: payment.v1.ListMyOffersResponse.offers:type_name -> payment.v1.Offer
+	17, // 2: payment.v1.ListMyTransfersRequest.status:type_name -> payment.v1.TransferStatus
+	18, // 3: payment.v1.ListMyCommissionsRequest.status:type_name -> payment.v1.CommissionStatus
+	19, // 4: payment.v1.ListMyCommissionsResponse.commissions:type_name -> payment.v1.Commission
+	20, // 5: payment.v1.ListMyWalletsResponse.wallets:type_name -> payment.v1.AgentWallet
+	21, // 6: payment.v1.AddWalletRequest.operator:type_name -> payment.v1.Operator
+	13, // 7: payment.v1.ListDepositChannelsResponse.channels:type_name -> payment.v1.DepositChannel
+	0,  // 8: payment.v1.AgentService.GetMyProfile:input_type -> payment.v1.GetMyProfileRequest
+	1,  // 9: payment.v1.AgentService.ListMyOffers:input_type -> payment.v1.ListMyOffersRequest
+	3,  // 10: payment.v1.AgentService.AcceptOffer:input_type -> payment.v1.AcceptOfferRequest
+	4,  // 11: payment.v1.AgentService.DeclineOffer:input_type -> payment.v1.DeclineOfferRequest
+	5,  // 12: payment.v1.AgentService.ListMyTransfers:input_type -> payment.v1.ListMyTransfersRequest
+	6,  // 13: payment.v1.AgentService.ListMyCommissions:input_type -> payment.v1.ListMyCommissionsRequest
+	8,  // 14: payment.v1.AgentService.ListMyWallets:input_type -> payment.v1.ListMyWalletsRequest
+	10, // 15: payment.v1.AgentService.AddWallet:input_type -> payment.v1.AddWalletRequest
+	11, // 16: payment.v1.AgentService.RemoveWallet:input_type -> payment.v1.RemoveWalletRequest
+	12, // 17: payment.v1.AgentService.ListDepositChannels:input_type -> payment.v1.ListDepositChannelsRequest
+	22, // 18: payment.v1.AgentService.GetMyProfile:output_type -> payment.v1.AgentProfile
+	2,  // 19: payment.v1.AgentService.ListMyOffers:output_type -> payment.v1.ListMyOffersResponse
+	23, // 20: payment.v1.AgentService.AcceptOffer:output_type -> payment.v1.Transfer
+	16, // 21: payment.v1.AgentService.DeclineOffer:output_type -> payment.v1.Offer
+	24, // 22: payment.v1.AgentService.ListMyTransfers:output_type -> payment.v1.ListTransfersResponse
+	7,  // 23: payment.v1.AgentService.ListMyCommissions:output_type -> payment.v1.ListMyCommissionsResponse
+	9,  // 24: payment.v1.AgentService.ListMyWallets:output_type -> payment.v1.ListMyWalletsResponse
+	20, // 25: payment.v1.AgentService.AddWallet:output_type -> payment.v1.AgentWallet
+	25, // 26: payment.v1.AgentService.RemoveWallet:output_type -> google.protobuf.Empty
+	14, // 27: payment.v1.AgentService.ListDepositChannels:output_type -> payment.v1.ListDepositChannelsResponse
+	18, // [18:28] is the sub-list for method output_type
+	8,  // [8:18] is the sub-list for method input_type
+	8,  // [8:8] is the sub-list for extension type_name
+	8,  // [8:8] is the sub-list for extension extendee
+	0,  // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_payment_v1_agent_service_proto_init() }
@@ -780,14 +891,15 @@ func file_payment_v1_agent_service_proto_init() {
 	file_payment_v1_transfer_service_proto_init()
 	file_payment_v1_agent_service_proto_msgTypes[1].OneofWrappers = []any{}
 	file_payment_v1_agent_service_proto_msgTypes[5].OneofWrappers = []any{}
-	file_payment_v1_agent_service_proto_msgTypes[11].OneofWrappers = []any{}
+	file_payment_v1_agent_service_proto_msgTypes[6].OneofWrappers = []any{}
+	file_payment_v1_agent_service_proto_msgTypes[13].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_payment_v1_agent_service_proto_rawDesc), len(file_payment_v1_agent_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   13,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

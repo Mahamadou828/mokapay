@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/riverqueue/river"
+	complianceevents "mokapay.app/app/services/payment/internal/business/compliance/events"
 	"mokapay.app/core/logger"
 )
 
@@ -29,9 +30,22 @@ type OffersExpireArg struct {
 
 func (OffersExpireArg) Kind() string { return "transfer.offers_expire" }
 
-// PaymentTimeoutArg fires when the client's payment window elapses.
+// Payment-timeout stages: the same job guards both off-platform payment
+// windows, because they are the same clock at two ends of the transfer.
+const (
+	// StageClient: the client never paid the agent — cancel, release.
+	StageClient = "client"
+	// StagePayout: the client paid but the agent never reported the
+	// payout — auto-dispute (the spec's system dispute on timeout).
+	StagePayout = "payout"
+)
+
+// PaymentTimeoutArg fires when a payment window elapses. Stage names
+// which one; an empty Stage is the client window (jobs enqueued before
+// the payout clock existed keep their meaning).
 type PaymentTimeoutArg struct {
 	TransferID string
+	Stage      string
 }
 
 func (PaymentTimeoutArg) Kind() string { return "transfer.payment_timeout" }
@@ -80,7 +94,18 @@ func (p TransferJobs) ScheduleOffersExpire(ctx context.Context, tx pgx.Tx, trans
 
 // SchedulePaymentTimeout starts the client's payment clock at accept.
 func (p TransferJobs) SchedulePaymentTimeout(ctx context.Context, tx pgx.Tx, transferID uuid.UUID, at time.Time) error {
-	_, err := p.river.InsertTx(ctx, tx, PaymentTimeoutArg{TransferID: transferID.String()},
+	_, err := p.river.InsertTx(ctx, tx,
+		PaymentTimeoutArg{TransferID: transferID.String(), Stage: StageClient},
+		&river.InsertOpts{ScheduledAt: at})
+	return err
+}
+
+// SchedulePayoutTimeout starts the agent's payout clock when the client's
+// funding proof lands — its own window, so an agent always gets the full
+// time from the moment the money actually reached them.
+func (p TransferJobs) SchedulePayoutTimeout(ctx context.Context, tx pgx.Tx, transferID uuid.UUID, at time.Time) error {
+	_, err := p.river.InsertTx(ctx, tx,
+		PaymentTimeoutArg{TransferID: transferID.String(), Stage: StagePayout},
 		&river.InsertOpts{ScheduledAt: at})
 	return err
 }
@@ -89,6 +114,16 @@ func (p TransferJobs) SchedulePaymentTimeout(ctx context.Context, tx pgx.Tx, tra
 func (p TransferJobs) ScheduleAutoConfirm(ctx context.Context, tx pgx.Tx, transferID uuid.UUID, at time.Time) error {
 	_, err := p.river.InsertTx(ctx, tx, AutoConfirmArg{TransferID: transferID.String()},
 		&river.InsertOpts{ScheduledAt: at})
+	return err
+}
+
+// ScheduleComplianceEvaluation commits the AML evaluation with the
+// completion that earns it. The job itself lives in the compliance events
+// package (it is that domain's topology) — it is enqueued from here
+// because a transfer transition is what starts it.
+func (p TransferJobs) ScheduleComplianceEvaluation(ctx context.Context, tx pgx.Tx, transferID uuid.UUID) error {
+	_, err := p.river.InsertTx(ctx, tx,
+		complianceevents.EvaluateArg{TransferID: transferID.String()}, nil)
 	return err
 }
 

@@ -52,9 +52,6 @@ type Config struct {
 		Subscriber      string        // mailto: contact, VAPID sub claim
 		TTL             time.Duration // how long the push service holds an undelivered message
 	}
-	Seed struct {
-		OpsPhone string
-	}
 }
 
 // newConfig resolves the whole service config from the environment. Defaults
@@ -99,8 +96,6 @@ func newConfig() Config {
 	cfg.Cognito.ClientSecret = config.GetEnv("COGNITO_CLIENT_SECRET", "")
 	cfg.Cognito.PoolID = config.GetEnv("COGNITO_POOL_ID", "")
 	cfg.Cognito.Region = config.GetEnv("COGNITO_REGION", "eu-west-1")
-
-	cfg.Seed.OpsPhone = config.GetEnv("SEED_OPS_PHONE", "")
 
 	return cfg
 }

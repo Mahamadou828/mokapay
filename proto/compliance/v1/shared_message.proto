@@ -1,0 +1,148 @@
+syntax = "proto3";
+
+package compliance.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// Values mirror the compliance DB enums (compliance_subject_type,
+// compliance_rule_code, compliance_severity, compliance_alert_status,
+// compliance_case_status) — conversion is a plain cast.
+
+// Who a rule was evaluated against. sender/agent carry an account id,
+// recipient carries a phone (recipients are off-platform — they have no
+// account).
+enum SubjectType {
+  SUBJECT_TYPE_UNSPECIFIED = 0;
+  SUBJECT_TYPE_SENDER = 1;
+  SUBJECT_TYPE_AGENT = 2;
+  SUBJECT_TYPE_RECIPIENT = 3;
+}
+
+// The fixed AML rule set. Every rule runs on every evaluation and logs
+// its outcome — triggered or not — so the audit trail records what was
+// checked, not only what fired.
+enum RuleCode {
+  RULE_CODE_UNSPECIFIED = 0;
+  RULE_CODE_DAILY_VOLUME_LIMIT = 1;
+  RULE_CODE_WEEKLY_STRUCTURING = 2;
+  RULE_CODE_SENDER_VOLUME_SPIKE = 3;
+  RULE_CODE_AGENT_VOLUME_SPIKE = 4;
+  RULE_CODE_BENEFICIARY_CONCENTRATION = 5;
+  RULE_CODE_HOURLY_VELOCITY = 6;
+  RULE_CODE_NIGHT_TIME_STRUCTURING = 7;
+  RULE_CODE_NEW_ACCOUNT_HIGH_VOLUME = 8;
+}
+
+enum Severity {
+  SEVERITY_UNSPECIFIED = 0;  // also: "not triggered"
+  SEVERITY_LOW = 1;
+  SEVERITY_MEDIUM = 2;
+  SEVERITY_HIGH = 3;
+}
+
+// The staff review lifecycle of one alert.
+enum AlertStatus {
+  ALERT_STATUS_UNSPECIFIED = 0;
+  ALERT_STATUS_OPEN = 1;
+  ALERT_STATUS_UNDER_REVIEW = 2;
+  ALERT_STATUS_ESCALATED = 3;
+  ALERT_STATUS_RESOLVED = 4;
+  ALERT_STATUS_DISMISSED = 5;
+}
+
+// A case bundles alerts. CLOSED_SAR records that a Suspicious Activity
+// Report was filed with the regulator — a real closure outcome, not a
+// synonym of "closed".
+enum CaseStatus {
+  CASE_STATUS_UNSPECIFIED = 0;
+  CASE_STATUS_OPEN = 1;
+  CASE_STATUS_INVESTIGATING = 2;
+  CASE_STATUS_CLOSED_SAR = 3;
+  CASE_STATUS_CLOSED_NO_ACTION = 4;
+}
+
+// RiskLevel deliberately has NO database enum: the score is a computed
+// view (SUM of risk_points over a 90-day window) and the score→level
+// bucketing is applied in the Go usecase from env config, so ops retune
+// the bands without a migration.
+enum RiskLevel {
+  RISK_LEVEL_UNSPECIFIED = 0;
+  RISK_LEVEL_LOW = 1;
+  RISK_LEVEL_MEDIUM = 2;
+  RISK_LEVEL_HIGH = 3;
+  RISK_LEVEL_CRITICAL = 4;
+}
+
+// One immutable audit row: "ran this rule, against these inputs, at this
+// time". Never updated, never deleted.
+message RuleEvaluation {
+  string id = 1;
+  string transfer_id = 2;  // payment.transfers, cross-service NK
+  RuleCode rule_code = 3;
+  SubjectType subject_type = 4;
+  optional string account_id = 5;       // sender/agent subjects
+  optional string recipient_phone = 6;  // recipient subjects
+  bool triggered = 7;
+  Severity severity = 8;  // UNSPECIFIED when not triggered
+  // Points this evaluation contributes to the subject's risk score,
+  // snapshotted at evaluation time (retuning severity points never
+  // rewrites history).
+  int32 risk_points = 9;
+  // The metrics snapshot the rule was evaluated against, as JSON — the
+  // audit answer to "what was checked?".
+  string inputs = 10;
+  google.protobuf.Timestamp evaluated_at = 11;
+}
+
+// A triggered evaluation, plus the staff lifecycle on top of it. 1:1 with
+// its evaluation; the rule/subject fields are joined from it for display.
+message Alert {
+  string id = 1;
+  string rule_evaluation_id = 2;
+  AlertStatus status = 3;
+  optional string assignee_id = 4;  // staff account
+  optional string resolution_note = 5;
+  RuleCode rule_code = 6;
+  SubjectType subject_type = 7;
+  Severity severity = 8;
+  string transfer_id = 9;
+  optional string account_id = 10;
+  optional string recipient_phone = 11;
+  google.protobuf.Timestamp created_at = 12;
+  google.protobuf.Timestamp updated_at = 13;
+}
+
+// An investigation bundling one or more alerts.
+message Case {
+  string id = 1;
+  string reference = 2;  // CASE-YYYY-NNNNNN, generated server-side
+  CaseStatus status = 3;
+  optional string assignee_id = 4;
+  optional string summary = 5;
+  google.protobuf.Timestamp closed_at = 6;  // set when status moves to a closed_* value
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+// The 90-day rolling risk score of one account, computed on read.
+message AccountRisk {
+  string account_id = 1;
+  int64 risk_score = 2;
+  RiskLevel level = 3;
+  google.protobuf.Timestamp last_evaluated_at = 4;
+}
+
+// Counts for the admin compliance page.
+message ComplianceDashboard {
+  int64 open_alerts = 1;
+  int64 under_review_alerts = 2;
+  int64 escalated_alerts = 3;
+  int64 high_severity_alerts = 4;
+  int64 medium_severity_alerts = 5;
+  int64 low_severity_alerts = 6;
+  int64 open_cases = 7;
+  int64 investigating_cases = 8;
+  int64 sar_cases = 9;
+  // Distinct transfers carrying at least one unresolved alert.
+  int64 flagged_transfers = 10;
+}

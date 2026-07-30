@@ -45,13 +45,15 @@ func Run() error {
 			CORSAllowedOrigins: config.GetEnvAsSlice("CORS_ALLOWED_ORIGINS", []string{"*"}),
 		},
 		Client: struct {
-			UserGRPCPort    string
-			PaymentGRPCPort string
-			FileGRPCPort    string
+			UserGRPCPort       string
+			PaymentGRPCPort    string
+			FileGRPCPort       string
+			ComplianceGRPCPort string
 		}{
-			UserGRPCPort:    config.GetEnv("USER_GRPC_PORT", "localhost:50051"),
-			PaymentGRPCPort: config.GetEnv("PAYMENT_GRPC_PORT", "localhost:50053"),
-			FileGRPCPort:    config.GetEnv("FILE_GRPC_PORT", "localhost:50052"),
+			UserGRPCPort:       config.GetEnv("USER_GRPC_PORT", "localhost:50051"),
+			PaymentGRPCPort:    config.GetEnv("PAYMENT_GRPC_PORT", "localhost:50053"),
+			FileGRPCPort:       config.GetEnv("FILE_GRPC_PORT", "localhost:50052"),
+			ComplianceGRPCPort: config.GetEnv("COMPLIANCE_GRPC_PORT", "localhost:50054"),
 		},
 	}
 	cfg.Cognito.ClientID = config.GetEnv("COGNITO_CLIENT_ID", "")
@@ -77,13 +79,15 @@ func Run() error {
 	// -------------------------------------------------------------------------
 	// init moka client
 	moka, err := client.NewMokaClient(client.Config{
-		UserServiceAddr:    cfg.Client.UserGRPCPort,
-		PaymentServiceAddr: cfg.Client.PaymentGRPCPort,
-		FileServiceAddr:    cfg.Client.FileGRPCPort,
+		UserServiceAddr:       cfg.Client.UserGRPCPort,
+		PaymentServiceAddr:    cfg.Client.PaymentGRPCPort,
+		FileServiceAddr:       cfg.Client.FileGRPCPort,
+		ComplianceServiceAddr: cfg.Client.ComplianceGRPCPort,
 	}, map[client.Connection]bool{
-		client.ConnectionUser:    true,
-		client.ConnectionPayment: true,
-		client.ConnectionFile:    true,
+		client.ConnectionUser:       true,
+		client.ConnectionPayment:    true,
+		client.ConnectionFile:       true,
+		client.ConnectionCompliance: true,
 	})
 	if err != nil {
 		log.Error(ctx, "startup", "failed to init cognito client", "error", err)

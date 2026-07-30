@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package compliance.v1;
+
+import "compliance/v1/shared_message.proto";
+
+// The rule engine. Service-internal only (system passport), called by
+// payment through a River job after a transfer lifecycle event — never
+// exposed on the gateway, and never on a transfer's critical path:
+// compliance detects and alerts, it does not block money.
+service ComplianceService {
+  // Runs every rule of the fixed set against the metrics snapshot and
+  // appends one immutable rule_evaluations row per rule (triggered or
+  // not). A triggered rule also opens an alert, in the same statement.
+  rpc EvaluateTransfer(EvaluateTransferRequest) returns (EvaluateTransferResponse);
+}
+
+// The metrics snapshot for one account-backed subject (sender or agent).
+// Compliance never queries payment or user: whatever aggregates a rule
+// needs arrive here, computed by the caller that owns the data. All
+// amounts are WHOLE USD (not minor units) — the caller converts, so the
+// configured thresholds read as the dollar figures ops signed off on.
+message TransferMetrics {
+  string account_id = 1;
+  int64 current_amount_usd = 2;
+  int64 rolling_24h_volume_usd = 3;
+  int64 rolling_7d_volume_usd = 4;
+  int32 rolling_7d_count = 5;
+  int64 rolling_30d_avg_daily_volume_usd = 6;
+  int32 rolling_1h_count = 7;
+  int32 rolling_7d_nighttime_count = 8;  // in the configured tz, e.g. Africa/Kinshasa
+  int32 account_age_days = 9;
+}
+
+// The recipient is off-platform (cash payout) — a phone number, never an
+// account.
+message RecipientMetrics {
+  string phone = 1;
+  int32 distinct_senders_7d = 2;
+}
+
+message EvaluateTransferRequest {
+  string transfer_id = 1;
+  TransferMetrics sender = 2;
+  // Optional: a transfer evaluated before matching has no agent yet.
+  TransferMetrics agent = 3;
+  RecipientMetrics recipient = 4;
+}
+
+message EvaluateTransferResponse {
+  // Every rule that ran, in rule order — the caller logs the count, it
+  // does not act on the outcome.
+  repeated RuleEvaluation evaluations = 1;
+  int32 triggered_count = 2;
+}

@@ -19,9 +19,10 @@ type Config struct {
 		CORSAllowedOrigins []string
 	}
 	Client struct {
-		UserGRPCPort    string
-		PaymentGRPCPort string
-		FileGRPCPort    string
+		UserGRPCPort       string
+		PaymentGRPCPort    string
+		FileGRPCPort       string
+		ComplianceGRPCPort string
 	}
 	Cognito struct {
 		ClientID     string

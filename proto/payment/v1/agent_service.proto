@@ -22,6 +22,9 @@ service AgentService {
   // Takes the agent out of this transfer for good.
   rpc DeclineOffer(DeclineOfferRequest) returns (Offer);
   rpc ListMyTransfers(ListMyTransfersRequest) returns (ListTransfersResponse);
+  // The agent's earnings: one accrual per completed transfer, with the
+  // status of its weekly payout.
+  rpc ListMyCommissions(ListMyCommissionsRequest) returns (ListMyCommissionsResponse);
   rpc ListMyWallets(ListMyWalletsRequest) returns (ListMyWalletsResponse);
   // Self-service wallet declaration (revised 2026-07-27): one wallet per
   // operator with per-currency acceptance flags; remove then re-add to
@@ -57,6 +60,15 @@ message DeclineOfferRequest {
 message ListMyTransfersRequest {
   optional TransferStatus status = 1;
   int32 limit = 2;
+}
+
+message ListMyCommissionsRequest {
+  optional CommissionStatus status = 1;
+  int32 limit = 2;  // 0 = server default
+}
+
+message ListMyCommissionsResponse {
+  repeated Commission commissions = 1;
 }
 
 message ListMyWalletsRequest {}

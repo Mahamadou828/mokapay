@@ -13,6 +13,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 	"mokapay.app/app/services/payment/internal/api/transfer/mapper"
 	"mokapay.app/app/services/payment/internal/business/beneficiary"
+	disputeuc "mokapay.app/app/services/payment/internal/business/dispute/usecase"
 	"mokapay.app/app/services/payment/internal/business/transfer"
 	"mokapay.app/app/services/payment/internal/business/transfer/usecase"
 	"mokapay.app/app/services/payment/internal/sdk/grpcerr"
@@ -26,16 +27,17 @@ import (
 type Handler struct {
 	paymentv1.UnimplementedTransferServiceServer
 
-	logger *logger.Logger
-	uc     usecase.UseCase
+	logger   *logger.Logger
+	uc       usecase.UseCase
+	disputes disputeuc.UseCase
 	// The file service, for party-scoped proof reads: the file service
 	// only knows owners, so ListTransferFiles authorizes here and reads
 	// under the system passport.
 	files filev1.FileServiceClient
 }
 
-func NewHandler(l *logger.Logger, uc usecase.UseCase, files filev1.FileServiceClient) *Handler {
-	return &Handler{logger: l, uc: uc, files: files}
+func NewHandler(l *logger.Logger, uc usecase.UseCase, disputes disputeuc.UseCase, files filev1.FileServiceClient) *Handler {
+	return &Handler{logger: l, uc: uc, disputes: disputes, files: files}
 }
 
 func (h *Handler) GetAvailableOperators(ctx context.Context, req *paymentv1.GetAvailableOperatorsRequest) (*paymentv1.GetAvailableOperatorsResponse, error) {
@@ -370,6 +372,32 @@ func (h *Handler) CancelTransfer(ctx context.Context, req *paymentv1.CancelTrans
 	}
 
 	return mapper.TransferToProto(usecase.TransferView{Transfer: cancelled}), nil
+}
+
+// OpenDispute freezes a contested transfer. Either party may raise one
+// (the owner, or the assigned agent claiming client fraud); the usecase
+// derives which from the passport identity against the transfer itself.
+func (h *Handler) OpenDispute(ctx context.Context, req *paymentv1.OpenDisputeRequest) (*paymentv1.Dispute, error) {
+	callerID, err := identity.RequireRoles(ctx, "user", "agent", "pending_agent")
+	if err != nil {
+		return nil, err
+	}
+
+	id, err := uuid.Parse(req.Id)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid transfer id")
+	}
+	reason := mapper.DisputeReasonFromProto(req.Reason)
+	if reason == "" {
+		return nil, status.Error(codes.InvalidArgument, "reason is required")
+	}
+
+	opened, err := h.disputes.Open(ctx, callerID, id, reason, req.Details)
+	if err != nil {
+		return nil, grpcerr.Map(err)
+	}
+
+	return mapper.DisputeToProto(opened), nil
 }
 
 // UpdateTransferStatus is the file worker's proof path — system-only;

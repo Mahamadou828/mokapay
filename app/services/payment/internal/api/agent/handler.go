@@ -15,6 +15,8 @@ import (
 	profileuc "mokapay.app/app/services/payment/internal/business/agentprofile/usecase"
 	"mokapay.app/app/services/payment/internal/business/agentwallet"
 	walletuc "mokapay.app/app/services/payment/internal/business/agentwallet/usecase"
+	"mokapay.app/app/services/payment/internal/business/commission"
+	commissionuc "mokapay.app/app/services/payment/internal/business/commission/usecase"
 	"mokapay.app/app/services/payment/internal/business/ledger"
 	"mokapay.app/app/services/payment/internal/business/matching"
 	matchinguc "mokapay.app/app/services/payment/internal/business/matching/usecase"
@@ -29,23 +31,25 @@ import (
 type Handler struct {
 	paymentv1.UnimplementedAgentServiceServer
 
-	logger    *logger.Logger
-	profiles  profileuc.UseCase
-	matching  matchinguc.UseCase
-	transfers transferuc.UseCase
-	wallets   walletuc.UseCase
+	logger      *logger.Logger
+	profiles    profileuc.UseCase
+	matching    matchinguc.UseCase
+	transfers   transferuc.UseCase
+	wallets     walletuc.UseCase
+	commissions commissionuc.UseCase
 	// The official receiving-account catalogue: startup configuration,
 	// no usecase behind it.
 	depositChannels []ledger.DepositChannel
 }
 
-func NewHandler(l *logger.Logger, profiles profileuc.UseCase, matching matchinguc.UseCase, transfers transferuc.UseCase, wallets walletuc.UseCase, depositChannels []ledger.DepositChannel) *Handler {
+func NewHandler(l *logger.Logger, profiles profileuc.UseCase, matching matchinguc.UseCase, transfers transferuc.UseCase, wallets walletuc.UseCase, commissions commissionuc.UseCase, depositChannels []ledger.DepositChannel) *Handler {
 	return &Handler{
 		logger:          l,
 		profiles:        profiles,
 		matching:        matching,
 		transfers:       transfers,
 		wallets:         wallets,
+		commissions:     commissions,
 		depositChannels: depositChannels,
 	}
 }
@@ -151,6 +155,34 @@ func (h *Handler) ListMyTransfers(ctx context.Context, req *paymentv1.ListMyTran
 	}
 
 	return &paymentv1.ListTransfersResponse{Transfers: out}, nil
+}
+
+// ListMyCommissions serves the agent's earnings — one accrual per
+// completed transfer, with the status of the weekly payout carrying it.
+func (h *Handler) ListMyCommissions(ctx context.Context, req *paymentv1.ListMyCommissionsRequest) (*paymentv1.ListMyCommissionsResponse, error) {
+	accountID, err := identity.RequireRoles(ctx, "agent")
+	if err != nil {
+		return nil, err
+	}
+
+	var st *commission.Status
+	if req.Status != nil {
+		if s := adminmapper.CommissionStatusFromProto(*req.Status); s != "" {
+			st = new(s)
+		}
+	}
+
+	list, err := h.commissions.ListForAgent(ctx, accountID, st, req.Limit)
+	if err != nil {
+		return nil, grpcerr.Map(err)
+	}
+
+	out := make([]*paymentv1.Commission, 0, len(list))
+	for _, c := range list {
+		out = append(out, adminmapper.CommissionToProto(c))
+	}
+
+	return &paymentv1.ListMyCommissionsResponse{Commissions: out}, nil
 }
 
 func (h *Handler) ListMyWallets(ctx context.Context, _ *paymentv1.ListMyWalletsRequest) (*paymentv1.ListMyWalletsResponse, error) {

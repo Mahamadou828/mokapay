@@ -28,6 +28,10 @@ service TransferService {
   rpc ConfirmReceipt(ConfirmReceiptRequest) returns (Transfer);
   // Owner cancel, pre-accept only (no hold yet).
   rpc CancelTransfer(CancelTransferRequest) returns (Transfer);
+  // Freeze a contested transfer. Callable by either party of a
+  // post-accept transfer (the owner, or the assigned agent claiming
+  // client fraud); the agent's guarantee stays held until ops rules.
+  rpc OpenDispute(OpenDisputeRequest) returns (Dispute);
   rpc ListBeneficiaries(ListBeneficiariesRequest) returns (ListBeneficiariesResponse);
   // Save a recipient ahead of any transfer (D7). Idempotent on the
   // caller's (phone) pair: re-adding a live one refreshes its details —
@@ -120,6 +124,12 @@ message ConfirmReceiptRequest {
 message CancelTransferRequest {
   string id = 1;
   optional string reason = 2;
+}
+
+message OpenDisputeRequest {
+  string id = 1;                 // the transfer
+  DisputeReason reason = 2;
+  optional string details = 3;   // what the party says happened
 }
 
 message ListBeneficiariesRequest {}

@@ -9,7 +9,7 @@ import (
 
 var seedCmd = &cobra.Command{
 	Use:   "seed",
-	Short: "Seed the OPS account (SEED_OPS_PHONE / SEED_OPS_PASSWORD)",
+	Short: "Seed the fixed admin/user/agent test accounts (see internal/seed.go)",
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := internal.Seed(); err != nil {
 			os.Exit(1)

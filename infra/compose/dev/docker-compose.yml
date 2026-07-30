@@ -126,6 +126,9 @@ services:
       REDIS_PORT: "6379"
       USER_GRPC_PORT: user:50051
       FILE_GRPC_PORT: file:50052
+      # The AML evaluation job ships its metrics snapshot to compliance.
+      # Dialled lazily from a post-commit job — no depends_on needed.
+      COMPLIANCE_GRPC_PORT: compliance:50054
     depends_on:
       postgres:
         condition: service_healthy
@@ -133,6 +136,27 @@ services:
         condition: service_healthy
       user:
         condition: service_started
+
+  compliance:
+    build:
+      context: ../../..
+      dockerfile: app/services/compliance/Dockerfile
+      args:
+        BUILD_REF: develop
+    command: ["--migrate"]
+    networks:
+      - mokapay.app
+      - mokapay.infrastructure
+    env_file:
+      - ../../../app/services/compliance/.env
+    # No downstream service: the rule engine is fed a metrics snapshot on
+    # the request and never reads back into payment or user.
+    environment:
+      DB_HOST: postgres
+      DB_PORT: "5432"
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   gateway:
     build:
@@ -148,6 +172,7 @@ services:
       USER_GRPC_PORT: user:50051
       PAYMENT_GRPC_PORT: payment:50053
       FILE_GRPC_PORT: file:50052
+      COMPLIANCE_GRPC_PORT: compliance:50054
     depends_on:
       postgres:
         condition: service_healthy
@@ -158,6 +183,8 @@ services:
       payment:
         condition: service_started
       file:
+        condition: service_started
+      compliance:
         condition: service_started
 
   # ---------------------------------------------------------------------------
