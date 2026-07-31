@@ -38,6 +38,7 @@ import (
 	"mokapay.app/core/grpc/middleware"
 	coreweb "mokapay.app/core/http"
 	"mokapay.app/core/logger"
+	"mokapay.app/core/ws"
 	paymentv1 "mokapay.app/proto/codebase/payment/v1"
 )
 
@@ -171,11 +172,12 @@ func Run() error {
 	notification := events.NewLedgerNotification(log, riverClient, moka)
 
 	// -------------------------------------------------------------------------
-	// Redis backs the FX rate cache; unreachable redis degrades to
-	// provider-per-request, it never blocks startup.
+	// Redis backs the FX rate cache and the live event bus; unreachable
+	// redis degrades to provider-per-request FX and no websocket push, it
+	// never blocks startup.
 	var redis *cache.Cache
 	if c, err := cache.New(ctx, cache.Config{Host: cfg.Redis.Host, Port: cfg.Redis.Port}); err != nil {
-		log.Error(ctx, "startup", "redis unreachable, fx cache disabled", "error", err)
+		log.Error(ctx, "startup", "redis unreachable, fx cache and live events disabled", "error", err)
 	} else {
 		redis = c
 		defer func() {
@@ -184,6 +186,15 @@ func Run() error {
 			}
 		}()
 	}
+
+	// The live sink: what the gateway's websocket clients hear. A nil bus
+	// (no redis) makes every publish a no-op — the notification jobs stay
+	// the durable path either way.
+	var bus ws.Bus
+	if redis != nil {
+		bus = redis
+	}
+	live := ws.NewPublisher(bus)
 
 	fx := fxrate.New(fxrate.Config{
 		ProviderURL: cfg.FX.ProviderURL,
@@ -198,7 +209,7 @@ func Run() error {
 	// Init usecases
 	profileUC := profileuc.New(log, pg)
 	ledgerUC := ledgeruc.New(log, pg, notification)
-	transferUC := transferuc.New(log, pg, fx, transferJobs, transferuc.Config{
+	transferUC := transferuc.New(log, pg, fx, transferJobs, live, transferuc.Config{
 		FeeSameBps:       cfg.Transfer.FeeSameBps,
 		FeeFXBps:         cfg.Transfer.FeeFXBps,
 		MarginBps:        cfg.Transfer.MarginBps,
@@ -206,12 +217,12 @@ func Run() error {
 		PayoutTimeout:    cfg.Transfer.PayoutTimeout,
 		AutoConfirmAfter: cfg.Transfer.AutoConfirmAfter,
 	})
-	disputeUC := disputeuc.New(log, pg, transferJobs)
+	disputeUC := disputeuc.New(log, pg, transferJobs, live)
 	commissionUC := commissionuc.New(log, pg, transferJobs)
 	complianceUC := complianceuc.New(log, pg, complianceuc.NewUserAccounts(moka), complianceuc.Config{
 		Timezone: cfg.Compliance.Timezone,
 	})
-	matchingUC := matchinguc.New(log, pg, transferJobs, matchinguc.Config{
+	matchingUC := matchinguc.New(log, pg, transferJobs, live, matchinguc.Config{
 		MaxAgents:      cfg.Transfer.MaxAgents,
 		OfferTTL:       cfg.Transfer.OfferTTL,
 		MaxRounds:      cfg.Transfer.MaxRounds,

@@ -2,8 +2,10 @@ package auth
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
+	"math/big"
 	"time"
 
 	"mokapay.app/app/services/user/internal/business/auth"
@@ -16,6 +18,10 @@ import (
 const codeSpace = 1_000_000 // 6 digits: 000000-999999
 const maxAttempts = 6
 const otpTTL = 5 * time.Minute
+
+// otpMessage is the SMS body — the code alone, with no context, reads as
+// spam/phishing to a recipient and to carrier filters alike.
+const otpMessage = "Votre code MokaPay est %s"
 
 type OTPSender interface {
 	Send(ctx context.Context, phoneNumber, msg string) error
@@ -99,7 +105,7 @@ func (a Auth) SendOTP(ctx context.Context, phoneNumber string, purpose auth.OtpP
 			return time.Time{}, err
 		}
 		// send otp
-		if err := a.otp.Send(ctx, phoneNumber, code); err != nil {
+		if err := a.otp.Send(ctx, phoneNumber, fmt.Sprintf(otpMessage, code)); err != nil {
 			a.logger.Error(ctx, "Auth.SendOTP: failed to send otp request", "err", err)
 			return time.Time{}, err
 		}
@@ -120,7 +126,7 @@ func (a Auth) SendOTP(ctx context.Context, phoneNumber string, purpose auth.OtpP
 	}
 
 	// send otp
-	if err := a.otp.Send(ctx, phoneNumber, code); err != nil {
+	if err := a.otp.Send(ctx, phoneNumber, fmt.Sprintf(otpMessage, code)); err != nil {
 		a.logger.Error(ctx, "Auth.SendOTP: failed to send otp request", "err", err)
 		return time.Time{}, err
 	}
@@ -342,14 +348,20 @@ func statusCanAuth(s auth.AccountStatus) error {
 	return nil
 }
 
-// getCode - return a random 6 digits code and the hash
-// TODO: remove harcoded value of 111111
-func (a Auth) getCodeAndHash(p string) (string, string, error) {
-	//n, err := rand.Int(rand.Reader, big.NewInt(codeSpace))
-	//if err != nil {
-	//	return err
-	//}
-	//code := fmt.Sprintf("%06d", n.Int64())
-	code := "111111"
-	return code, a.hasher.Hash(p, code), nil
+// getCodeAndHash returns the 6-digit code to send for phoneE164 and its
+// hash. The seeded test accounts keep the fixed auth.TestOtpCode so the team
+// can drive register/login/reset without reading an SMS; every other number
+// gets a fresh code from crypto/rand.
+func (a Auth) getCodeAndHash(phoneE164 string) (string, string, error) {
+	if auth.IsTestPhone(phoneE164) {
+		return auth.TestOtpCode, a.hasher.Hash(phoneE164, auth.TestOtpCode), nil
+	}
+
+	n, err := rand.Int(rand.Reader, big.NewInt(codeSpace))
+	if err != nil {
+		return "", "", fmt.Errorf("drawing otp code: %w", err)
+	}
+	code := fmt.Sprintf("%06d", n.Int64())
+
+	return code, a.hasher.Hash(phoneE164, code), nil
 }

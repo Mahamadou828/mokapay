@@ -33,11 +33,12 @@ type testAccount struct {
 
 // testAccounts are provisioned by Seed, in order. Fixed phone numbers +
 // shared password so every environment (local, CI, a teammate's machine)
-// logs in the same way.
+// logs in the same way. The numbers come from business/auth, which is also
+// what makes their OTP fixed and keeps them off the real SMS provider.
 var testAccounts = []testAccount{
-	{Phone: "+243812345670", FirstName: "Moka", LastName: "Admin", Role: auth.AccountRoleAdmin},
-	{Phone: "+243812345673", FirstName: "Moka", LastName: "User", Role: auth.AccountRoleUser},
-	{Phone: "+243812345675", FirstName: "Moka", LastName: "Agent", Role: auth.AccountRoleAgent},
+	{Phone: auth.TestPhoneAdmin, FirstName: "Moka", LastName: "Admin", Role: auth.AccountRoleAdmin},
+	{Phone: auth.TestPhoneUser, FirstName: "Moka", LastName: "User", Role: auth.AccountRoleUser},
+	{Phone: auth.TestPhoneAgent, FirstName: "Moka", LastName: "Agent", Role: auth.AccountRoleAgent},
 }
 
 // Seed provisions the fixed test accounts above (Cognito identity + account

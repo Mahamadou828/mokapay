@@ -52,6 +52,15 @@ type Config struct {
 		Subscriber      string        // mailto: contact, VAPID sub claim
 		TTL             time.Duration // how long the push service holds an undelivered message
 	}
+	SMS struct {
+		// Africa's Talking, the OTP delivery provider. Username "sandbox"
+		// targets their sandbox account. SenderID is optional — an
+		// alphanumeric sender has to be registered and approved with them
+		// first; empty means their shared pool.
+		ATUsername string
+		ATAPIKey   string
+		ATSenderID string
+	}
 }
 
 // newConfig resolves the whole service config from the environment. Defaults
@@ -91,6 +100,11 @@ func newConfig() Config {
 	cfg.Push.VapidPrivateKey = config.GetEnv("VAPID_PRIVATE_KEY", "")
 	cfg.Push.Subscriber = config.GetEnv("VAPID_SUBSCRIBER", "")
 	cfg.Push.TTL = config.GetEnvAsTimeDuration("PUSH_TTL", 30*time.Second)
+
+	// Empty username or api key keeps every SMS on the logging sender.
+	cfg.SMS.ATUsername = config.GetEnv("AT_USERNAME", "")
+	cfg.SMS.ATAPIKey = config.GetEnv("AT_API_KEY", "")
+	cfg.SMS.ATSenderID = config.GetEnv("AT_SENDER_ID", "")
 
 	cfg.Cognito.ClientID = config.GetEnv("COGNITO_CLIENT_ID", "")
 	cfg.Cognito.ClientSecret = config.GetEnv("COGNITO_CLIENT_SECRET", "")

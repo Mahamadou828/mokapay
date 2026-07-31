@@ -22,6 +22,7 @@ import (
 	transferrepo "mokapay.app/app/services/payment/internal/business/transfer/repo"
 	coredb "mokapay.app/core/db"
 	"mokapay.app/core/logger"
+	"mokapay.app/core/ws"
 )
 
 // Scheduler is the River publisher the engine enqueues through — always
@@ -31,6 +32,15 @@ type Scheduler interface {
 	ScheduleOffersExpire(ctx context.Context, tx pgx.Tx, transferID uuid.UUID, at time.Time) error
 	SchedulePaymentTimeout(ctx context.Context, tx pgx.Tx, transferID uuid.UUID, at time.Time) error
 	Notify(ctx context.Context, tx pgx.Tx, to, eventType, title, message string) error
+}
+
+// Live is the websocket sink: the same fact the notification job carries,
+// pushed to whatever sockets the account has open right now. A second sink
+// at the same call site, never a second signal path — and best-effort, so a
+// down event bus costs an agent a fast signal, never the offer itself (the
+// notification and the inbox read stay authoritative).
+type Live interface {
+	Publish(ctx context.Context, accountID string, event ws.Event) error
 }
 
 // Config carries the matching knobs, all env-resolved.
@@ -49,10 +59,11 @@ type UseCase struct {
 	transfers transferrepo.Store
 	profiles  profilerepo.Store
 	scheduler Scheduler
+	live      Live
 	cfg       Config
 }
 
-func New(l *logger.Logger, db *coredb.Postgres, scheduler Scheduler, cfg Config) UseCase {
+func New(l *logger.Logger, db *coredb.Postgres, scheduler Scheduler, live Live, cfg Config) UseCase {
 	return UseCase{
 		logger:    l,
 		db:        db,
@@ -60,6 +71,7 @@ func New(l *logger.Logger, db *coredb.Postgres, scheduler Scheduler, cfg Config)
 		transfers: transferrepo.New(db),
 		profiles:  profilerepo.New(db),
 		scheduler: scheduler,
+		live:      live,
 		cfg:       cfg,
 	}
 }
@@ -108,6 +120,7 @@ func (u UseCase) RunMatch(ctx context.Context, transferID uuid.UUID) error {
 		scored = scored[:u.cfg.MaxAgents]
 	}
 
+	var offered []matching.Offer
 	expiresAt := time.Now().Add(u.cfg.OfferTTL)
 	if err := u.db.BeginPgx(ctx, func(tx pgx.Tx) error {
 		batch, err := u.offers.WithTx(tx).OfferBatch(ctx, t.ID, scored, expiresAt)
@@ -122,20 +135,52 @@ func (u UseCase) RunMatch(ctx context.Context, transferID uuid.UUID) error {
 		}
 		for _, s := range scored {
 			if err := u.scheduler.Notify(ctx, tx, accounts[s.AgentProfileID].String(),
-				"transfer.offer_received",
+				matching.EventOfferReceived,
 				"Nouvelle offre de transfert",
 				fmt.Sprintf("Un transfert %s est disponible.", t.Reference),
 			); err != nil {
 				return err
 			}
 		}
+		offered = batch
 		return nil
 	}); err != nil {
 		u.logger.Error(ctx, "Matching.RunMatch: offer round failed", "err", err)
 		return fmt.Errorf("offering transfer %s: %w", t.ID, err)
 	}
 
+	u.pushOffers(ctx, t, offered, accounts)
+
 	return nil
+}
+
+// pushOffers is the live half of the broadcast: every agent that got an
+// offer row also gets it on whatever sockets they have open, so the
+// first-accept-wins race is decided on a push instead of on a poll cycle.
+// After the commit on purpose — a rolled-back round must never push a
+// phantom offer — and best-effort: the notification job and the inbox read
+// remain the authoritative paths.
+func (u UseCase) pushOffers(ctx context.Context, t transfer.Transfer, offers []matching.Offer, accounts map[uuid.UUID]uuid.UUID) {
+	if u.live == nil {
+		return
+	}
+
+	for _, o := range offers {
+		account, ok := accounts[o.AgentProfileID]
+		if !ok {
+			continue // not part of this round's shortlist — nobody to address
+		}
+		if err := u.live.Publish(ctx, account.String(), ws.Event{
+			Type: matching.EventOfferReceived,
+			Data: map[string]string{
+				"transfer_id": t.ID.String(),
+				"offer_id":    o.ID.String(),
+				"reference":   t.Reference,
+			},
+		}); err != nil {
+			u.logger.Error(ctx, "Matching.RunMatch: live offer push failed", "err", err)
+		}
+	}
 }
 
 // HandleOffersExpired is the expiry job's body: close the overdue
@@ -181,7 +226,7 @@ func (u UseCase) AcceptOffer(ctx context.Context, agentAccountID, offerID uuid.U
 			return err
 		}
 		return u.scheduler.Notify(ctx, tx, accepted.ClientID.String(),
-			"transfer.matched",
+			transfer.EventMatched,
 			"Agent trouvé",
 			fmt.Sprintf("Votre transfert %s a été accepté par un agent.", accepted.Reference),
 		)
@@ -192,6 +237,11 @@ func (u UseCase) AcceptOffer(ctx context.Context, agentAccountID, offerID uuid.U
 		u.logger.Error(ctx, "Matching.AcceptOffer: failed", "err", err)
 		return transfer.Transfer{}, err
 	}
+
+	// The client is sitting on the "searching for an agent" screen: this is
+	// the move they are waiting for. The winning agent hears it too — their
+	// own inbox card just became a transfer.
+	u.pushTransfer(ctx, accepted, transfer.EventMatched, accepted.ClientID, agentAccountID)
 
 	return accepted, nil
 }
@@ -246,6 +296,7 @@ func (u UseCase) ListOffers(ctx context.Context, agentAccountID uuid.UUID, statu
 // expire terminally expires a transfer that ran out of rounds or time,
 // notifying its owner in the same commit.
 func (u UseCase) expire(ctx context.Context, t transfer.Transfer) error {
+	var expired bool
 	if err := u.db.BeginPgx(ctx, func(tx pgx.Tx) error {
 		if _, err := u.transfers.WithTx(tx).Expire(ctx, t.ID.String(), "no agent matched in time"); err != nil {
 			if errors.Is(err, transfer.ErrTransferNotFound) {
@@ -253,8 +304,9 @@ func (u UseCase) expire(ctx context.Context, t transfer.Transfer) error {
 			}
 			return err
 		}
+		expired = true
 		return u.scheduler.Notify(ctx, tx, t.ClientID.String(),
-			"transfer.expired",
+			transfer.EventExpired,
 			"Transfert expiré",
 			fmt.Sprintf("Aucun agent n'a pu être trouvé pour votre transfert %s.", t.Reference),
 		)
@@ -262,7 +314,37 @@ func (u UseCase) expire(ctx context.Context, t transfer.Transfer) error {
 		u.logger.Error(ctx, "Matching.RunMatch: expiring failed", "err", err)
 		return fmt.Errorf("expiring transfer %s: %w", t.ID, err)
 	}
+
+	// Only the owner is watching: an expiry means no agent ever took it. A
+	// round that raced with an accept expired nothing — nothing to announce.
+	if expired {
+		u.pushTransfer(ctx, t, transfer.EventExpired, t.ClientID)
+	}
+
 	return nil
+}
+
+// pushTransfer is the live half of a transfer transition owned by this
+// engine: the accounts watching the transfer are told to refetch it the
+// moment the move commits. Same contract as pushOffers — after the commit
+// (a refetch that would still read the pre-commit row is worse than no
+// event), best-effort, and ids only.
+func (u UseCase) pushTransfer(ctx context.Context, t transfer.Transfer, eventType string, accounts ...uuid.UUID) {
+	if u.live == nil {
+		return
+	}
+
+	for _, account := range accounts {
+		if err := u.live.Publish(ctx, account.String(), ws.Event{
+			Type: eventType,
+			Data: map[string]string{
+				"transfer_id": t.ID.String(),
+				"reference":   t.Reference,
+			},
+		}); err != nil {
+			u.logger.Error(ctx, "Matching.pushTransfer: live push failed", "event", eventType, "err", err)
+		}
+	}
 }
 
 // explainGoneOffer turns the accept's zero rows into the precise error:

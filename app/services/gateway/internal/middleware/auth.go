@@ -36,46 +36,53 @@ func Auth(v AuthValidator, client *client.MokaClient) core.MidFunc {
 				return coreerrs.New(errs.PermissionDenied, errors.New("invalid token"))
 			}
 
-			cl, err := v.ValidateToken(strings.TrimSpace(token))
+			pass, err := Authenticate(r.Context(), v, client, strings.TrimSpace(token))
 			if err != nil {
 				return coreerrs.New(errs.PermissionDenied, err)
 			}
 
-			// rehydrate user data
-			// TODO: put caching here to not fetch on every request
-			var user *userv1.Account
-			{
-				pass := passport.SystemPassport()
-				ctx := passport.AddToContext(r.Context(), pass)
-
-				user, err = client.User.User.GetAccountBySub(ctx, &userv1.GetAccountBySubRequest{
-					Sub: cl.Subject,
-				})
-				if err != nil {
-					return coreerrs.New(errs.PermissionDenied, fmt.Errorf("failed to fetch user: %w", err))
-				}
-			}
-			if user == nil {
-				return coreerrs.New(errs.PermissionDenied, errors.New("user not found"))
-			}
-
-			ctx = passport.AddToContext(ctx, &passport.Passport{
-				Claim: cl,
-				User: passport.User{
-					ID:                user.Id,
-					FirstName:         user.FirstName,
-					LastName:          user.LastName,
-					Email:             user.Email,
-					PhoneNumber:       user.PhoneNumber,
-					Role:              roleString(user.Role),
-					PreferredLanguage: languageString(user.PreferredLanguage),
-				},
-				Type: passport.TypeUser,
-			})
-
-			return next(ctx, r)
+			return next(passport.AddToContext(ctx, pass), r)
 		}
 	}
+}
+
+// Authenticate is the single authentication path: validate the access token,
+// then rehydrate the account behind its subject into a passport. The REST
+// middleware above and the websocket handshake (which cannot carry an
+// Authorization header, so its token rides the query string) both go through
+// it — one auth path, two transports, no weaker second check.
+func Authenticate(ctx context.Context, v AuthValidator, client *client.MokaClient, token string) (*passport.Passport, error) {
+	cl, err := v.ValidateToken(token)
+	if err != nil {
+		return nil, err
+	}
+
+	// rehydrate user data
+	// TODO: put caching here to not fetch on every request
+	user, err := client.User.User.GetAccountBySub(
+		passport.AddToContext(ctx, passport.SystemPassport()),
+		&userv1.GetAccountBySubRequest{Sub: cl.Subject},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch user: %w", err)
+	}
+	if user == nil {
+		return nil, errors.New("user not found")
+	}
+
+	return &passport.Passport{
+		Claim: cl,
+		User: passport.User{
+			ID:                user.Id,
+			FirstName:         user.FirstName,
+			LastName:          user.LastName,
+			Email:             user.Email,
+			PhoneNumber:       user.PhoneNumber,
+			Role:              roleString(user.Role),
+			PreferredLanguage: languageString(user.PreferredLanguage),
+		},
+		Type: passport.TypeUser,
+	}, nil
 }
 
 // roleString / languageString carry the DB enum strings in the passport —

@@ -1,0 +1,2 @@
+- We can now integrate Africa's talking
+- But make it not send sms code to the user seeded phone number - keep them at 111111 for us to test easier the platform
