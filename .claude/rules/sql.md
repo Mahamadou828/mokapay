@@ -230,7 +230,7 @@ Generated Go code is written to `internal/sqlc/` with package name `sqlc`.
 ### sqlc conventions
 
 - **Value semantics** — never use pointer fields in generated structs.
-  Set `emit_pointers_for_null_fields: false` in `sqlc.yaml`.
+  Set `emit_pointers_for_null_types: false` in `sqlc.yaml`.
 - **Named arguments** — always use `sqlc.arg()` / `sqlc.narg()`, never
   positional `$1 $2`.
   ```sql
