@@ -166,9 +166,13 @@ services:
         BUILD_REF: develop
     networks:
       - mokapay.app
+      # redis: the live event bus behind the /v1/ws websocket surface.
+      - mokapay.infrastructure
     env_file:
       - ../../../app/services/gateway/.env
     environment:
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
       USER_GRPC_PORT: user:50051
       PAYMENT_GRPC_PORT: payment:50053
       FILE_GRPC_PORT: file:50052

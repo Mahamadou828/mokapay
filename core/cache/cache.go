@@ -1,6 +1,7 @@
 // Package cache is the shared redis client: a deliberately small surface
-// covering the platform's three uses — caching (Get/Set), rate limiting
-// (Incr) and coordination (SetNX locks / idempotency keys).
+// covering the platform's four uses — caching (Get/Set), rate limiting
+// (Incr), coordination (SetNX locks / idempotency keys) and the live event
+// bus (Publish/Subscribe, see core/ws).
 //
 // Key-prefix convention: "cache:" for evictable data, "coord:" for keys
 // that must never be evicted (locks, rate counters, idempotency). Locally
@@ -96,6 +97,24 @@ func (c *Cache) Delete(ctx context.Context, key string) error {
 		return fmt.Errorf("deleting %s: %w", key, err)
 	}
 	return nil
+}
+
+// Publish hands a payload to every current subscriber of the channel.
+// Pub/sub is fire-and-forget: nobody listening is not an error, and nothing
+// is retained for a subscriber that connects later — the callers of this
+// (live websocket events) all have a durable path of their own.
+func (c *Cache) Publish(ctx context.Context, channel, payload string) error {
+	if err := c.client.Publish(ctx, channel, payload).Err(); err != nil {
+		return fmt.Errorf("publishing to %s: %w", channel, err)
+	}
+	return nil
+}
+
+// Subscribe opens a subscription on the channel. The returned *redis.PubSub
+// owns its own connection and reconnects underneath Channel(); the caller
+// owns its lifetime and must Close it when it stops listening.
+func (c *Cache) Subscribe(ctx context.Context, channel string) *redis.PubSub {
+	return c.client.Subscribe(ctx, channel)
 }
 
 func (c *Cache) Close() error {

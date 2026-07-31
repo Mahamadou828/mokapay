@@ -23,6 +23,7 @@ import (
 	transferrepo "mokapay.app/app/services/payment/internal/business/transfer/repo"
 	coredb "mokapay.app/core/db"
 	"mokapay.app/core/logger"
+	"mokapay.app/core/ws"
 )
 
 // Jobs is the River publisher the usecase enqueues through — always in
@@ -35,6 +36,13 @@ type Jobs interface {
 	ScheduleComplianceEvaluation(ctx context.Context, tx pgx.Tx, transferID uuid.UUID) error
 }
 
+// Live is the websocket sink. A freeze and a ruling both move the transfer
+// under both parties' screens, so they ride the same live channel as every
+// other transition — best-effort, alongside the notification job.
+type Live interface {
+	Publish(ctx context.Context, accountID string, event ws.Event) error
+}
+
 type UseCase struct {
 	logger      *logger.Logger
 	db          *coredb.Postgres
@@ -43,9 +51,10 @@ type UseCase struct {
 	commissions commissionrepo.Store
 	profiles    profilerepo.Store
 	jobs        Jobs
+	live        Live
 }
 
-func New(l *logger.Logger, db *coredb.Postgres, j Jobs) UseCase {
+func New(l *logger.Logger, db *coredb.Postgres, j Jobs, live Live) UseCase {
 	return UseCase{
 		logger:      l,
 		db:          db,
@@ -54,6 +63,7 @@ func New(l *logger.Logger, db *coredb.Postgres, j Jobs) UseCase {
 		commissions: commissionrepo.New(db),
 		profiles:    profilerepo.New(db),
 		jobs:        j,
+		live:        live,
 	}
 }
 
@@ -137,6 +147,7 @@ func (u UseCase) Resolve(ctx context.Context, adminID, id uuid.UUID, resolution 
 	}
 
 	var resolved dispute.Dispute
+	var ruled transfer.Transfer
 	if err := u.db.BeginPgx(ctx, func(tx pgx.Tx) error {
 		disputes := u.disputes.WithTx(tx)
 
@@ -154,6 +165,7 @@ func (u UseCase) Resolve(ctx context.Context, adminID, id uuid.UUID, resolution 
 		if terr != nil {
 			return terr
 		}
+		ruled = t
 
 		// A ruling that leaves the payout standing completes the transfer,
 		// and a completion books the same two things here as on the happy
@@ -180,6 +192,10 @@ func (u UseCase) Resolve(ctx context.Context, adminID, id uuid.UUID, resolution 
 
 	u.warnRefundShortfall(ctx, resolved, effect)
 
+	// The ruling moved the transfer to its terminal state (done, refunded or
+	// cancelled): both parties' screens are still showing "disputed".
+	u.pushLive(ctx, ruled, transfer.EventDisputeResolved)
+
 	return resolved, nil
 }
 
@@ -196,7 +212,7 @@ func (u UseCase) open(ctx context.Context, t transfer.Transfer, nd dispute.NewDi
 
 		const (
 			title = "Transfert en litige"
-			event = "transfer.disputed"
+			event = transfer.EventDisputed
 		)
 		msg := fmt.Sprintf("Le transfert %s est en litige — notre équipe examine le dossier.", t.Reference)
 		if err := u.jobs.Notify(ctx, tx, t.ClientID.String(), event, title, msg); err != nil {
@@ -209,6 +225,8 @@ func (u UseCase) open(ctx context.Context, t transfer.Transfer, nd dispute.NewDi
 		}
 		return dispute.Dispute{}, err
 	}
+
+	u.pushLive(ctx, t, transfer.EventDisputed)
 
 	return opened, nil
 }
@@ -249,7 +267,7 @@ func (u UseCase) partyOf(ctx context.Context, callerID uuid.UUID, t transfer.Tra
 func (u UseCase) notifyResolution(ctx context.Context, tx pgx.Tx, t transfer.Transfer, effect dispute.Effect, resolution dispute.Resolution) error {
 	const (
 		title = "Litige résolu"
-		event = "transfer.dispute_resolved"
+		event = transfer.EventDisputeResolved
 	)
 
 	clientMsg := fmt.Sprintf("Le litige sur le transfert %s est résolu.", t.Reference)
@@ -266,6 +284,38 @@ func (u UseCase) notifyResolution(ctx context.Context, tx pgx.Tx, t transfer.Tra
 	}
 
 	return u.notifyAgent(ctx, tx, t, event, title, agentMsg)
+}
+
+// pushLive is the live half of a dispute transition: the same fact the
+// notification jobs carry, pushed to both parties' open sockets so the
+// transfer screen refetches instead of waiting for its backstop poll.
+// After the commit and best-effort, exactly like the transfer usecase's.
+func (u UseCase) pushLive(ctx context.Context, t transfer.Transfer, eventType string) {
+	if u.live == nil {
+		return
+	}
+
+	accounts := []uuid.UUID{t.ClientID}
+	if t.AgentProfileID != nil {
+		agent, err := u.profiles.Get(ctx, t.AgentProfileID.String())
+		if err != nil {
+			u.logger.Error(ctx, "Dispute.pushLive: agent lookup failed", "err", err)
+		} else {
+			accounts = append(accounts, agent.AccountID)
+		}
+	}
+
+	for _, account := range accounts {
+		if err := u.live.Publish(ctx, account.String(), ws.Event{
+			Type: eventType,
+			Data: map[string]string{
+				"transfer_id": t.ID.String(),
+				"reference":   t.Reference,
+			},
+		}); err != nil {
+			u.logger.Error(ctx, "Dispute.pushLive: live push failed", "event", eventType, "err", err)
+		}
+	}
 }
 
 func (u UseCase) notifyAgent(ctx context.Context, tx pgx.Tx, t transfer.Transfer, event, title, message string) error {

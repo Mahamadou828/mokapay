@@ -27,6 +27,12 @@ var ErrInsufficientAvailable = errors.New("available balance cannot cover the ho
 // transfer.
 var ErrNoCandidates = errors.New("no eligible agents right now")
 
+// EventOfferReceived is the event_type a broadcast round announces itself
+// with — the notification job and the live websocket push carry the same
+// string, so a frontend keys off one vocabulary whichever channel it hears
+// on first.
+const EventOfferReceived = "transfer.offer_received"
+
 // OfferStatus values mirror the stored offer_status enum.
 type OfferStatus string
 

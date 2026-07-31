@@ -27,6 +27,7 @@ import (
 	coredb "mokapay.app/core/db"
 	"mokapay.app/core/logger"
 	"mokapay.app/core/passport"
+	"mokapay.app/core/ws"
 )
 
 // Jobs is the River publisher the usecase enqueues through — always in
@@ -39,6 +40,16 @@ type Jobs interface {
 	ScheduleAutoConfirm(ctx context.Context, tx pgx.Tx, transferID uuid.UUID, at time.Time) error
 	ScheduleComplianceEvaluation(ctx context.Context, tx pgx.Tx, transferID uuid.UUID) error
 	Notify(ctx context.Context, tx pgx.Tx, to, eventType, title, message string) error
+}
+
+// Live is the websocket sink: the same transition the notification job
+// carries, pushed to whatever sockets the parties have open right now. A
+// second sink at the same call site, never a second signal path — and
+// best-effort, so a down event bus costs a screen its instant refresh,
+// never the transition itself (the notification job and the backstop poll
+// stay authoritative).
+type Live interface {
+	Publish(ctx context.Context, accountID string, event ws.Event) error
 }
 
 // Config carries the money knobs, all env-resolved. Fees are basis
@@ -63,10 +74,11 @@ type UseCase struct {
 	commissions   commissionrepo.Store
 	fx            fxrate.Provider
 	jobs          Jobs
+	live          Live
 	cfg           Config
 }
 
-func New(l *logger.Logger, db *coredb.Postgres, fx fxrate.Provider, jobs Jobs, cfg Config) UseCase {
+func New(l *logger.Logger, db *coredb.Postgres, fx fxrate.Provider, jobs Jobs, live Live, cfg Config) UseCase {
 	return UseCase{
 		logger:        l,
 		db:            db,
@@ -77,6 +89,7 @@ func New(l *logger.Logger, db *coredb.Postgres, fx fxrate.Provider, jobs Jobs, c
 		commissions:   commissionrepo.New(db),
 		fx:            fx,
 		jobs:          jobs,
+		live:          live,
 		cfg:           cfg,
 	}
 }
@@ -388,7 +401,7 @@ func (u UseCase) ApplyProof(ctx context.Context, id uuid.UUID, newStatus transfe
 				return aerr
 			}
 			return u.jobs.Notify(ctx, tx, agent.AccountID.String(),
-				"transfer.client_paid",
+				transfer.EventClientPaid,
 				"Paiement client reçu",
 				fmt.Sprintf("Le client du transfert %s a payé — effectuez le versement.", updated.Reference))
 		}
@@ -401,7 +414,7 @@ func (u UseCase) ApplyProof(ctx context.Context, id uuid.UUID, newStatus transfe
 			return err
 		}
 		return u.jobs.Notify(ctx, tx, updated.ClientID.String(),
-			"transfer.payout_done",
+			transfer.EventPayoutDone,
 			"Versement effectué",
 			fmt.Sprintf("Le destinataire du transfert %s a été payé — confirmez la réception.", updated.Reference))
 	})
@@ -418,6 +431,15 @@ func (u UseCase) ApplyProof(ctx context.Context, id uuid.UUID, newStatus transfe
 		u.logger.Error(ctx, "Transfer.ApplyProof: failed", "err", err)
 		return transfer.Transfer{}, err
 	}
+
+	// The proof landed: this is the transition the whole websocket effort is
+	// about — the party that did NOT upload has a screen sitting on the old
+	// status until something tells it otherwise.
+	event := transfer.EventClientPaid
+	if newStatus == transfer.StatusPendingClientConfirmation {
+		event = transfer.EventPayoutDone
+	}
+	u.pushLive(ctx, updated, event)
 
 	return updated, nil
 }
@@ -448,7 +470,7 @@ func (u UseCase) Confirm(ctx context.Context, clientID, id uuid.UUID) (transfer.
 			return aerr
 		}
 		return u.jobs.Notify(ctx, tx, agent.AccountID.String(),
-			"transfer.completed",
+			transfer.EventCompleted,
 			"Transfert terminé",
 			fmt.Sprintf("Le transfert %s est confirmé — votre garantie est libérée.", done.Reference))
 	}); err != nil {
@@ -457,6 +479,8 @@ func (u UseCase) Confirm(ctx context.Context, clientID, id uuid.UUID) (transfer.
 		}
 		return transfer.Transfer{}, err
 	}
+
+	u.pushLive(ctx, done, transfer.EventCompleted)
 
 	return done, nil
 }
@@ -484,7 +508,7 @@ func (u UseCase) CancelByAdmin(ctx context.Context, adminID, id uuid.UUID, reaso
 			return terr
 		}
 		if err := u.jobs.Notify(ctx, tx, cancelled.ClientID.String(),
-			"transfer.cancelled", "Transfert annulé",
+			transfer.EventCancelled, "Transfert annulé",
 			fmt.Sprintf("Votre transfert %s a été annulé: %s", cancelled.Reference, reason)); err != nil {
 			return err
 		}
@@ -494,7 +518,7 @@ func (u UseCase) CancelByAdmin(ctx context.Context, adminID, id uuid.UUID, reaso
 				return aerr
 			}
 			return u.jobs.Notify(ctx, tx, agent.AccountID.String(),
-				"transfer.cancelled", "Transfert annulé",
+				transfer.EventCancelled, "Transfert annulé",
 				fmt.Sprintf("Le transfert %s a été annulé: %s", cancelled.Reference, reason))
 		}
 		return nil
@@ -505,14 +529,18 @@ func (u UseCase) CancelByAdmin(ctx context.Context, adminID, id uuid.UUID, reaso
 		return transfer.Transfer{}, err
 	}
 
+	u.pushLive(ctx, cancelled, transfer.EventCancelled)
+
 	return cancelled, nil
 }
 
 // HandlePaymentTimeout is the timer's exit when the client never paid:
 // cancel + release, both parties told. A moved-on transfer is a no-op.
 func (u UseCase) HandlePaymentTimeout(ctx context.Context, id uuid.UUID) error {
+	var cancelled transfer.Transfer
 	if err := u.db.BeginPgx(ctx, func(tx pgx.Tx) error {
-		cancelled, err := u.transfers.WithTx(tx).CancelTimeout(ctx, id.String(), "payment window elapsed")
+		var err error
+		cancelled, err = u.transfers.WithTx(tx).CancelTimeout(ctx, id.String(), "payment window elapsed")
 		if err != nil {
 			if errors.Is(err, transfer.ErrTransferNotFound) {
 				return nil // the proof arrived first — the clock is stale
@@ -520,7 +548,7 @@ func (u UseCase) HandlePaymentTimeout(ctx context.Context, id uuid.UUID) error {
 			return err
 		}
 		if err := u.jobs.Notify(ctx, tx, cancelled.ClientID.String(),
-			"transfer.cancelled", "Transfert annulé",
+			transfer.EventCancelled, "Transfert annulé",
 			fmt.Sprintf("Votre transfert %s a été annulé: paiement non reçu à temps.", cancelled.Reference)); err != nil {
 			return err
 		}
@@ -529,12 +557,18 @@ func (u UseCase) HandlePaymentTimeout(ctx context.Context, id uuid.UUID) error {
 			return aerr
 		}
 		return u.jobs.Notify(ctx, tx, agent.AccountID.String(),
-			"transfer.cancelled", "Transfert annulé",
+			transfer.EventCancelled, "Transfert annulé",
 			fmt.Sprintf("Le transfert %s a expiré sans paiement — votre garantie est libérée.", cancelled.Reference))
 	}); err != nil {
 		u.logger.Error(ctx, "Transfer.HandlePaymentTimeout: failed", "err", err)
 		return err
 	}
+
+	// A stale clock cancelled nothing: no transition, nothing to announce.
+	if cancelled.ID != uuid.Nil {
+		u.pushLive(ctx, cancelled, transfer.EventCancelled)
+	}
+
 	return nil
 }
 
@@ -542,8 +576,10 @@ func (u UseCase) HandlePaymentTimeout(ctx context.Context, id uuid.UUID) error {
 // confirmation window (D11). A moved-on transfer is a no-op.
 func (u UseCase) HandleAutoConfirm(ctx context.Context, id uuid.UUID) error {
 	reason := "auto-confirmed after inactivity"
+	var done transfer.Transfer
 	if err := u.db.BeginPgx(ctx, func(tx pgx.Tx) error {
-		done, err := u.transfers.WithTx(tx).Complete(ctx, id.String(), nil, new(reason))
+		var err error
+		done, err = u.transfers.WithTx(tx).Complete(ctx, id.String(), nil, new(reason))
 		if err != nil {
 			if errors.Is(err, transfer.ErrTransferNotFound) {
 				return nil // confirmed (or cancelled) meanwhile
@@ -558,13 +594,68 @@ func (u UseCase) HandleAutoConfirm(ctx context.Context, id uuid.UUID) error {
 			return aerr
 		}
 		return u.jobs.Notify(ctx, tx, agent.AccountID.String(),
-			"transfer.completed", "Transfert terminé",
+			transfer.EventCompleted, "Transfert terminé",
 			fmt.Sprintf("Le transfert %s est confirmé — votre garantie est libérée.", done.Reference))
 	}); err != nil {
 		u.logger.Error(ctx, "Transfer.HandleAutoConfirm: failed", "err", err)
 		return err
 	}
+
+	// A stale timer completed nothing (the client confirmed first).
+	if done.ID != uuid.Nil {
+		u.pushLive(ctx, done, transfer.EventCompleted)
+	}
+
 	return nil
+}
+
+// pushLive is the live half of a transition: the transfer's watchers get
+// told to refetch it the moment the move commits, instead of learning on
+// their next poll cycle.
+//
+// It goes to BOTH parties, where the notification job addresses only the
+// one that has to act: the event is a cache invalidation ("this transfer
+// moved"), and both screens are showing the same row — the client watching
+// their own proof land is as stuck on a stale view as the agent waiting for
+// it. Data carries the ids a refetch needs, never the transfer itself.
+//
+// Called AFTER the commit on purpose: an event whose refetch would still
+// read the pre-commit row is worse than no event at all. Best-effort by
+// design — a failed push is logged and dropped.
+func (u UseCase) pushLive(ctx context.Context, t transfer.Transfer, eventType string) {
+	if u.live == nil {
+		return
+	}
+
+	for _, account := range u.watchers(ctx, t) {
+		if err := u.live.Publish(ctx, account.String(), ws.Event{
+			Type: eventType,
+			Data: map[string]string{
+				"transfer_id": t.ID.String(),
+				"reference":   t.Reference,
+			},
+		}); err != nil {
+			u.logger.Error(ctx, "Transfer.pushLive: live push failed", "event", eventType, "err", err)
+		}
+	}
+}
+
+// watchers are the accounts with a screen on this transfer: its owner, plus
+// the assigned agent's account once one is assigned. A profile that cannot
+// be read costs the agent their push, never the client theirs.
+func (u UseCase) watchers(ctx context.Context, t transfer.Transfer) []uuid.UUID {
+	accounts := []uuid.UUID{t.ClientID}
+	if t.AgentProfileID == nil {
+		return accounts
+	}
+
+	agent, err := u.profiles.Get(ctx, t.AgentProfileID.String())
+	if err != nil {
+		u.logger.Error(ctx, "Transfer.pushLive: agent lookup failed", "err", err)
+		return accounts
+	}
+
+	return append(accounts, agent.AccountID)
 }
 
 // onCompleted books everything that rides a transfer reaching done, inside

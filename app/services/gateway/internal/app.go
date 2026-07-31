@@ -2,6 +2,7 @@ package internal
 
 import (
 	"context"
+	"errors"
 	"os"
 	"os/signal"
 	"runtime"
@@ -9,13 +10,16 @@ import (
 	"time"
 
 	"mokapay.app/app/services/gateway/internal/api"
+	"mokapay.app/app/services/gateway/internal/api/live"
 	appMiddleware "mokapay.app/app/services/gateway/internal/middleware"
 	"mokapay.app/core/aws"
+	"mokapay.app/core/cache"
 	"mokapay.app/core/client"
 	"mokapay.app/core/config"
 	coreweb "mokapay.app/core/http"
 	"mokapay.app/core/http/middleware"
 	"mokapay.app/core/logger"
+	"mokapay.app/core/ws"
 )
 
 /*
@@ -60,6 +64,8 @@ func Run() error {
 	cfg.Cognito.ClientSecret = config.GetEnv("COGNITO_CLIENT_SECRET", "")
 	cfg.Cognito.PoolID = config.GetEnv("COGNITO_POOL_ID", "")
 	cfg.Cognito.Region = config.GetEnv("COGNITO_REGION", "eu-west-1")
+	cfg.Redis.Host = config.GetEnv("REDIS_HOST", "localhost")
+	cfg.Redis.Port = config.GetEnv("REDIS_PORT", "6379")
 	// -----------------------------------------------------------------------------------------------------------------
 	// Init logger
 	log := newLogger()
@@ -121,10 +127,29 @@ func Run() error {
 		ShutdownTimeout: cfg.Web.ShutdownTimeout,
 	})
 
+	// -------------------------------------------------------------------------
+	// Live event bus + websocket hub. Unreachable redis costs the /v1/ws
+	// route (clients fall back to their polling backstop), it never blocks
+	// startup — push is an accelerator, not the only path to state.
+	var liveHandler *live.Handler
+	if redis, err := cache.New(ctx, cache.Config{Host: cfg.Redis.Host, Port: cfg.Redis.Port}); err != nil {
+		log.Error(ctx, "startup", "redis unreachable, websocket push disabled", "error", err)
+	} else {
+		hub := ws.NewHub(log.Info, ws.Opts{AllowedOrigins: cfg.Web.CORSAllowedOrigins})
+		liveHandler = live.NewHandler(log, hub, cognito, moka, redis)
+		defer hub.Close()
+		defer func() {
+			if err := redis.Close(); err != nil {
+				log.Error(ctx, "shutdown", "failed to close redis", "error", err)
+			}
+		}()
+	}
+
 	// Handlers
 	closer, err := api.Register(api.Config{
 		Moka: moka,
 		Auth: appMiddleware.Auth(cognito, moka),
+		Live: liveHandler,
 	}, log, server)
 	if err != nil {
 		log.Error(ctx, "failed to register handlers", "error", err)
@@ -139,6 +164,19 @@ func Run() error {
 	// StartUp and Shutdown
 	shutdown, serverErrors := make(chan os.Signal, 1), make(chan error, 1)
 	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, syscall.SIGKILL)
+
+	// start the bus → socket dispatch loop. A dead bus is not a dead
+	// gateway: the loop logs and stops, the REST surface keeps serving.
+	if liveHandler != nil {
+		liveCtx, cancelLive := context.WithCancel(ctx)
+		defer cancelLive()
+
+		go func() {
+			if err := liveHandler.Run(liveCtx); err != nil && !errors.Is(err, context.Canceled) {
+				log.Error(liveCtx, "live-bus", "dispatch loop stopped", "error", err)
+			}
+		}()
+	}
 
 	// start debug
 	go func() {

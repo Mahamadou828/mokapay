@@ -35,6 +35,22 @@ var ErrRecipientRequired = errors.New("recipient details required")
 // two legal targets.
 var ErrInvalidStatusMove = errors.New("invalid transfer status transition")
 
+// The event_type vocabulary a transfer transition announces itself with.
+// The notification job and the live websocket push carry the same string
+// (matching.EventOfferReceived is the same vocabulary, owned by the domain
+// that produces it), so a frontend keys off one set of names whichever
+// channel it hears on first.
+const (
+	EventMatched         = "transfer.matched"
+	EventExpired         = "transfer.expired"
+	EventClientPaid      = "transfer.client_paid"
+	EventPayoutDone      = "transfer.payout_done"
+	EventCompleted       = "transfer.completed"
+	EventCancelled       = "transfer.cancelled"
+	EventDisputed        = "transfer.disputed"
+	EventDisputeResolved = "transfer.dispute_resolved"
+)
+
 // Currency values mirror the stored currency enum.
 type Currency string
 

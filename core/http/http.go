@@ -91,6 +91,15 @@ func (s *Server) RegisterHandler(method, path string, handler HandlerFunc, mw ..
 	return
 }
 
+// RegisterRawHandler mounts a stdlib handler as-is: no timeout context, no
+// Encoder response pipeline, no middleware. It is the escape hatch for the
+// protocols that pipeline cannot express — a websocket upgrade hijacks the
+// connection (so nothing may write a response afterwards) and has to outlive
+// the request timeout. Such a handler authenticates itself.
+func (s *Server) RegisterRawHandler(method, path string, handler http.HandlerFunc) {
+	s.mux.HandleFunc(fmt.Sprintf("%s %s", method, path), handler)
+}
+
 // FileServerReact starts a file server based on the specified file system and
 // directory inside that file system for a statically built react webapp.
 func (s *Server) FileServerReact(static embed.FS, dir string, path string) error {

@@ -30,6 +30,13 @@ type Config struct {
 		PoolID       string
 		Region       string
 	}
+	// Redis carries the live event bus: backend services publish their
+	// events on it, every gateway replica subscribes and pushes to its own
+	// websocket clients.
+	Redis struct {
+		Host string
+		Port string
+	}
 }
 
 // newLogger builds the structured logger used by every command, wiring the

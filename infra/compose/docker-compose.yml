@@ -193,6 +193,8 @@ services:
         BUILD_REF: develop
     networks:
       - mokapay.app
+      # redis: the live event bus behind the /v1/ws websocket surface.
+      - mokapay.infrastructure
     ports:
       # Host 8085 → container 8080 (8080 is often taken on the host).
       - "8085:8080"
@@ -201,6 +203,8 @@ services:
     # Inside compose the downstream services live on the app network under
     # their service names.
     environment:
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
       USER_GRPC_PORT: user:50051
       PAYMENT_GRPC_PORT: payment:50053
       FILE_GRPC_PORT: file:50052
