@@ -15,6 +15,7 @@ import (
 	adminapi "mokapay.app/app/services/user/internal/api/admin"
 	authapi "mokapay.app/app/services/user/internal/api/auth"
 	notificationapi "mokapay.app/app/services/user/internal/api/notification"
+	"mokapay.app/app/services/user/internal/business/auth"
 	accountUC "mokapay.app/app/services/user/internal/business/auth/usecase/account"
 	adminUC "mokapay.app/app/services/user/internal/business/auth/usecase/admin"
 	authUC "mokapay.app/app/services/user/internal/business/auth/usecase/auth"
@@ -72,14 +73,31 @@ func Run() error {
 	defer pg.Close()
 
 	// -------------------------------------------------------------------------
-	// Init integrations: Cognito owns credentials & sessions, SMS is the
-	// logging mock until a provider is picked.
+	// Init integrations: Cognito owns credentials & sessions, Africa's
+	// Talking delivers the OTP SMS.
 	cognito, err := aws.NewCognito(ctx, cfg.Cognito.ClientID, cfg.Cognito.ClientSecret, cfg.Cognito.PoolID, cfg.Cognito.Region)
 	if err != nil {
 		log.Error(ctx, "startup", "failed to init cognito client", "error", err)
 		return err
 	}
-	sender := sms.NewLog(log)
+
+	// SMS sender: real Africa's Talking delivery once credentials are
+	// configured, logging stand-in without them (local dev needs none). With
+	// a provider wired, the seeded test phones are still routed to the
+	// logging sender — their code is the fixed auth.TestOtpCode, so a real
+	// send would only burn credit.
+	logSMS := sms.NewLog(log)
+	var sender authUC.OTPSender = logSMS
+	if cfg.SMS.ATUsername != "" && cfg.SMS.ATAPIKey != "" {
+		sender = sms.NewRouter(
+			sms.NewAfricasTalking(log, cfg.SMS.ATUsername, cfg.SMS.ATAPIKey, cfg.SMS.ATSenderID),
+			logSMS,
+			auth.IsTestPhone,
+		)
+		log.Info(ctx, "startup", "status", "africa's talking sms sender enabled", "sender_id", cfg.SMS.ATSenderID)
+	} else {
+		log.Info(ctx, "startup", "status", "no sms credentials, otp codes are logged only")
+	}
 
 	// -------------------------------------------------------------------------
 	// Redis backs the OTP rate limiter; unreachable redis fails open (the
