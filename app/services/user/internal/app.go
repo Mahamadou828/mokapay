@@ -21,6 +21,7 @@ import (
 	authUC "mokapay.app/app/services/user/internal/business/auth/usecase/auth"
 	enrollmentuc "mokapay.app/app/services/user/internal/business/enrollment/usecase"
 	notificationuc "mokapay.app/app/services/user/internal/business/notification/usecase"
+	"mokapay.app/app/services/user/internal/integration/email"
 	"mokapay.app/app/services/user/internal/integration/sms"
 	"mokapay.app/app/services/user/internal/integration/webpush"
 	"mokapay.app/core/aws"
@@ -99,6 +100,23 @@ func Run() error {
 		log.Info(ctx, "startup", "status", "no sms credentials, otp codes are logged only")
 	}
 
+	// Email sender: the OTP channel for accounts that picked it. Real SMTP
+	// once a host is configured, logging stand-in without one (local dev and
+	// CI need no mail server). Unlike SMS there is no test-phone router —
+	// SendOTP keeps the seeded phones on the SMS path outright.
+	var mailer authUC.EmailSender = email.NewLog(log)
+	if cfg.SMTP.Host != "" {
+		smtp, err := email.NewSMTP(log, cfg.SMTP.Host, cfg.SMTP.Port, cfg.SMTP.User, cfg.SMTP.Password, cfg.SMTP.From)
+		if err != nil {
+			log.Error(ctx, "startup", "failed to init smtp sender", "error", err)
+			return err
+		}
+		mailer = smtp
+		log.Info(ctx, "startup", "status", "smtp email sender enabled", "host", cfg.SMTP.Host, "from", cfg.SMTP.From)
+	} else {
+		log.Info(ctx, "startup", "status", "no smtp host, otp emails are logged only")
+	}
+
 	// -------------------------------------------------------------------------
 	// Redis backs the OTP rate limiter; unreachable redis fails open (the
 	// limiter protects SMS cost — the DB attempt cap holds the security
@@ -123,7 +141,7 @@ func Run() error {
 
 	// -------------------------------------------------------------------------
 	// Init usecases
-	authUsecase, err := authUC.New(log, pg, sender, cognito, cfg.Auth.OtpPepper, limiter)
+	authUsecase, err := authUC.New(log, pg, sender, mailer, cognito, cfg.Auth.OtpPepper, limiter)
 	if err != nil {
 		log.Error(ctx, "startup", "failed to init auth usecase", "error", err)
 		return err

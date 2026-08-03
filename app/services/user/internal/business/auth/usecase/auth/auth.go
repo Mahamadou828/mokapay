@@ -19,12 +19,24 @@ const codeSpace = 1_000_000 // 6 digits: 000000-999999
 const maxAttempts = 6
 const otpTTL = 5 * time.Minute
 
-// otpMessage is the SMS body — the code alone, with no context, reads as
-// spam/phishing to a recipient and to carrier filters alike.
+// otpMessage is the message body — the code alone, with no context, reads as
+// spam/phishing to a recipient and to carrier filters alike. SMS and email
+// share it on purpose: one wording, no second copy to drift out of sync.
 const otpMessage = "Votre code MokaPay est %s"
+
+// otpSubject is the email subject. The code itself stays out of it — subjects
+// show up in notification previews on a locked screen.
+const otpSubject = "Votre code MokaPay"
 
 type OTPSender interface {
 	Send(ctx context.Context, phoneNumber, msg string) error
+}
+
+// EmailSender delivers the OTP to an account that asked for the email method.
+// Declared here, with OTPSender, because the usecase is the consumer — the
+// integration package owns the implementations, not the contract.
+type EmailSender interface {
+	Send(ctx context.Context, email, subject, body string) error
 }
 
 type AuthProvider interface {
@@ -41,12 +53,13 @@ type Auth struct {
 	repo     repo.Store
 	db       *coredb.Postgres
 	otp      OTPSender
+	email    EmailSender
 	provider AuthProvider
 	hasher   Hasher
 	limiter  Limiter
 }
 
-func New(l *logger.Logger, db *coredb.Postgres, otp OTPSender, p AuthProvider, hash string, limiter Limiter) (Auth, error) {
+func New(l *logger.Logger, db *coredb.Postgres, otp OTPSender, email EmailSender, p AuthProvider, hash string, limiter Limiter) (Auth, error) {
 	h, err := NewHasher([]byte(hash))
 	if err != nil {
 		return Auth{}, err
@@ -55,6 +68,7 @@ func New(l *logger.Logger, db *coredb.Postgres, otp OTPSender, p AuthProvider, h
 	return Auth{
 		repo:     repo.New(db),
 		otp:      otp,
+		email:    email,
 		provider: p,
 		logger:   l,
 		db:       db,
@@ -105,7 +119,7 @@ func (a Auth) SendOTP(ctx context.Context, phoneNumber string, purpose auth.OtpP
 			return time.Time{}, err
 		}
 		// send otp
-		if err := a.otp.Send(ctx, phoneNumber, fmt.Sprintf(otpMessage, code)); err != nil {
+		if err := a.deliverOTP(ctx, phoneNumber, code, purpose); err != nil {
 			a.logger.Error(ctx, "Auth.SendOTP: failed to send otp request", "err", err)
 			return time.Time{}, err
 		}
@@ -126,7 +140,7 @@ func (a Auth) SendOTP(ctx context.Context, phoneNumber string, purpose auth.OtpP
 	}
 
 	// send otp
-	if err := a.otp.Send(ctx, phoneNumber, fmt.Sprintf(otpMessage, code)); err != nil {
+	if err := a.deliverOTP(ctx, phoneNumber, code, purpose); err != nil {
 		a.logger.Error(ctx, "Auth.SendOTP: failed to send otp request", "err", err)
 		return time.Time{}, err
 	}
@@ -143,6 +157,49 @@ func (a Auth) SendOTP(ctx context.Context, phoneNumber string, purpose auth.OtpP
 	}
 
 	return expiresAt, nil
+}
+
+// deliverOTP sends code to the account's chosen channel: email when it asked
+// for it, SMS otherwise. phoneNumber must already be in E.164 form.
+func (a Auth) deliverOTP(ctx context.Context, phoneNumber, code string, purpose auth.OtpPurpose) error {
+	if to := a.otpEmailRecipient(ctx, phoneNumber, purpose); to != "" {
+		return a.email.Send(ctx, to, otpSubject, fmt.Sprintf(otpMessage, code))
+	}
+
+	return a.otp.Send(ctx, phoneNumber, fmt.Sprintf(otpMessage, code))
+}
+
+// otpEmailRecipient returns the address to email the code to, or "" to send
+// it by SMS. Every uncertainty resolves to SMS: registration has no account
+// row to hold a preference, the seeded test phones keep their logging SMS
+// round-trip (their code is public, an email adds nothing), and an account
+// that asked for email but has none on file degrades rather than losing OTP
+// delivery entirely — a data gap must never lock a user out. A lookup
+// failure is logged and degrades the same way.
+func (a Auth) otpEmailRecipient(ctx context.Context, phoneNumber string, purpose auth.OtpPurpose) string {
+	if purpose == auth.OtpPurposeRegister || auth.IsTestPhone(phoneNumber) {
+		return ""
+	}
+
+	account, err := a.repo.GetAccountByPhone(ctx, phoneNumber)
+	if err != nil {
+		// Not found is expected: SendOTP is pre-auth and does not assert the
+		// account exists. Anything else is worth a line.
+		if !errors.Is(err, auth.ErrAccountNotFound) {
+			a.logger.Error(ctx, "Auth.otpEmailRecipient: failed to get account, falling back to sms", "err", err)
+		}
+		return ""
+	}
+
+	if account.PreferredOtpMethod != auth.OtpMethodEmail {
+		return ""
+	}
+	if account.Email == nil || *account.Email == "" {
+		a.logger.Info(ctx, "Auth.otpEmailRecipient: account prefers email but has none on file, falling back to sms", "account_id", account.ID)
+		return ""
+	}
+
+	return *account.Email
 }
 
 func (a Auth) RegisterUser(ctx context.Context, na auth.NewAccount) (auth.Token, error) {

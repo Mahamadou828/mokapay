@@ -117,13 +117,14 @@ func (s Store) GetAccountByPhone(ctx context.Context, phoneNumber string) (auth.
 // stored value untouched.
 func (s Store) UpdateAccount(ctx context.Context, up auth.UpdateAccount) (auth.Account, error) {
 	row, err := s.sqlc.UpdateAccount(ctx, sqlc.UpdateAccountParams{
-		ID:                up.ID.String(),
-		FirstName:         toNullString(up.FirstName),
-		LastName:          toNullString(up.LastName),
-		Email:             toNullString(up.Email),
-		PreferredLanguage: toNullLanguagePtr(up.PreferredLanguage),
-		Role:              toNullRole(up.Role),
-		Status:            toNullStatus(up.Status),
+		ID:                 up.ID.String(),
+		FirstName:          toNullString(up.FirstName),
+		LastName:           toNullString(up.LastName),
+		Email:              toNullString(up.Email),
+		PreferredLanguage:  toNullLanguagePtr(up.PreferredLanguage),
+		PreferredOtpMethod: toNullOtpMethodPtr(up.PreferredOtpMethod),
+		Role:               toNullRole(up.Role),
+		Status:             toNullStatus(up.Status),
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -191,15 +192,16 @@ func accountToDomain(a sqlc.Account) (auth.Account, error) {
 	}
 
 	out := auth.Account{
-		ID:                id,
-		PhoneNumber:       a.PhoneNumber,
-		FirstName:         a.FirstName,
-		LastName:          a.LastName,
-		PreferredLanguage: auth.Language(a.PreferredLanguage),
-		Role:              auth.AccountRole(a.Role),
-		Status:            auth.AccountStatus(a.Status),
-		CreatedAt:         a.CreatedAt,
-		UpdatedAt:         a.UpdatedAt,
+		ID:                 id,
+		PhoneNumber:        a.PhoneNumber,
+		FirstName:          a.FirstName,
+		LastName:           a.LastName,
+		PreferredLanguage:  auth.Language(a.PreferredLanguage),
+		PreferredOtpMethod: auth.OtpMethod(a.PreferredOtpMethod),
+		Role:               auth.AccountRole(a.Role),
+		Status:             auth.AccountStatus(a.Status),
+		CreatedAt:          a.CreatedAt,
+		UpdatedAt:          a.UpdatedAt,
 	}
 	if a.CognitoSub.Valid {
 		out.CognitoSub = new(a.CognitoSub.String)
@@ -222,15 +224,16 @@ func viewAccountToDomain(a sqlc.UsersExtAccount) (auth.Account, error) {
 	}
 
 	out := auth.Account{
-		ID:                id,
-		PhoneNumber:       a.PhoneNumber,
-		FirstName:         a.FirstName,
-		LastName:          a.LastName,
-		PreferredLanguage: auth.Language(a.PreferredLanguage),
-		Role:              auth.AccountRole(a.Role),
-		Status:            auth.AccountStatus(a.Status),
-		CreatedAt:         a.CreatedAt,
-		UpdatedAt:         a.UpdatedAt,
+		ID:                 id,
+		PhoneNumber:        a.PhoneNumber,
+		FirstName:          a.FirstName,
+		LastName:           a.LastName,
+		PreferredLanguage:  auth.Language(a.PreferredLanguage),
+		PreferredOtpMethod: auth.OtpMethod(a.PreferredOtpMethod),
+		Role:               auth.AccountRole(a.Role),
+		Status:             auth.AccountStatus(a.Status),
+		CreatedAt:          a.CreatedAt,
+		UpdatedAt:          a.UpdatedAt,
 	}
 	if a.CognitoSub.Valid {
 		out.CognitoSub = new(a.CognitoSub.String)
@@ -281,6 +284,13 @@ func toNullLanguagePtr(l *auth.Language) sqlc.NullAccountLanguage {
 		return sqlc.NullAccountLanguage{}
 	}
 	return toNullLanguage(*l)
+}
+
+func toNullOtpMethodPtr(m *auth.OtpMethod) sqlc.NullOtpMethod {
+	if m == nil {
+		return sqlc.NullOtpMethod{}
+	}
+	return sqlc.NullOtpMethod{OtpMethod: sqlc.OtpMethod(*m), Valid: true}
 }
 
 func toNullRole(r *auth.AccountRole) sqlc.NullAccountRole {

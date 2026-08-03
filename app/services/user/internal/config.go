@@ -61,6 +61,17 @@ type Config struct {
 		ATAPIKey   string
 		ATSenderID string
 	}
+	SMTP struct {
+		// The business' mail server, used when an account asked for its OTP
+		// by email. Host empty = logging sender for everyone, same fallback
+		// the SMS side uses. User/Password may be empty for an internal
+		// relay that accepts unauthenticated submissions.
+		Host     string
+		Port     int
+		User     string
+		Password string
+		From     string
+	}
 }
 
 // newConfig resolves the whole service config from the environment. Defaults
@@ -105,6 +116,13 @@ func newConfig() Config {
 	cfg.SMS.ATUsername = config.GetEnv("AT_USERNAME", "")
 	cfg.SMS.ATAPIKey = config.GetEnv("AT_API_KEY", "")
 	cfg.SMS.ATSenderID = config.GetEnv("AT_SENDER_ID", "")
+
+	// Empty host keeps every email on the logging sender.
+	cfg.SMTP.Host = config.GetEnv("SMTP_HOST", "")
+	cfg.SMTP.Port = config.GetEnvAsInt("SMTP_PORT", 587)
+	cfg.SMTP.User = config.GetEnv("SMTP_USER", "")
+	cfg.SMTP.Password = config.GetEnv("SMTP_PASSWORD", "")
+	cfg.SMTP.From = config.GetEnv("SMTP_FROM", "no-reply@mokapay.app")
 
 	cfg.Cognito.ClientID = config.GetEnv("COGNITO_CLIENT_ID", "")
 	cfg.Cognito.ClientSecret = config.GetEnv("COGNITO_CLIENT_SECRET", "")

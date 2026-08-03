@@ -102,13 +102,14 @@ func (x *GetAccountBySubRequest) GetSub() string {
 }
 
 type UpdateAccountRequest struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	FirstName         *string                `protobuf:"bytes,1,opt,name=first_name,json=firstName,proto3,oneof" json:"first_name,omitempty"`
-	LastName          *string                `protobuf:"bytes,2,opt,name=last_name,json=lastName,proto3,oneof" json:"last_name,omitempty"`
-	Email             *string                `protobuf:"bytes,3,opt,name=email,proto3,oneof" json:"email,omitempty"`
-	PreferredLanguage *Language              `protobuf:"varint,4,opt,name=preferred_language,json=preferredLanguage,proto3,enum=user.v1.Language,oneof" json:"preferred_language,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	FirstName          *string                `protobuf:"bytes,1,opt,name=first_name,json=firstName,proto3,oneof" json:"first_name,omitempty"`
+	LastName           *string                `protobuf:"bytes,2,opt,name=last_name,json=lastName,proto3,oneof" json:"last_name,omitempty"`
+	Email              *string                `protobuf:"bytes,3,opt,name=email,proto3,oneof" json:"email,omitempty"`
+	PreferredLanguage  *Language              `protobuf:"varint,4,opt,name=preferred_language,json=preferredLanguage,proto3,enum=user.v1.Language,oneof" json:"preferred_language,omitempty"`
+	PreferredOtpMethod *OtpMethod             `protobuf:"varint,5,opt,name=preferred_otp_method,json=preferredOtpMethod,proto3,enum=user.v1.OtpMethod,oneof" json:"preferred_otp_method,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *UpdateAccountRequest) Reset() {
@@ -167,6 +168,13 @@ func (x *UpdateAccountRequest) GetPreferredLanguage() Language {
 		return *x.PreferredLanguage
 	}
 	return Language_LANGUAGE_UNSPECIFIED
+}
+
+func (x *UpdateAccountRequest) GetPreferredOtpMethod() OtpMethod {
+	if x != nil && x.PreferredOtpMethod != nil {
+		return *x.PreferredOtpMethod
+	}
+	return OtpMethod_OTP_METHOD_UNSPECIFIED
 }
 
 type GetMyEnrollmentRequest struct {
@@ -308,18 +316,20 @@ const file_user_v1_user_service_proto_rawDesc = "" +
 	"\x1auser/v1/user_service.proto\x12\auser.v1\x1a\x1cuser/v1/shared_message.proto\"\v\n" +
 	"\tMeRequest\"*\n" +
 	"\x16GetAccountBySubRequest\x12\x10\n" +
-	"\x03sub\x18\x01 \x01(\tR\x03sub\"\xfc\x01\n" +
+	"\x03sub\x18\x01 \x01(\tR\x03sub\"\xe0\x02\n" +
 	"\x14UpdateAccountRequest\x12\"\n" +
 	"\n" +
 	"first_name\x18\x01 \x01(\tH\x00R\tfirstName\x88\x01\x01\x12 \n" +
 	"\tlast_name\x18\x02 \x01(\tH\x01R\blastName\x88\x01\x01\x12\x19\n" +
 	"\x05email\x18\x03 \x01(\tH\x02R\x05email\x88\x01\x01\x12E\n" +
-	"\x12preferred_language\x18\x04 \x01(\x0e2\x11.user.v1.LanguageH\x03R\x11preferredLanguage\x88\x01\x01B\r\n" +
+	"\x12preferred_language\x18\x04 \x01(\x0e2\x11.user.v1.LanguageH\x03R\x11preferredLanguage\x88\x01\x01\x12I\n" +
+	"\x14preferred_otp_method\x18\x05 \x01(\x0e2\x12.user.v1.OtpMethodH\x04R\x12preferredOtpMethod\x88\x01\x01B\r\n" +
 	"\v_first_nameB\f\n" +
 	"\n" +
 	"_last_nameB\b\n" +
 	"\x06_emailB\x15\n" +
-	"\x13_preferred_language\"\x18\n" +
+	"\x13_preferred_languageB\x17\n" +
+	"\x15_preferred_otp_method\"\x18\n" +
 	"\x16GetMyEnrollmentRequest\"J\n" +
 	"\x17AcceptEnrollmentRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
@@ -357,28 +367,30 @@ var file_user_v1_user_service_proto_goTypes = []any{
 	(*AcceptEnrollmentRequest)(nil),  // 4: user.v1.AcceptEnrollmentRequest
 	(*DeclineEnrollmentRequest)(nil), // 5: user.v1.DeclineEnrollmentRequest
 	(Language)(0),                    // 6: user.v1.Language
-	(*Account)(nil),                  // 7: user.v1.Account
-	(*Enrollment)(nil),               // 8: user.v1.Enrollment
+	(OtpMethod)(0),                   // 7: user.v1.OtpMethod
+	(*Account)(nil),                  // 8: user.v1.Account
+	(*Enrollment)(nil),               // 9: user.v1.Enrollment
 }
 var file_user_v1_user_service_proto_depIdxs = []int32{
 	6, // 0: user.v1.UpdateAccountRequest.preferred_language:type_name -> user.v1.Language
-	0, // 1: user.v1.UserService.Me:input_type -> user.v1.MeRequest
-	2, // 2: user.v1.UserService.UpdateAccount:input_type -> user.v1.UpdateAccountRequest
-	1, // 3: user.v1.UserService.GetAccountBySub:input_type -> user.v1.GetAccountBySubRequest
-	3, // 4: user.v1.UserService.GetMyEnrollment:input_type -> user.v1.GetMyEnrollmentRequest
-	4, // 5: user.v1.UserService.AcceptEnrollment:input_type -> user.v1.AcceptEnrollmentRequest
-	5, // 6: user.v1.UserService.DeclineEnrollment:input_type -> user.v1.DeclineEnrollmentRequest
-	7, // 7: user.v1.UserService.Me:output_type -> user.v1.Account
-	7, // 8: user.v1.UserService.UpdateAccount:output_type -> user.v1.Account
-	7, // 9: user.v1.UserService.GetAccountBySub:output_type -> user.v1.Account
-	8, // 10: user.v1.UserService.GetMyEnrollment:output_type -> user.v1.Enrollment
-	8, // 11: user.v1.UserService.AcceptEnrollment:output_type -> user.v1.Enrollment
-	8, // 12: user.v1.UserService.DeclineEnrollment:output_type -> user.v1.Enrollment
-	7, // [7:13] is the sub-list for method output_type
-	1, // [1:7] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	7, // 1: user.v1.UpdateAccountRequest.preferred_otp_method:type_name -> user.v1.OtpMethod
+	0, // 2: user.v1.UserService.Me:input_type -> user.v1.MeRequest
+	2, // 3: user.v1.UserService.UpdateAccount:input_type -> user.v1.UpdateAccountRequest
+	1, // 4: user.v1.UserService.GetAccountBySub:input_type -> user.v1.GetAccountBySubRequest
+	3, // 5: user.v1.UserService.GetMyEnrollment:input_type -> user.v1.GetMyEnrollmentRequest
+	4, // 6: user.v1.UserService.AcceptEnrollment:input_type -> user.v1.AcceptEnrollmentRequest
+	5, // 7: user.v1.UserService.DeclineEnrollment:input_type -> user.v1.DeclineEnrollmentRequest
+	8, // 8: user.v1.UserService.Me:output_type -> user.v1.Account
+	8, // 9: user.v1.UserService.UpdateAccount:output_type -> user.v1.Account
+	8, // 10: user.v1.UserService.GetAccountBySub:output_type -> user.v1.Account
+	9, // 11: user.v1.UserService.GetMyEnrollment:output_type -> user.v1.Enrollment
+	9, // 12: user.v1.UserService.AcceptEnrollment:output_type -> user.v1.Enrollment
+	9, // 13: user.v1.UserService.DeclineEnrollment:output_type -> user.v1.Enrollment
+	8, // [8:14] is the sub-list for method output_type
+	2, // [2:8] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_user_v1_user_service_proto_init() }

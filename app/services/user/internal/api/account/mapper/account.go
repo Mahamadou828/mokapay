@@ -12,16 +12,17 @@ import (
 
 func AccountToProto(in auth.Account) *userv1.Account {
 	out := &userv1.Account{
-		Id:                in.ID.String(),
-		PhoneNumber:       in.PhoneNumber,
-		FirstName:         in.FirstName,
-		LastName:          in.LastName,
-		Email:             in.Email,
-		PreferredLanguage: LanguageToProto(in.PreferredLanguage),
-		Role:              AccountRoleToProto(in.Role),
-		Status:            AccountStatusToProto(in.Status),
-		CreatedAt:         timestamppb.New(in.CreatedAt),
-		UpdatedAt:         timestamppb.New(in.UpdatedAt),
+		Id:                 in.ID.String(),
+		PhoneNumber:        in.PhoneNumber,
+		FirstName:          in.FirstName,
+		LastName:           in.LastName,
+		Email:              in.Email,
+		PreferredLanguage:  LanguageToProto(in.PreferredLanguage),
+		PreferredOtpMethod: OtpMethodToProto(in.PreferredOtpMethod),
+		Role:               AccountRoleToProto(in.Role),
+		Status:             AccountStatusToProto(in.Status),
+		CreatedAt:          timestamppb.New(in.CreatedAt),
+		UpdatedAt:          timestamppb.New(in.UpdatedAt),
 	}
 	if in.LastLoginAt != nil {
 		out.LastLoginAt = timestamppb.New(*in.LastLoginAt)
@@ -41,6 +42,9 @@ func UpdateOwnToDomain(in *userv1.UpdateAccountRequest) auth.UpdateAccount {
 	}
 	if in.PreferredLanguage != nil {
 		out.PreferredLanguage = new(LanguageFromProto(*in.PreferredLanguage))
+	}
+	if in.PreferredOtpMethod != nil {
+		out.PreferredOtpMethod = new(OtpMethodFromProto(*in.PreferredOtpMethod))
 	}
 
 	return out

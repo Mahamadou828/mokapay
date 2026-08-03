@@ -1,25 +1,25 @@
 -- name: GetAccount :one
 SELECT id, phone_number, cognito_sub, first_name, last_name, email, preferred_language,
-       role, status, last_login_at, created_at, updated_at
+       preferred_otp_method, role, status, last_login_at, created_at, updated_at
 FROM users_ext.accounts
 WHERE id = sqlc.arg(id)::uuid;
 
 -- name: GetAccountByPhone :one
 SELECT id, phone_number, cognito_sub, first_name, last_name, email, preferred_language,
-       role, status, last_login_at, created_at, updated_at
+       preferred_otp_method, role, status, last_login_at, created_at, updated_at
 FROM users_ext.accounts
 WHERE phone_number = sqlc.arg(phone_number);
 
 -- name: GetAccountBySub :one
 SELECT id, phone_number, cognito_sub, first_name, last_name, email, preferred_language,
-       role, status, last_login_at, created_at, updated_at
+       preferred_otp_method, role, status, last_login_at, created_at, updated_at
 FROM users_ext.accounts
 WHERE cognito_sub = sqlc.arg(cognito_sub);
 
 -- name: ListAccounts :many
 -- Every filter is optional: a NULL value disables it.
 SELECT id, phone_number, cognito_sub, first_name, last_name, email, preferred_language,
-       role, status, last_login_at, created_at, updated_at
+       preferred_otp_method, role, status, last_login_at, created_at, updated_at
 FROM users_ext.accounts
 WHERE (sqlc.narg(role)::account_role IS NULL OR role = sqlc.narg(role)::account_role)
   AND (sqlc.narg(status)::account_status IS NULL OR status = sqlc.narg(status)::account_status)
@@ -45,6 +45,7 @@ SELECT * FROM users_ext.update_account(
     sqlc.narg(last_name),
     sqlc.narg(email),
     sqlc.narg(preferred_language)::account_language,
+    sqlc.narg(preferred_otp_method)::otp_method,
     sqlc.narg(role)::account_role,
     sqlc.narg(status)::account_status,
     sqlc.narg(last_login_at),

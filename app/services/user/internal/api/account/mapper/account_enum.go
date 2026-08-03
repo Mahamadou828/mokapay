@@ -84,3 +84,23 @@ func LanguageFromProto(l userv1.Language) auth.Language {
 	}
 	return ""
 }
+
+func OtpMethodToProto(m auth.OtpMethod) userv1.OtpMethod {
+	switch m {
+	case auth.OtpMethodSMS:
+		return userv1.OtpMethod_OTP_METHOD_SMS
+	case auth.OtpMethodEmail:
+		return userv1.OtpMethod_OTP_METHOD_EMAIL
+	}
+	return userv1.OtpMethod_OTP_METHOD_UNSPECIFIED
+}
+
+func OtpMethodFromProto(m userv1.OtpMethod) auth.OtpMethod {
+	switch m {
+	case userv1.OtpMethod_OTP_METHOD_SMS:
+		return auth.OtpMethodSMS
+	case userv1.OtpMethod_OTP_METHOD_EMAIL:
+		return auth.OtpMethodEmail
+	}
+	return ""
+}

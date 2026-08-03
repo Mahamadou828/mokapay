@@ -5,7 +5,7 @@ package user.v1;
 import "google/protobuf/timestamp.proto";
 
 // Values mirror the users DB enums (account_role, account_status,
-// account_language, otp_purpose) — conversion is a plain cast.
+// account_language, otp_method, otp_purpose) — conversion is a plain cast.
 
 enum AccountRole {
   ACCOUNT_ROLE_UNSPECIFIED = 0;
@@ -30,6 +30,14 @@ enum Language {
   LANGUAGE_EN = 2;
 }
 
+// How an account wants its login/reset OTP delivered. Registration is
+// always SMS — no account row exists yet to hold a preference.
+enum OtpMethod {
+  OTP_METHOD_UNSPECIFIED = 0;
+  OTP_METHOD_SMS = 1;
+  OTP_METHOD_EMAIL = 2;
+}
+
 enum OtpPurpose {
   OTP_PURPOSE_UNSPECIFIED = 0;
   OTP_PURPOSE_REGISTER = 1;
@@ -51,6 +59,7 @@ message Account {
   optional google.protobuf.Timestamp last_login_at = 9;  // absent if never logged in
   google.protobuf.Timestamp created_at = 10;
   google.protobuf.Timestamp updated_at = 11;
+  OtpMethod preferred_otp_method = 12;
 }
 
 // Values mirror the users DB enrollment_status enum.
