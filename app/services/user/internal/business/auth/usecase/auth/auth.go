@@ -299,33 +299,47 @@ func (a Auth) LogOut(ctx context.Context, sub string) error {
 	return a.provider.Logout(ctx, account.PhoneNumber)
 }
 
-// CheckAndConsumeOTP verifies the code sent for phoneNumber/purpose and burns
-// it on success. phoneNumber must already be in E.164 form — codes are stored
-// under it. A failed verify counts against the attempts cap.
-func (a Auth) CheckAndConsumeOTP(ctx context.Context, phoneNumber, code string, purpose auth.OtpPurpose) error {
-	// The DB caps attempts per CODE (below); this caps guesses per PHONE
-	// across codes, so cycling fresh codes never resets the budget.
+// ValidateOTP verifies the code sent for phoneNumber/purpose WITHOUT burning
+// it — the client calls it at the code-entry step so a mistyped code fails
+// there instead of several screens later. The flow's terminal call still runs
+// CheckAndConsumeOTP, so the code is checked twice on the happy path and
+// consumed exactly once. phoneNumber must already be in E.164 form. A failed
+// verify counts against the attempts cap, same as a consuming check.
+func (a Auth) ValidateOTP(ctx context.Context, phoneNumber, code string, purpose auth.OtpPurpose) error {
+	// Unlike CheckAndConsumeOTP this is called straight from the api layer,
+	// so it normalizes like SendOTP does — codes are stored under E.164.
+	phoneNumber, err := normalizePhoneNumber(phoneNumber)
+	if err != nil {
+		a.logger.Error(ctx, "Auth.ValidateOTP: failed to parse phone number", "err", err)
+		return auth.ErrInvalidPhoneNumber
+	}
+
+	// Same rate limit as the consuming path: validate-spam is the guessing
+	// attack AllowVerify exists for.
 	if err := a.limiter.AllowVerify(ctx, phoneNumber); err != nil {
 		return err
 	}
 
-	// find otp attempt
-	otp, err := a.repo.GetValidOtp(ctx, phoneNumber, purpose)
-	if err != nil {
+	if _, err := a.checkOTP(ctx, phoneNumber, code, purpose); err != nil {
 		return err
 	}
 
-	if otp.Attempts > maxAttempts {
-		return auth.ErrTooManyAttempts
+	return nil
+}
+
+// CheckAndConsumeOTP verifies the code sent for phoneNumber/purpose and burns
+// it on success. phoneNumber must already be in E.164 form — codes are stored
+// under it. A failed verify counts against the attempts cap.
+func (a Auth) CheckAndConsumeOTP(ctx context.Context, phoneNumber, code string, purpose auth.OtpPurpose) error {
+	// The DB caps attempts per CODE (in checkOTP); this caps guesses per
+	// PHONE across codes, so cycling fresh codes never resets the budget.
+	if err := a.limiter.AllowVerify(ctx, phoneNumber); err != nil {
+		return err
 	}
 
-	// validate the code send
-	if ok := a.hasher.Verify(otp.CodeHash, phoneNumber, code); !ok {
-		if _, err := a.repo.BumpOtpAttempts(ctx, otp.ID.String()); err != nil {
-			a.logger.Error(ctx, "Auth.CheckAndConsumeOTP: failed to bump otp attempt", "err", err)
-			return fmt.Errorf("failed to bump otp attempt: %w", err)
-		}
-		return auth.ErrInvalidCode
+	otp, err := a.checkOTP(ctx, phoneNumber, code, purpose)
+	if err != nil {
+		return err
 	}
 
 	if _, err := a.repo.ConsumeOtp(ctx, otp.ID.String()); err != nil {
@@ -334,6 +348,33 @@ func (a Auth) CheckAndConsumeOTP(ctx context.Context, phoneNumber, code string, 
 	}
 
 	return nil
+}
+
+// checkOTP resolves the live otp for phoneNumber/purpose and verifies code
+// against it, returning the otp so the caller can consume it. A wrong code
+// bumps the per-code attempts counter and yields auth.ErrInvalidCode; it never
+// consumes. Callers apply the per-phone rate limit before calling.
+func (a Auth) checkOTP(ctx context.Context, phoneNumber, code string, purpose auth.OtpPurpose) (auth.Otp, error) {
+	// find otp attempt
+	otp, err := a.repo.GetValidOtp(ctx, phoneNumber, purpose)
+	if err != nil {
+		return auth.Otp{}, err
+	}
+
+	if otp.Attempts > maxAttempts {
+		return auth.Otp{}, auth.ErrTooManyAttempts
+	}
+
+	// validate the code send
+	if ok := a.hasher.Verify(otp.CodeHash, phoneNumber, code); !ok {
+		if _, err := a.repo.BumpOtpAttempts(ctx, otp.ID.String()); err != nil {
+			a.logger.Error(ctx, "Auth.checkOTP: failed to bump otp attempt", "err", err)
+			return auth.Otp{}, fmt.Errorf("failed to bump otp attempt: %w", err)
+		}
+		return auth.Otp{}, auth.ErrInvalidCode
+	}
+
+	return otp, nil
 }
 
 // statusCanAuth rejects moderated accounts. pending stays allowed — it is

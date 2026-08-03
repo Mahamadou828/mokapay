@@ -25,6 +25,19 @@ func (h Handler) sendOtp(ctx context.Context, r *http.Request) core.Encoder {
 	return protocodec.Proto{Message: res}
 }
 
+func (h Handler) validateOtp(ctx context.Context, r *http.Request) core.Encoder {
+	req := &userv1.ValidateOtpRequest{}
+	if err := core.Decode(r, protocodec.Proto{Message: req}); err != nil {
+		return coreerrs.New(errs.InvalidArgument, err)
+	}
+
+	if _, err := h.moka.User.Auth.ValidateOtp(ctx, req); err != nil {
+		return rpcErr(err)
+	}
+
+	return nil // 204
+}
+
 func (h Handler) register(ctx context.Context, r *http.Request) core.Encoder {
 	req := &userv1.RegisterRequest{}
 	if err := core.Decode(r, protocodec.Proto{Message: req}); err != nil {

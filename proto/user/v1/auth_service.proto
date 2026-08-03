@@ -12,6 +12,7 @@ import "user/v1/shared_message.proto";
 // gateway, locally against the Cognito JWKS — there is no validation RPC.
 service AuthService {
   rpc SendOtp(SendOtpRequest) returns (SendOtpResponse);
+  rpc ValidateOtp(ValidateOtpRequest) returns (google.protobuf.Empty);
   rpc Register(RegisterRequest) returns (AuthResponse);
   rpc Login(LoginRequest) returns (AuthResponse);
   rpc RefreshToken(RefreshTokenRequest) returns (AuthResponse);
@@ -27,6 +28,15 @@ message SendOtpRequest {
 // Never carries the code — delivery is SMS only.
 message SendOtpResponse {
   int64 expires_in_seconds = 1;
+}
+
+// Checks a code without burning it: the client calls it at the code-entry
+// step for instant feedback, and the flow's terminal call (Register,
+// ChangePassword) still does the real check-and-consume.
+message ValidateOtpRequest {
+  string phone_number = 1;
+  string code = 2;
+  OtpPurpose purpose = 3;
 }
 
 message RegisterRequest {
