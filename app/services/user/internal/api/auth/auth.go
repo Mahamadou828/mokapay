@@ -28,6 +28,26 @@ func (h Handler) SendOtp(ctx context.Context, req *userv1.SendOtpRequest) (*user
 	return &userv1.SendOtpResponse{ExpiresInSeconds: mapper.SecondsUntil(expiresAt)}, nil
 }
 
+// ValidateOtp checks a code without consuming it — the client calls it at the
+// code-entry step so a wrong code fails there, not after the user has filled
+// in the rest of the flow.
+func (h Handler) ValidateOtp(ctx context.Context, req *userv1.ValidateOtpRequest) (*emptypb.Empty, error) {
+	switch {
+	case req.PhoneNumber == "":
+		return nil, status.Error(codes.InvalidArgument, "phone_number is required")
+	case req.Code == "":
+		return nil, status.Error(codes.InvalidArgument, "code is required")
+	case req.Purpose == userv1.OtpPurpose_OTP_PURPOSE_UNSPECIFIED:
+		return nil, status.Error(codes.InvalidArgument, "purpose is required")
+	}
+
+	if err := h.uc.ValidateOTP(ctx, req.PhoneNumber, req.Code, mapper.OtpPurposeFromProto(req.Purpose)); err != nil {
+		return nil, grpcerr.Map(err)
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
 func (h Handler) Register(ctx context.Context, req *userv1.RegisterRequest) (*userv1.AuthResponse, error) {
 	switch {
 	case req.PhoneNumber == "":

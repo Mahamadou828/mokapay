@@ -19,12 +19,24 @@ const codeSpace = 1_000_000 // 6 digits: 000000-999999
 const maxAttempts = 6
 const otpTTL = 5 * time.Minute
 
-// otpMessage is the SMS body — the code alone, with no context, reads as
-// spam/phishing to a recipient and to carrier filters alike.
+// otpMessage is the message body — the code alone, with no context, reads as
+// spam/phishing to a recipient and to carrier filters alike. SMS and email
+// share it on purpose: one wording, no second copy to drift out of sync.
 const otpMessage = "Votre code MokaPay est %s"
+
+// otpSubject is the email subject. The code itself stays out of it — subjects
+// show up in notification previews on a locked screen.
+const otpSubject = "Votre code MokaPay"
 
 type OTPSender interface {
 	Send(ctx context.Context, phoneNumber, msg string) error
+}
+
+// EmailSender delivers the OTP to an account that asked for the email method.
+// Declared here, with OTPSender, because the usecase is the consumer — the
+// integration package owns the implementations, not the contract.
+type EmailSender interface {
+	Send(ctx context.Context, email, subject, body string) error
 }
 
 type AuthProvider interface {
@@ -41,12 +53,13 @@ type Auth struct {
 	repo     repo.Store
 	db       *coredb.Postgres
 	otp      OTPSender
+	email    EmailSender
 	provider AuthProvider
 	hasher   Hasher
 	limiter  Limiter
 }
 
-func New(l *logger.Logger, db *coredb.Postgres, otp OTPSender, p AuthProvider, hash string, limiter Limiter) (Auth, error) {
+func New(l *logger.Logger, db *coredb.Postgres, otp OTPSender, email EmailSender, p AuthProvider, hash string, limiter Limiter) (Auth, error) {
 	h, err := NewHasher([]byte(hash))
 	if err != nil {
 		return Auth{}, err
@@ -55,6 +68,7 @@ func New(l *logger.Logger, db *coredb.Postgres, otp OTPSender, p AuthProvider, h
 	return Auth{
 		repo:     repo.New(db),
 		otp:      otp,
+		email:    email,
 		provider: p,
 		logger:   l,
 		db:       db,
@@ -105,7 +119,7 @@ func (a Auth) SendOTP(ctx context.Context, phoneNumber string, purpose auth.OtpP
 			return time.Time{}, err
 		}
 		// send otp
-		if err := a.otp.Send(ctx, phoneNumber, fmt.Sprintf(otpMessage, code)); err != nil {
+		if err := a.deliverOTP(ctx, phoneNumber, code, purpose); err != nil {
 			a.logger.Error(ctx, "Auth.SendOTP: failed to send otp request", "err", err)
 			return time.Time{}, err
 		}
@@ -126,7 +140,7 @@ func (a Auth) SendOTP(ctx context.Context, phoneNumber string, purpose auth.OtpP
 	}
 
 	// send otp
-	if err := a.otp.Send(ctx, phoneNumber, fmt.Sprintf(otpMessage, code)); err != nil {
+	if err := a.deliverOTP(ctx, phoneNumber, code, purpose); err != nil {
 		a.logger.Error(ctx, "Auth.SendOTP: failed to send otp request", "err", err)
 		return time.Time{}, err
 	}
@@ -143,6 +157,49 @@ func (a Auth) SendOTP(ctx context.Context, phoneNumber string, purpose auth.OtpP
 	}
 
 	return expiresAt, nil
+}
+
+// deliverOTP sends code to the account's chosen channel: email when it asked
+// for it, SMS otherwise. phoneNumber must already be in E.164 form.
+func (a Auth) deliverOTP(ctx context.Context, phoneNumber, code string, purpose auth.OtpPurpose) error {
+	if to := a.otpEmailRecipient(ctx, phoneNumber, purpose); to != "" {
+		return a.email.Send(ctx, to, otpSubject, fmt.Sprintf(otpMessage, code))
+	}
+
+	return a.otp.Send(ctx, phoneNumber, fmt.Sprintf(otpMessage, code))
+}
+
+// otpEmailRecipient returns the address to email the code to, or "" to send
+// it by SMS. Every uncertainty resolves to SMS: registration has no account
+// row to hold a preference, the seeded test phones keep their logging SMS
+// round-trip (their code is public, an email adds nothing), and an account
+// that asked for email but has none on file degrades rather than losing OTP
+// delivery entirely — a data gap must never lock a user out. A lookup
+// failure is logged and degrades the same way.
+func (a Auth) otpEmailRecipient(ctx context.Context, phoneNumber string, purpose auth.OtpPurpose) string {
+	if purpose == auth.OtpPurposeRegister || auth.IsTestPhone(phoneNumber) {
+		return ""
+	}
+
+	account, err := a.repo.GetAccountByPhone(ctx, phoneNumber)
+	if err != nil {
+		// Not found is expected: SendOTP is pre-auth and does not assert the
+		// account exists. Anything else is worth a line.
+		if !errors.Is(err, auth.ErrAccountNotFound) {
+			a.logger.Error(ctx, "Auth.otpEmailRecipient: failed to get account, falling back to sms", "err", err)
+		}
+		return ""
+	}
+
+	if account.PreferredOtpMethod != auth.OtpMethodEmail {
+		return ""
+	}
+	if account.Email == nil || *account.Email == "" {
+		a.logger.Info(ctx, "Auth.otpEmailRecipient: account prefers email but has none on file, falling back to sms", "account_id", account.ID)
+		return ""
+	}
+
+	return *account.Email
 }
 
 func (a Auth) RegisterUser(ctx context.Context, na auth.NewAccount) (auth.Token, error) {
@@ -299,33 +356,47 @@ func (a Auth) LogOut(ctx context.Context, sub string) error {
 	return a.provider.Logout(ctx, account.PhoneNumber)
 }
 
-// CheckAndConsumeOTP verifies the code sent for phoneNumber/purpose and burns
-// it on success. phoneNumber must already be in E.164 form — codes are stored
-// under it. A failed verify counts against the attempts cap.
-func (a Auth) CheckAndConsumeOTP(ctx context.Context, phoneNumber, code string, purpose auth.OtpPurpose) error {
-	// The DB caps attempts per CODE (below); this caps guesses per PHONE
-	// across codes, so cycling fresh codes never resets the budget.
+// ValidateOTP verifies the code sent for phoneNumber/purpose WITHOUT burning
+// it — the client calls it at the code-entry step so a mistyped code fails
+// there instead of several screens later. The flow's terminal call still runs
+// CheckAndConsumeOTP, so the code is checked twice on the happy path and
+// consumed exactly once. phoneNumber must already be in E.164 form. A failed
+// verify counts against the attempts cap, same as a consuming check.
+func (a Auth) ValidateOTP(ctx context.Context, phoneNumber, code string, purpose auth.OtpPurpose) error {
+	// Unlike CheckAndConsumeOTP this is called straight from the api layer,
+	// so it normalizes like SendOTP does — codes are stored under E.164.
+	phoneNumber, err := normalizePhoneNumber(phoneNumber)
+	if err != nil {
+		a.logger.Error(ctx, "Auth.ValidateOTP: failed to parse phone number", "err", err)
+		return auth.ErrInvalidPhoneNumber
+	}
+
+	// Same rate limit as the consuming path: validate-spam is the guessing
+	// attack AllowVerify exists for.
 	if err := a.limiter.AllowVerify(ctx, phoneNumber); err != nil {
 		return err
 	}
 
-	// find otp attempt
-	otp, err := a.repo.GetValidOtp(ctx, phoneNumber, purpose)
-	if err != nil {
+	if _, err := a.checkOTP(ctx, phoneNumber, code, purpose); err != nil {
 		return err
 	}
 
-	if otp.Attempts > maxAttempts {
-		return auth.ErrTooManyAttempts
+	return nil
+}
+
+// CheckAndConsumeOTP verifies the code sent for phoneNumber/purpose and burns
+// it on success. phoneNumber must already be in E.164 form — codes are stored
+// under it. A failed verify counts against the attempts cap.
+func (a Auth) CheckAndConsumeOTP(ctx context.Context, phoneNumber, code string, purpose auth.OtpPurpose) error {
+	// The DB caps attempts per CODE (in checkOTP); this caps guesses per
+	// PHONE across codes, so cycling fresh codes never resets the budget.
+	if err := a.limiter.AllowVerify(ctx, phoneNumber); err != nil {
+		return err
 	}
 
-	// validate the code send
-	if ok := a.hasher.Verify(otp.CodeHash, phoneNumber, code); !ok {
-		if _, err := a.repo.BumpOtpAttempts(ctx, otp.ID.String()); err != nil {
-			a.logger.Error(ctx, "Auth.CheckAndConsumeOTP: failed to bump otp attempt", "err", err)
-			return fmt.Errorf("failed to bump otp attempt: %w", err)
-		}
-		return auth.ErrInvalidCode
+	otp, err := a.checkOTP(ctx, phoneNumber, code, purpose)
+	if err != nil {
+		return err
 	}
 
 	if _, err := a.repo.ConsumeOtp(ctx, otp.ID.String()); err != nil {
@@ -334,6 +405,33 @@ func (a Auth) CheckAndConsumeOTP(ctx context.Context, phoneNumber, code string, 
 	}
 
 	return nil
+}
+
+// checkOTP resolves the live otp for phoneNumber/purpose and verifies code
+// against it, returning the otp so the caller can consume it. A wrong code
+// bumps the per-code attempts counter and yields auth.ErrInvalidCode; it never
+// consumes. Callers apply the per-phone rate limit before calling.
+func (a Auth) checkOTP(ctx context.Context, phoneNumber, code string, purpose auth.OtpPurpose) (auth.Otp, error) {
+	// find otp attempt
+	otp, err := a.repo.GetValidOtp(ctx, phoneNumber, purpose)
+	if err != nil {
+		return auth.Otp{}, err
+	}
+
+	if otp.Attempts > maxAttempts {
+		return auth.Otp{}, auth.ErrTooManyAttempts
+	}
+
+	// validate the code send
+	if ok := a.hasher.Verify(otp.CodeHash, phoneNumber, code); !ok {
+		if _, err := a.repo.BumpOtpAttempts(ctx, otp.ID.String()); err != nil {
+			a.logger.Error(ctx, "Auth.checkOTP: failed to bump otp attempt", "err", err)
+			return auth.Otp{}, fmt.Errorf("failed to bump otp attempt: %w", err)
+		}
+		return auth.Otp{}, auth.ErrInvalidCode
+	}
+
+	return otp, nil
 }
 
 // statusCanAuth rejects moderated accounts. pending stays allowed — it is

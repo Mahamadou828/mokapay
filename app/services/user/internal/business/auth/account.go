@@ -56,6 +56,16 @@ const (
 	LanguageEn Language = "en"
 )
 
+// OtpMethod values mirror the stored otp_method enum: how the account wants
+// its login/reset codes delivered. Registration is always SMS — no account
+// row exists yet to hold a preference.
+type OtpMethod string
+
+const (
+	OtpMethodSMS   OtpMethod = "sms"
+	OtpMethodEmail OtpMethod = "email"
+)
+
 // NewAccount is the register payload. Code and Password are auth-flow fields
 // (OTP verify, Cognito sign-up) — the repo never persists them. CognitoSub is
 // set by the usecase after provider sign-up, before the row is stored.
@@ -73,13 +83,14 @@ type NewAccount struct {
 // Role and Status are moderation fields — the api layer only sets them on the
 // admin path (authorization is its job).
 type UpdateAccount struct {
-	ID                uuid.UUID
-	FirstName         *string
-	LastName          *string
-	Email             *string
-	PreferredLanguage *Language
-	Role              *AccountRole
-	Status            *AccountStatus
+	ID                 uuid.UUID
+	FirstName          *string
+	LastName           *string
+	Email              *string
+	PreferredLanguage  *Language
+	PreferredOtpMethod *OtpMethod
+	Role               *AccountRole
+	Status             *AccountStatus
 }
 
 // AccountFilter narrows account listings; nil fields mean "not filtering".
@@ -91,16 +102,17 @@ type AccountFilter struct {
 
 // Account is the read entity. Credentials live in Cognito, never here.
 type Account struct {
-	ID                uuid.UUID
-	PhoneNumber       string
-	CognitoSub        *string // nil until the Cognito user is provisioned
-	FirstName         string
-	LastName          string
-	Email             *string
-	PreferredLanguage Language
-	Role              AccountRole
-	Status            AccountStatus
-	LastLoginAt       *time.Time // nil until the first login
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
+	ID                 uuid.UUID
+	PhoneNumber        string
+	CognitoSub         *string // nil until the Cognito user is provisioned
+	FirstName          string
+	LastName           string
+	Email              *string
+	PreferredLanguage  Language
+	PreferredOtpMethod OtpMethod
+	Role               AccountRole
+	Status             AccountStatus
+	LastLoginAt        *time.Time // nil until the first login
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 }

@@ -184,6 +184,57 @@ func (Language) EnumDescriptor() ([]byte, []int) {
 	return file_user_v1_shared_message_proto_rawDescGZIP(), []int{2}
 }
 
+// How an account wants its login/reset OTP delivered. Registration is
+// always SMS — no account row exists yet to hold a preference.
+type OtpMethod int32
+
+const (
+	OtpMethod_OTP_METHOD_UNSPECIFIED OtpMethod = 0
+	OtpMethod_OTP_METHOD_SMS         OtpMethod = 1
+	OtpMethod_OTP_METHOD_EMAIL       OtpMethod = 2
+)
+
+// Enum value maps for OtpMethod.
+var (
+	OtpMethod_name = map[int32]string{
+		0: "OTP_METHOD_UNSPECIFIED",
+		1: "OTP_METHOD_SMS",
+		2: "OTP_METHOD_EMAIL",
+	}
+	OtpMethod_value = map[string]int32{
+		"OTP_METHOD_UNSPECIFIED": 0,
+		"OTP_METHOD_SMS":         1,
+		"OTP_METHOD_EMAIL":       2,
+	}
+)
+
+func (x OtpMethod) Enum() *OtpMethod {
+	p := new(OtpMethod)
+	*p = x
+	return p
+}
+
+func (x OtpMethod) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (OtpMethod) Descriptor() protoreflect.EnumDescriptor {
+	return file_user_v1_shared_message_proto_enumTypes[3].Descriptor()
+}
+
+func (OtpMethod) Type() protoreflect.EnumType {
+	return &file_user_v1_shared_message_proto_enumTypes[3]
+}
+
+func (x OtpMethod) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use OtpMethod.Descriptor instead.
+func (OtpMethod) EnumDescriptor() ([]byte, []int) {
+	return file_user_v1_shared_message_proto_rawDescGZIP(), []int{3}
+}
+
 type OtpPurpose int32
 
 const (
@@ -220,11 +271,11 @@ func (x OtpPurpose) String() string {
 }
 
 func (OtpPurpose) Descriptor() protoreflect.EnumDescriptor {
-	return file_user_v1_shared_message_proto_enumTypes[3].Descriptor()
+	return file_user_v1_shared_message_proto_enumTypes[4].Descriptor()
 }
 
 func (OtpPurpose) Type() protoreflect.EnumType {
-	return &file_user_v1_shared_message_proto_enumTypes[3]
+	return &file_user_v1_shared_message_proto_enumTypes[4]
 }
 
 func (x OtpPurpose) Number() protoreflect.EnumNumber {
@@ -233,7 +284,7 @@ func (x OtpPurpose) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use OtpPurpose.Descriptor instead.
 func (OtpPurpose) EnumDescriptor() ([]byte, []int) {
-	return file_user_v1_shared_message_proto_rawDescGZIP(), []int{3}
+	return file_user_v1_shared_message_proto_rawDescGZIP(), []int{4}
 }
 
 // Values mirror the users DB enrollment_status enum.
@@ -279,11 +330,11 @@ func (x EnrollmentStatus) String() string {
 }
 
 func (EnrollmentStatus) Descriptor() protoreflect.EnumDescriptor {
-	return file_user_v1_shared_message_proto_enumTypes[4].Descriptor()
+	return file_user_v1_shared_message_proto_enumTypes[5].Descriptor()
 }
 
 func (EnrollmentStatus) Type() protoreflect.EnumType {
-	return &file_user_v1_shared_message_proto_enumTypes[4]
+	return &file_user_v1_shared_message_proto_enumTypes[5]
 }
 
 func (x EnrollmentStatus) Number() protoreflect.EnumNumber {
@@ -292,26 +343,27 @@ func (x EnrollmentStatus) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use EnrollmentStatus.Descriptor instead.
 func (EnrollmentStatus) EnumDescriptor() ([]byte, []int) {
-	return file_user_v1_shared_message_proto_rawDescGZIP(), []int{4}
+	return file_user_v1_shared_message_proto_rawDescGZIP(), []int{5}
 }
 
 // The single identity row for every human in the system.
 // No password field anywhere — hashes never cross the wire.
 type Account struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	PhoneNumber       string                 `protobuf:"bytes,2,opt,name=phone_number,json=phoneNumber,proto3" json:"phone_number,omitempty"` // E.164
-	FirstName         string                 `protobuf:"bytes,3,opt,name=first_name,json=firstName,proto3" json:"first_name,omitempty"`
-	LastName          string                 `protobuf:"bytes,4,opt,name=last_name,json=lastName,proto3" json:"last_name,omitempty"`
-	Email             *string                `protobuf:"bytes,5,opt,name=email,proto3,oneof" json:"email,omitempty"`
-	PreferredLanguage Language               `protobuf:"varint,6,opt,name=preferred_language,json=preferredLanguage,proto3,enum=user.v1.Language" json:"preferred_language,omitempty"`
-	Role              AccountRole            `protobuf:"varint,7,opt,name=role,proto3,enum=user.v1.AccountRole" json:"role,omitempty"`
-	Status            AccountStatus          `protobuf:"varint,8,opt,name=status,proto3,enum=user.v1.AccountStatus" json:"status,omitempty"`
-	LastLoginAt       *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=last_login_at,json=lastLoginAt,proto3,oneof" json:"last_login_at,omitempty"` // absent if never logged in
-	CreatedAt         *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt         *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	Id                 string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	PhoneNumber        string                 `protobuf:"bytes,2,opt,name=phone_number,json=phoneNumber,proto3" json:"phone_number,omitempty"` // E.164
+	FirstName          string                 `protobuf:"bytes,3,opt,name=first_name,json=firstName,proto3" json:"first_name,omitempty"`
+	LastName           string                 `protobuf:"bytes,4,opt,name=last_name,json=lastName,proto3" json:"last_name,omitempty"`
+	Email              *string                `protobuf:"bytes,5,opt,name=email,proto3,oneof" json:"email,omitempty"`
+	PreferredLanguage  Language               `protobuf:"varint,6,opt,name=preferred_language,json=preferredLanguage,proto3,enum=user.v1.Language" json:"preferred_language,omitempty"`
+	Role               AccountRole            `protobuf:"varint,7,opt,name=role,proto3,enum=user.v1.AccountRole" json:"role,omitempty"`
+	Status             AccountStatus          `protobuf:"varint,8,opt,name=status,proto3,enum=user.v1.AccountStatus" json:"status,omitempty"`
+	LastLoginAt        *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=last_login_at,json=lastLoginAt,proto3,oneof" json:"last_login_at,omitempty"` // absent if never logged in
+	CreatedAt          *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt          *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	PreferredOtpMethod OtpMethod              `protobuf:"varint,12,opt,name=preferred_otp_method,json=preferredOtpMethod,proto3,enum=user.v1.OtpMethod" json:"preferred_otp_method,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *Account) Reset() {
@@ -419,6 +471,13 @@ func (x *Account) GetUpdatedAt() *timestamppb.Timestamp {
 		return x.UpdatedAt
 	}
 	return nil
+}
+
+func (x *Account) GetPreferredOtpMethod() OtpMethod {
+	if x != nil {
+		return x.PreferredOtpMethod
+	}
+	return OtpMethod_OTP_METHOD_UNSPECIFIED
 }
 
 // One agent-enrollment request: the invite → TOS acceptance → approval
@@ -544,7 +603,7 @@ var File_user_v1_shared_message_proto protoreflect.FileDescriptor
 
 const file_user_v1_shared_message_proto_rawDesc = "" +
 	"\n" +
-	"\x1cuser/v1/shared_message.proto\x12\auser.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x86\x04\n" +
+	"\x1cuser/v1/shared_message.proto\x12\auser.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xcc\x04\n" +
 	"\aAccount\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
 	"\fphone_number\x18\x02 \x01(\tR\vphoneNumber\x12\x1d\n" +
@@ -560,7 +619,8 @@ const file_user_v1_shared_message_proto_rawDesc = "" +
 	"created_at\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\b\n" +
+	"updated_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12D\n" +
+	"\x14preferred_otp_method\x18\f \x01(\x0e2\x12.user.v1.OtpMethodR\x12preferredOtpMethodB\b\n" +
 	"\x06_emailB\x10\n" +
 	"\x0e_last_login_at\"\x98\x04\n" +
 	"\n" +
@@ -603,7 +663,11 @@ const file_user_v1_shared_message_proto_rawDesc = "" +
 	"\bLanguage\x12\x18\n" +
 	"\x14LANGUAGE_UNSPECIFIED\x10\x00\x12\x0f\n" +
 	"\vLANGUAGE_FR\x10\x01\x12\x0f\n" +
-	"\vLANGUAGE_EN\x10\x02*q\n" +
+	"\vLANGUAGE_EN\x10\x02*Q\n" +
+	"\tOtpMethod\x12\x1a\n" +
+	"\x16OTP_METHOD_UNSPECIFIED\x10\x00\x12\x12\n" +
+	"\x0eOTP_METHOD_SMS\x10\x01\x12\x14\n" +
+	"\x10OTP_METHOD_EMAIL\x10\x02*q\n" +
 	"\n" +
 	"OtpPurpose\x12\x1b\n" +
 	"\x17OTP_PURPOSE_UNSPECIFIED\x10\x00\x12\x18\n" +
@@ -631,35 +695,37 @@ func file_user_v1_shared_message_proto_rawDescGZIP() []byte {
 	return file_user_v1_shared_message_proto_rawDescData
 }
 
-var file_user_v1_shared_message_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
+var file_user_v1_shared_message_proto_enumTypes = make([]protoimpl.EnumInfo, 6)
 var file_user_v1_shared_message_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_user_v1_shared_message_proto_goTypes = []any{
 	(AccountRole)(0),              // 0: user.v1.AccountRole
 	(AccountStatus)(0),            // 1: user.v1.AccountStatus
 	(Language)(0),                 // 2: user.v1.Language
-	(OtpPurpose)(0),               // 3: user.v1.OtpPurpose
-	(EnrollmentStatus)(0),         // 4: user.v1.EnrollmentStatus
-	(*Account)(nil),               // 5: user.v1.Account
-	(*Enrollment)(nil),            // 6: user.v1.Enrollment
-	(*timestamppb.Timestamp)(nil), // 7: google.protobuf.Timestamp
+	(OtpMethod)(0),                // 3: user.v1.OtpMethod
+	(OtpPurpose)(0),               // 4: user.v1.OtpPurpose
+	(EnrollmentStatus)(0),         // 5: user.v1.EnrollmentStatus
+	(*Account)(nil),               // 6: user.v1.Account
+	(*Enrollment)(nil),            // 7: user.v1.Enrollment
+	(*timestamppb.Timestamp)(nil), // 8: google.protobuf.Timestamp
 }
 var file_user_v1_shared_message_proto_depIdxs = []int32{
 	2,  // 0: user.v1.Account.preferred_language:type_name -> user.v1.Language
 	0,  // 1: user.v1.Account.role:type_name -> user.v1.AccountRole
 	1,  // 2: user.v1.Account.status:type_name -> user.v1.AccountStatus
-	7,  // 3: user.v1.Account.last_login_at:type_name -> google.protobuf.Timestamp
-	7,  // 4: user.v1.Account.created_at:type_name -> google.protobuf.Timestamp
-	7,  // 5: user.v1.Account.updated_at:type_name -> google.protobuf.Timestamp
-	4,  // 6: user.v1.Enrollment.status:type_name -> user.v1.EnrollmentStatus
-	7,  // 7: user.v1.Enrollment.tos_accepted_at:type_name -> google.protobuf.Timestamp
-	7,  // 8: user.v1.Enrollment.decided_at:type_name -> google.protobuf.Timestamp
-	7,  // 9: user.v1.Enrollment.created_at:type_name -> google.protobuf.Timestamp
-	7,  // 10: user.v1.Enrollment.updated_at:type_name -> google.protobuf.Timestamp
-	11, // [11:11] is the sub-list for method output_type
-	11, // [11:11] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	8,  // 3: user.v1.Account.last_login_at:type_name -> google.protobuf.Timestamp
+	8,  // 4: user.v1.Account.created_at:type_name -> google.protobuf.Timestamp
+	8,  // 5: user.v1.Account.updated_at:type_name -> google.protobuf.Timestamp
+	3,  // 6: user.v1.Account.preferred_otp_method:type_name -> user.v1.OtpMethod
+	5,  // 7: user.v1.Enrollment.status:type_name -> user.v1.EnrollmentStatus
+	8,  // 8: user.v1.Enrollment.tos_accepted_at:type_name -> google.protobuf.Timestamp
+	8,  // 9: user.v1.Enrollment.decided_at:type_name -> google.protobuf.Timestamp
+	8,  // 10: user.v1.Enrollment.created_at:type_name -> google.protobuf.Timestamp
+	8,  // 11: user.v1.Enrollment.updated_at:type_name -> google.protobuf.Timestamp
+	12, // [12:12] is the sub-list for method output_type
+	12, // [12:12] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_user_v1_shared_message_proto_init() }
@@ -674,7 +740,7 @@ func file_user_v1_shared_message_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_user_v1_shared_message_proto_rawDesc), len(file_user_v1_shared_message_proto_rawDesc)),
-			NumEnums:      5,
+			NumEnums:      6,
 			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,

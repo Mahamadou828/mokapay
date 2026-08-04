@@ -21,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	AuthService_SendOtp_FullMethodName        = "/user.v1.AuthService/SendOtp"
+	AuthService_ValidateOtp_FullMethodName    = "/user.v1.AuthService/ValidateOtp"
 	AuthService_Register_FullMethodName       = "/user.v1.AuthService/Register"
 	AuthService_Login_FullMethodName          = "/user.v1.AuthService/Login"
 	AuthService_RefreshToken_FullMethodName   = "/user.v1.AuthService/RefreshToken"
@@ -39,6 +40,7 @@ const (
 // gateway, locally against the Cognito JWKS — there is no validation RPC.
 type AuthServiceClient interface {
 	SendOtp(ctx context.Context, in *SendOtpRequest, opts ...grpc.CallOption) (*SendOtpResponse, error)
+	ValidateOtp(ctx context.Context, in *ValidateOtpRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*AuthResponse, error)
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*AuthResponse, error)
 	RefreshToken(ctx context.Context, in *RefreshTokenRequest, opts ...grpc.CallOption) (*AuthResponse, error)
@@ -58,6 +60,16 @@ func (c *authServiceClient) SendOtp(ctx context.Context, in *SendOtpRequest, opt
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SendOtpResponse)
 	err := c.cc.Invoke(ctx, AuthService_SendOtp_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) ValidateOtp(ctx context.Context, in *ValidateOtpRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AuthService_ValidateOtp_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -125,6 +137,7 @@ func (c *authServiceClient) ChangePassword(ctx context.Context, in *ChangePasswo
 // gateway, locally against the Cognito JWKS — there is no validation RPC.
 type AuthServiceServer interface {
 	SendOtp(context.Context, *SendOtpRequest) (*SendOtpResponse, error)
+	ValidateOtp(context.Context, *ValidateOtpRequest) (*emptypb.Empty, error)
 	Register(context.Context, *RegisterRequest) (*AuthResponse, error)
 	Login(context.Context, *LoginRequest) (*AuthResponse, error)
 	RefreshToken(context.Context, *RefreshTokenRequest) (*AuthResponse, error)
@@ -142,6 +155,9 @@ type UnimplementedAuthServiceServer struct{}
 
 func (UnimplementedAuthServiceServer) SendOtp(context.Context, *SendOtpRequest) (*SendOtpResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SendOtp not implemented")
+}
+func (UnimplementedAuthServiceServer) ValidateOtp(context.Context, *ValidateOtpRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method ValidateOtp not implemented")
 }
 func (UnimplementedAuthServiceServer) Register(context.Context, *RegisterRequest) (*AuthResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Register not implemented")
@@ -193,6 +209,24 @@ func _AuthService_SendOtp_Handler(srv interface{}, ctx context.Context, dec func
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AuthServiceServer).SendOtp(ctx, req.(*SendOtpRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_ValidateOtp_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ValidateOtpRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).ValidateOtp(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_ValidateOtp_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).ValidateOtp(ctx, req.(*ValidateOtpRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -297,6 +331,10 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SendOtp",
 			Handler:    _AuthService_SendOtp_Handler,
+		},
+		{
+			MethodName: "ValidateOtp",
+			Handler:    _AuthService_ValidateOtp_Handler,
 		},
 		{
 			MethodName: "Register",

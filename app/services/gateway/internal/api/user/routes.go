@@ -11,6 +11,7 @@ import (
 // ops/admin role).
 func (h Handler) Routes(public, authed, ops *core.Group) {
 	public.RegisterHandler(http.MethodPost, "/auth/otp", h.sendOtp)
+	public.RegisterHandler(http.MethodPost, "/auth/otp/validate", h.validateOtp)
 	public.RegisterHandler(http.MethodPost, "/auth/register", h.register)
 	public.RegisterHandler(http.MethodPost, "/auth/login", h.login)
 	public.RegisterHandler(http.MethodPost, "/auth/refresh", h.refreshToken)
