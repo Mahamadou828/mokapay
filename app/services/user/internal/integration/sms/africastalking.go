@@ -22,7 +22,7 @@ var ErrSendFailed = errors.New("sms: provider refused the message")
 const (
 	// Africa's Talking Messaging API. The sandbox is selected by the
 	// username — "sandbox" is a real account name on their side, not a flag.
-	atProductionURL = "https://api.africastalking.com/version1/messaging"
+	atProductionURL = "https://api.africastalking.com/version1/messaging/bulk"
 	atSandboxURL    = "https://api.sandbox.africastalking.com/version1/messaging"
 	atSandboxUser   = "sandbox"
 
@@ -75,13 +75,13 @@ func NewAfricasTalking(log *logger.Logger, username, apiKey, senderID string) Af
 // Send implements Sender.
 func (a AfricasTalking) Send(ctx context.Context, phoneNumber, message string) error {
 	form := url.Values{
-		"username":    {a.username},
-		"to":          {phoneNumber},
-		"message":     {message},
-		"bulkSMSMode": {"1"},
+		"username":     {a.username},
+		"phoneNumbers": {phoneNumber},
+		"message":      {message},
+		"bulkSMSMode":  {"1"},
 	}
 	if a.senderID != "" {
-		form.Set("from", a.senderID)
+		form.Set("senderId", a.senderID)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, a.url, strings.NewReader(form.Encode()))
