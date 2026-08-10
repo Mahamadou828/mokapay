@@ -82,22 +82,22 @@ func SplitFee(feeAmount, marginAmount int64) Shares {
 
 // PayableAmount expresses the agent's share in the guarantee balance's
 // denomination (USD minor units), which is the only currency the ledger
-// moves. A USD fee is already there; a CDF fee converts at the transfer's
-// OWN locked rate, read off the two amounts it stamped at create
-// (hold_amount is total_amount converted at that rate) — never a fresh
-// lookup, so the payout can never disagree with the quote the client got.
+// moves. A USD fee is already there; every other source currency converts
+// at the transfer's OWN locked rate, read off the two amounts it stamped
+// at create (hold_amount IS total_amount converted into USD, whatever the
+// source) — never a fresh lookup, so the payout can never disagree with
+// the quote the client got. That ratio is what makes this work for the
+// whole send ladder without enumerating it: the currency names the scale,
+// the stamped pair carries it.
 func PayableAmount(agentShare int64, feeCurrency transfer.Currency, totalAmount, holdAmount int64) (int64, error) {
 	if feeCurrency == transfer.CurrencyUSD {
 		return agentShare, nil
-	}
-	if feeCurrency != transfer.CurrencyCDF {
-		return 0, ErrNotPayable
 	}
 	if totalAmount <= 0 || holdAmount <= 0 {
 		return 0, ErrNotPayable
 	}
 
-	// francs × (cents per franc), half-up.
+	// source minor units × (USD cents per source minor unit), half-up.
 	return (agentShare*holdAmount + totalAmount/2) / totalAmount, nil
 }
 

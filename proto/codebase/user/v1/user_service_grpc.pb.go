@@ -25,6 +25,7 @@ const (
 	UserService_GetMyEnrollment_FullMethodName   = "/user.v1.UserService/GetMyEnrollment"
 	UserService_AcceptEnrollment_FullMethodName  = "/user.v1.UserService/AcceptEnrollment"
 	UserService_DeclineEnrollment_FullMethodName = "/user.v1.UserService/DeclineEnrollment"
+	UserService_SelfEnroll_FullMethodName        = "/user.v1.UserService/SelfEnroll"
 )
 
 // UserServiceClient is the client API for UserService service.
@@ -47,6 +48,12 @@ type UserServiceClient interface {
 	GetMyEnrollment(ctx context.Context, in *GetMyEnrollmentRequest, opts ...grpc.CallOption) (*Enrollment, error)
 	AcceptEnrollment(ctx context.Context, in *AcceptEnrollmentRequest, opts ...grpc.CallOption) (*Enrollment, error)
 	DeclineEnrollment(ctx context.Context, in *DeclineEnrollmentRequest, opts ...grpc.CallOption) (*Enrollment, error)
+	// Self-serve enrollment (AG-04): no invite, no inviter. The terms are
+	// stamped inline — this single call is both the creation and the
+	// acceptance — and the request lands in ACCEPTED with its guarantee
+	// funding already open. Retrying resumes the live self-serve request
+	// instead of failing.
+	SelfEnroll(ctx context.Context, in *SelfEnrollRequest, opts ...grpc.CallOption) (*Enrollment, error)
 }
 
 type userServiceClient struct {
@@ -117,6 +124,16 @@ func (c *userServiceClient) DeclineEnrollment(ctx context.Context, in *DeclineEn
 	return out, nil
 }
 
+func (c *userServiceClient) SelfEnroll(ctx context.Context, in *SelfEnrollRequest, opts ...grpc.CallOption) (*Enrollment, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Enrollment)
+	err := c.cc.Invoke(ctx, UserService_SelfEnroll_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // UserServiceServer is the server API for UserService service.
 // All implementations must embed UnimplementedUserServiceServer
 // for forward compatibility.
@@ -137,6 +154,12 @@ type UserServiceServer interface {
 	GetMyEnrollment(context.Context, *GetMyEnrollmentRequest) (*Enrollment, error)
 	AcceptEnrollment(context.Context, *AcceptEnrollmentRequest) (*Enrollment, error)
 	DeclineEnrollment(context.Context, *DeclineEnrollmentRequest) (*Enrollment, error)
+	// Self-serve enrollment (AG-04): no invite, no inviter. The terms are
+	// stamped inline — this single call is both the creation and the
+	// acceptance — and the request lands in ACCEPTED with its guarantee
+	// funding already open. Retrying resumes the live self-serve request
+	// instead of failing.
+	SelfEnroll(context.Context, *SelfEnrollRequest) (*Enrollment, error)
 	mustEmbedUnimplementedUserServiceServer()
 }
 
@@ -164,6 +187,9 @@ func (UnimplementedUserServiceServer) AcceptEnrollment(context.Context, *AcceptE
 }
 func (UnimplementedUserServiceServer) DeclineEnrollment(context.Context, *DeclineEnrollmentRequest) (*Enrollment, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeclineEnrollment not implemented")
+}
+func (UnimplementedUserServiceServer) SelfEnroll(context.Context, *SelfEnrollRequest) (*Enrollment, error) {
+	return nil, status.Error(codes.Unimplemented, "method SelfEnroll not implemented")
 }
 func (UnimplementedUserServiceServer) mustEmbedUnimplementedUserServiceServer() {}
 func (UnimplementedUserServiceServer) testEmbeddedByValue()                     {}
@@ -294,6 +320,24 @@ func _UserService_DeclineEnrollment_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _UserService_SelfEnroll_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SelfEnrollRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).SelfEnroll(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_SelfEnroll_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).SelfEnroll(ctx, req.(*SelfEnrollRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // UserService_ServiceDesc is the grpc.ServiceDesc for UserService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -324,6 +368,10 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeclineEnrollment",
 			Handler:    _UserService_DeclineEnrollment_Handler,
+		},
+		{
+			MethodName: "SelfEnroll",
+			Handler:    _UserService_SelfEnroll_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

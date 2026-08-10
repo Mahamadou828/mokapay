@@ -58,7 +58,7 @@ type AgentServiceClient interface {
 	ListMyWallets(ctx context.Context, in *ListMyWalletsRequest, opts ...grpc.CallOption) (*ListMyWalletsResponse, error)
 	// Self-service wallet declaration (revised 2026-07-27): one wallet per
 	// operator with per-currency acceptance flags; remove then re-add to
-	// change the msisdn or the flags.
+	// change the account number or the flags.
 	AddWallet(ctx context.Context, in *AddWalletRequest, opts ...grpc.CallOption) (*AgentWallet, error)
 	RemoveWallet(ctx context.Context, in *RemoveWalletRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// The platform's official receiving accounts for deposits (G2 "fund
@@ -202,7 +202,7 @@ type AgentServiceServer interface {
 	ListMyWallets(context.Context, *ListMyWalletsRequest) (*ListMyWalletsResponse, error)
 	// Self-service wallet declaration (revised 2026-07-27): one wallet per
 	// operator with per-currency acceptance flags; remove then re-add to
-	// change the msisdn or the flags.
+	// change the account number or the flags.
 	AddWallet(context.Context, *AddWalletRequest) (*AgentWallet, error)
 	RemoveWallet(context.Context, *RemoveWalletRequest) (*emptypb.Empty, error)
 	// The platform's official receiving accounts for deposits (G2 "fund

@@ -17,8 +17,9 @@ import (
 // contract as the ledger).
 var ErrTransferNotFound = errors.New("transfer not found")
 
-// ErrCorridorNotAllowed rejects a currency pair outside the three v1
-// corridors (usd→cdf, usd→usd, cdf→cdf).
+// ErrCorridorNotAllowed rejects a currency pair outside the v1 ladder:
+// every source currency one-way into cdf, plus the two same-currency
+// corridors (usd→usd, cdf→cdf).
 var ErrCorridorNotAllowed = errors.New("currency corridor not allowed")
 
 // ErrNotAllowed rejects a caller whose role has no business here.
@@ -55,21 +56,79 @@ const (
 type Currency string
 
 const (
+	CurrencyEUR Currency = "eur"
 	CurrencyUSD Currency = "usd"
+	CurrencyZAR Currency = "zar"
+	CurrencyAOA Currency = "aoa"
+	CurrencyZMW Currency = "zmw"
+	CurrencyTZS Currency = "tzs"
 	CurrencyCDF Currency = "cdf"
 )
 
-// Operator values mirror the stored payment_operator enum.
+// SourceCurrencies is the send ladder — what a client may fund a transfer
+// with. Every one of them settles into CDF and only into CDF; CDF itself
+// is not on the list (a franc source is the same-currency corridor, not a
+// rung of the ladder). Order is the order the picker offers, EUR first.
+var SourceCurrencies = []Currency{
+	CurrencyEUR, CurrencyUSD, CurrencyZAR, CurrencyAOA, CurrencyZMW, CurrencyTZS,
+}
+
+// AccountKind tells the two shapes of receiving account apart: a
+// mobile-money wallet is reached by MSISDN, a bank account by an account
+// number. It is what decides whether a screen collecting an account
+// renders a phone field or a plain text one — the payment domain's single
+// vocabulary for that split, shared by the operator catalogue below and
+// by the platform's own deposit channels (ledger.DepositChannel).
+type AccountKind string
+
+const (
+	AccountKindMobileMoney AccountKind = "mobile_money"
+	AccountKindBank        AccountKind = "bank"
+)
+
+// Operator values mirror the stored payment_operator enum. Since the bank
+// channels shipped, the catalogue is no longer mobile money only — use
+// Kind to tell which half a value falls in.
 type Operator string
 
 const (
 	OperatorOrangeMoney Operator = "orange_money"
 	OperatorMPesa       Operator = "m_pesa"
 	OperatorAirtelMoney Operator = "airtel_money"
+	OperatorAfrimoney   Operator = "afrimoney"
+	OperatorRawbank     Operator = "rawbank"
+	OperatorEquityBCDC  Operator = "equity_bcdc"
 )
 
-// Operators is the v1 catalogue (all three serve both currencies).
-var Operators = []Operator{OperatorOrangeMoney, OperatorMPesa, OperatorAirtelMoney}
+// Kind reports what shape of account this operator is paid on. Derived,
+// never stored: the operator alone decides it, so a persisted copy could
+// only ever disagree with it.
+func (o Operator) Kind() AccountKind {
+	switch o {
+	case OperatorRawbank, OperatorEquityBCDC:
+		return AccountKindBank
+	default:
+		return AccountKindMobileMoney
+	}
+}
+
+// Operators is the full catalogue: every value an agent can declare a
+// payout wallet on, banks included.
+var Operators = []Operator{
+	OperatorOrangeMoney, OperatorMPesa, OperatorAirtelMoney,
+	OperatorAfrimoney, OperatorRawbank, OperatorEquityBCDC,
+}
+
+// MobileMoneyOperators is the subset a *transfer* can be routed over. The
+// bank operators are deliberately absent: an agent may hold a bank wallet
+// (it is a real account, and withdrawals pay out to it), but routing a
+// transfer through one would mean a beneficiary identified by a bank
+// account rather than a phone number, and a settlement delay the
+// transfer's timeouts were never sized for. Both are product decisions
+// this slice does not make.
+var MobileMoneyOperators = []Operator{
+	OperatorOrangeMoney, OperatorMPesa, OperatorAirtelMoney, OperatorAfrimoney,
+}
 
 // Status values mirror the stored transfer_status enum.
 type Status string

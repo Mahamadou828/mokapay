@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -138,13 +139,15 @@ type TransferView struct {
 	PaymentDetails *agentwallet.Wallet
 }
 
-// AvailableOperators returns the v1 catalogue after validating the
-// corridor (all three operators serve both currencies).
+// AvailableOperators returns the operators a transfer can be routed over,
+// after validating the corridor. That is the mobile-money subset, not the
+// full catalogue: the bank operators exist so an agent can declare a bank
+// payout wallet, but nothing routes a transfer through one yet.
 func (u UseCase) AvailableOperators(from, to transfer.Currency) ([]transfer.Operator, error) {
 	if err := validateCorridor(from, to); err != nil {
 		return nil, err
 	}
-	return transfer.Operators, nil
+	return transfer.MobileMoneyOperators, nil
 }
 
 // GetQuote computes a quote from the cached rate.
@@ -171,14 +174,14 @@ func (u UseCase) GetQuoteByTarget(ctx context.Context, from transfer.Currency, t
 		return u.quote(ctx, from, target, to)
 	}
 
-	// usd → cdf. Invert to = gross − margin, gross = from×rate/1e8:
+	// <source> → cdf. Invert to = gross − margin, gross = from×rate/1e8:
 	// estimate, then verify with the authoritative forward quote and nudge
 	// up if integer rounding left it a franc short (a cent is worth
 	// thousands of francs of estimate error at most once).
-	rate, err := u.fx.RateMicros(ctx)
+	rate, err := u.fx.RateMicros(ctx, from)
 	if err != nil {
-		u.logger.Error(ctx, "Transfer.QuoteByTarget: rate lookup failed", "err", err)
-		return Quote{}, fmt.Errorf("resolving usd:cdf rate: %w", err)
+		u.logger.Error(ctx, "Transfer.QuoteByTarget: rate lookup failed", "currency", string(from), "err", err)
+		return Quote{}, fmt.Errorf("resolving %s:cdf rate: %w", from, err)
 	}
 	grossNeeded := target * 10_000 / int64(10_000-u.cfg.MarginBps)
 	// float64 keeps the estimate within a fraction of a cent here, and the
@@ -713,11 +716,13 @@ func alreadyPast(current, target transfer.Status) bool {
 //   - cross-currency: gross_cdf = from × rate / 1e8 (cents×micros→francs),
 //     margin half-up on MarginBps, to = gross − margin
 //   - hold (USD minor units): the FULL client total incl. fee (settled
-//     2026-07-25); CDF sources convert at the same rate, rounded UP —
+//     2026-07-25); a non-USD source converts through CDF, rounded UP —
 //     the reservation never under-covers.
 //
-// The rate is fetched whenever FX applies OR the source is CDF (the
-// hold is USD regardless of corridor).
+// Two rates can be in play: the source's own CDF rate (what the client is
+// quoted) and the USD one (what the hold is denominated in). They are the
+// same lookup when the source IS USD, and only the USD one is needed on
+// the cdf→cdf corridor.
 func (u UseCase) quote(ctx context.Context, from transfer.Currency, amount int64, to transfer.Currency) (Quote, error) {
 	if err := validateCorridor(from, to); err != nil {
 		return Quote{}, err
@@ -749,13 +754,17 @@ func (u UseCase) quote(ctx context.Context, from transfer.Currency, amount int64
 		return q, nil // usd→usd needs no rate at all
 	}
 
-	rate, err := u.fx.RateMicros(ctx)
-	if err != nil {
-		u.logger.Error(ctx, "Transfer.Quote: rate lookup failed", "err", err)
-		return Quote{}, fmt.Errorf("resolving usd:cdf rate: %w", err)
-	}
+	// The client-facing leg: what a unit of the source buys in francs.
+	// Only a cross-currency corridor has one (cdf→cdf is the sole
+	// same-currency case left here, and it prices nothing for the client).
+	var rate int64
+	if hasFX {
+		var err error
+		if rate, err = u.fx.RateMicros(ctx, from); err != nil {
+			u.logger.Error(ctx, "Transfer.Quote: rate lookup failed", "currency", string(from), "err", err)
+			return Quote{}, fmt.Errorf("resolving %s:cdf rate: %w", from, err)
+		}
 
-	if hasFX { // usd → cdf
 		gross := amount * rate / 100_000_000 // cents × micros → whole francs
 		margin := (gross*int64(u.cfg.MarginBps) + 5_000) / 10_000
 		q.ToAmount = gross - margin
@@ -764,8 +773,26 @@ func (u UseCase) quote(ctx context.Context, from transfer.Currency, amount int64
 		if q.ToAmount <= 0 {
 			return Quote{}, transfer.ErrInvalidAmount
 		}
-	} else { // cdf → cdf: the rate serves the hold only, not the client
-		q.HoldAmount = (total*100_000_000 + rate - 1) / rate // francs → cents, ceil
+	}
+
+	// The hold leg: the guarantee reserves USD minor units whatever the
+	// corridor, so anything but a USD source is converted through francs
+	// and rounded UP.
+	if from == transfer.CurrencyUSD {
+		return q, nil // total already IS USD minor units
+	}
+
+	usdRate, err := u.fx.RateMicros(ctx, transfer.CurrencyUSD)
+	if err != nil {
+		u.logger.Error(ctx, "Transfer.Quote: hold rate lookup failed", "err", err)
+		return Quote{}, fmt.Errorf("resolving usd:cdf rate: %w", err)
+	}
+	if from == transfer.CurrencyCDF {
+		q.HoldAmount = (total*100_000_000 + usdRate - 1) / usdRate // francs → cents, ceil
+	} else {
+		// Both sides are cent-scaled, so the minor-unit scale cancels and
+		// the two CDF rates divide straight into USD cents.
+		q.HoldAmount = (total*rate + usdRate - 1) / usdRate
 	}
 
 	return q, nil
@@ -811,17 +838,21 @@ func callerIdentity(pass *passport.Passport) (role string, id uuid.UUID, err err
 	return pass.User.Role, id, nil
 }
 
+// validateCorridor gates the v1 ladder: every source currency one-way
+// into CDF, plus the two same-currency corridors that predate it
+// (usd→usd, cdf→cdf). Nothing pays out in a source currency other than
+// those two, and nothing ever converts out of francs.
 func validateCorridor(from, to transfer.Currency) error {
-	valid := func(c transfer.Currency) bool {
-		return c == transfer.CurrencyUSD || c == transfer.CurrencyCDF
-	}
-	if !valid(from) || !valid(to) {
+	if from != transfer.CurrencyCDF && !slices.Contains(transfer.SourceCurrencies, from) {
 		return transfer.ErrCorridorNotAllowed
 	}
-	if from == transfer.CurrencyCDF && to == transfer.CurrencyUSD {
-		return transfer.ErrCorridorNotAllowed
+	switch {
+	case to == transfer.CurrencyCDF:
+		return nil
+	case from == to && from == transfer.CurrencyUSD:
+		return nil
 	}
-	return nil
+	return transfer.ErrCorridorNotAllowed
 }
 
 func defaultLimit(limit int32) int32 {

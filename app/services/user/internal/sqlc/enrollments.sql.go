@@ -76,6 +76,39 @@ func (q *Queries) AddEnrollment(ctx context.Context, arg AddEnrollmentParams) (E
 	return i, err
 }
 
+const addSelfEnrollment = `-- name: AddSelfEnrollment :one
+SELECT id, account_fk, invited_by, status, tos_version, tos_accepted_at, decided_by, decided_at, created_at, updated_at, deleted_at FROM users_ext.add_self_enrollment(
+    $1::uuid,
+    $2
+)
+`
+
+type AddSelfEnrollmentParams struct {
+	AccountID  string
+	TosVersion string
+}
+
+// The self-serve sign-up: no inviter, terms stamped inline, born
+// 'accepted'. Same 23505 on enrollment_requests_live_uq as AddEnrollment.
+func (q *Queries) AddSelfEnrollment(ctx context.Context, arg AddSelfEnrollmentParams) (EnrollmentRequest, error) {
+	row := q.db.QueryRow(ctx, addSelfEnrollment, arg.AccountID, arg.TosVersion)
+	var i EnrollmentRequest
+	err := row.Scan(
+		&i.ID,
+		&i.AccountFk,
+		&i.InvitedBy,
+		&i.Status,
+		&i.TosVersion,
+		&i.TosAcceptedAt,
+		&i.DecidedBy,
+		&i.DecidedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
 const approveEnrollment = `-- name: ApproveEnrollment :one
 SELECT id, account_fk, invited_by, status, tos_version, tos_accepted_at, decided_by, decided_at, created_at, updated_at, deleted_at FROM users_ext.approve_enrollment(
     $1::uuid,

@@ -97,6 +97,199 @@ func (u UseCase) List(ctx context.Context, f enrollment.Filter) ([]enrollment.En
 	return u.repo.List(ctx, f)
 }
 
+// SelfEnroll is the self-serve entry point (AG-04): no invite, no
+// inviter, and the terms are stamped by this very call rather than by a
+// later Accept. It lands the candidate exactly where an invited candidate
+// lands after accepting — status accepted, role pending_agent, agent
+// profile provisioned, guarantee funding open — so the funding screens and
+// the ops deposit worklist work identically for both. What differs is only
+// the exit: SettleGuarantee (driven by ops approving the deposit) rather
+// than an admin's Approve.
+//
+// Retrying is safe. A live self-serve request is resumed rather than
+// rejected, because the money-side work that follows creation can fail on
+// its own and the candidate must be able to press the button again.
+func (u UseCase) SelfEnroll(ctx context.Context, accountID uuid.UUID, in enrollment.SelfEnrollment) (enrollment.Enrollment, error) {
+	if in.TOSVersion != u.tosVersion {
+		return enrollment.Enrollment{}, enrollment.ErrTOSVersionMismatch
+	}
+
+	acc, err := u.accounts.GetAccount(ctx, accountID.String())
+	if err != nil {
+		return enrollment.Enrollment{}, err
+	}
+	// pending_agent is admitted for the retry case only — the row check
+	// below is what actually decides whether there is something to resume.
+	if acc.Status != auth.AccountStatusActive ||
+		(acc.Role != auth.AccountRoleUser && acc.Role != auth.AccountRolePendingAgent) {
+		return enrollment.Enrollment{}, enrollment.ErrNotEligible
+	}
+
+	created, fresh, err := u.createOrResumeSelfEnrollment(ctx, accountID, in.TOSVersion)
+	if err != nil {
+		if !errors.Is(err, enrollment.ErrEnrollmentPending) {
+			u.logger.Error(ctx, "Enrollment.SelfEnroll: failed", "err", err)
+		}
+		return enrollment.Enrollment{}, err
+	}
+
+	// The money side, in the same order and with the same idempotency the
+	// invited path's Accept uses. It runs after the row exists because the
+	// funding request references this enrollment by id.
+	if err := u.openGuarantee(ctx, accountID, created.ID, in.City); err != nil {
+		u.logger.Error(ctx, "Enrollment.SelfEnroll: failed to open guarantee", "err", err)
+		return enrollment.Enrollment{}, err
+	}
+
+	if fresh {
+		u.notify(ctx, accountID, "enrollment.self_enrolled",
+			"Your agent application is in",
+			"Fund your guarantee deposit to activate your agent account.")
+	}
+
+	return created, nil
+}
+
+// createOrResumeSelfEnrollment writes the request and flips the role on one
+// transaction. The bool reports whether the row is new: a resumed one must
+// not re-notify. A live INVITED request wins — the candidate has to answer
+// the invitation they already have rather than open a second track.
+func (u UseCase) createOrResumeSelfEnrollment(ctx context.Context, accountID uuid.UUID, tosVersion string) (enrollment.Enrollment, bool, error) {
+	var created enrollment.Enrollment
+	err := u.db.BeginPgx(ctx, func(tx pgx.Tx) error {
+		var err error
+		created, err = u.repo.WithTx(tx).AddSelf(ctx, accountID.String(), tosVersion)
+		if err != nil {
+			return err
+		}
+		return u.setRole(ctx, tx, accountID, auth.AccountRolePendingAgent)
+	})
+	if err == nil {
+		return created, true, nil
+	}
+	if !errors.Is(err, enrollment.ErrEnrollmentPending) {
+		return enrollment.Enrollment{}, false, err
+	}
+
+	live, gerr := u.repo.GetLatestByAccount(ctx, accountID.String())
+	if gerr != nil {
+		return enrollment.Enrollment{}, false, gerr
+	}
+	if !live.SelfServe() || live.Status != enrollment.StatusAccepted {
+		return enrollment.Enrollment{}, false, enrollment.ErrEnrollmentPending
+	}
+
+	return live, false, nil
+}
+
+// openGuarantee provisions the agent profile and opens the guarantee
+// funding request. Both calls are idempotent, so a retried SelfEnroll
+// converges instead of duplicating. City is only ever seeded here, at
+// profile creation — an existing profile keeps the city it already has.
+func (u UseCase) openGuarantee(ctx context.Context, accountID, enrollmentID uuid.UUID, city *string) error {
+	profile, err := u.ensureAgentProfile(ctx, accountID, city)
+	if err != nil {
+		return fmt.Errorf("creating agent profile: %w", err)
+	}
+
+	if profile.GuaranteeFloor <= 0 {
+		// Nothing is owed, so nothing will ever settle — and settlement is
+		// this path's only route to agent. Surface it rather than leaving
+		// the candidate to wait on a deposit that cannot exist.
+		u.logger.Info(ctx, "Enrollment.SelfEnroll: guarantee floor is zero, no funding request opened", "account", accountID)
+		return nil
+	}
+
+	// The candidate's own passport: they send the money and attach the
+	// proof, so they are the accountable creator. AlreadyExists means an
+	// earlier attempt already opened it — success.
+	if _, err := u.moka.Payment.Ledger.CreateLedgerRequest(asPendingAgent(ctx), &paymentv1.CreateLedgerRequestRequest{
+		Type:                paymentv1.LedgerRequestType_LEDGER_REQUEST_TYPE_FUNDING,
+		Amount:              profile.GuaranteeFloor,
+		ReferenceEntityType: new(paymentv1.LedgerReferenceType_LEDGER_REFERENCE_TYPE_ENROLLMENT),
+		ReferenceEntityId:   new(enrollmentID.String()),
+	}); err != nil && status.Code(err) != codes.AlreadyExists {
+		return fmt.Errorf("opening guarantee funding request: %w", err)
+	}
+
+	return nil
+}
+
+// asPendingAgent re-stamps the caller's passport with the role their
+// account now actually holds.
+//
+// This is not a privilege grant, it is a staleness fix, and only the
+// self-serve path needs it: the gateway rehydrated the inbound passport
+// while the caller was still a plain `user`, and SelfEnroll flips them to
+// pending_agent a few lines earlier in the SAME request. Payment's
+// CreateLedgerRequest authorizes the guarantee funding off that role, so
+// forwarding the passport verbatim would have it judge a role the account
+// stopped having one commit ago — it would reject a request the very next
+// call, with a freshly rehydrated passport, would accept. The invited path
+// never hits this: an invited candidate was flipped by an earlier request
+// and arrives already pending_agent.
+//
+// Nothing but the role is touched, and the user service is the authority
+// on roles — it is stating what it just committed.
+func asPendingAgent(ctx context.Context) context.Context {
+	pass, err := passport.FromContext(ctx)
+	if err != nil {
+		// No passport to refresh; let the callee reject it on its own terms.
+		return ctx
+	}
+
+	refreshed := *pass
+	refreshed.User.Role = string(auth.AccountRolePendingAgent)
+
+	return passport.AddToContext(ctx, &refreshed)
+}
+
+// SettleGuarantee is the self-serve path's exit, called by the payment
+// service (system passport, no gateway route) once ops approves the
+// guarantee deposit. That approval IS the decision — there is no separate
+// admin verdict on a self-serve enrollment — so this replicates Approve's
+// effect exactly: profile activated, request approved, account role flipped
+// to agent on one transaction.
+//
+// An invited enrollment is left alone: its approval is still the admin's
+// to make, and the ledger request it settles was approved BY that decision
+// in the first place.
+func (u UseCase) SettleGuarantee(ctx context.Context, enrollmentID, decidedBy uuid.UUID) (enrollment.Enrollment, error) {
+	current, err := u.repo.Get(ctx, enrollmentID.String())
+	if err != nil {
+		return enrollment.Enrollment{}, err
+	}
+	if !current.SelfServe() || current.Status == enrollment.StatusApproved {
+		return current, nil
+	}
+	if current.Status != enrollment.StatusAccepted {
+		// declined/cancelled: the deposit settled against a dead request.
+		return enrollment.Enrollment{}, enrollment.ErrEnrollmentNotFound
+	}
+
+	// Remote side first, outside the transaction — a remote call must
+	// never hold row locks open. Idempotent, so a failed local commit
+	// below just means the job retries.
+	if err := u.activateAgentProfile(ctx, current.AccountID); err != nil {
+		u.logger.Error(ctx, "Enrollment.SettleGuarantee: failed to activate agent profile", "err", err)
+		return enrollment.Enrollment{}, err
+	}
+
+	approved, err := u.promote(ctx, enrollmentID, decidedBy)
+	if err != nil {
+		if !errors.Is(err, enrollment.ErrEnrollmentNotFound) && !errors.Is(err, enrollment.ErrNotEligible) {
+			u.logger.Error(ctx, "Enrollment.SettleGuarantee: failed", "err", err)
+		}
+		return enrollment.Enrollment{}, err
+	}
+
+	u.notify(ctx, approved.AccountID, "enrollment.approved",
+		"You are now a MOKA PAY agent",
+		"Your guarantee deposit has been validated. Welcome aboard!")
+
+	return approved, nil
+}
+
 // Accept stamps the candidate's TOS acceptance. The role does not change
 // here — that is the admin approval's job.
 func (u UseCase) Accept(ctx context.Context, accountID, id uuid.UUID, tosVersion string) (enrollment.Enrollment, error) {
@@ -109,7 +302,10 @@ func (u UseCase) Accept(ctx context.Context, accountID, id uuid.UUID, tosVersion
 	// creation runs under the system passport (creation is plumbing, not
 	// a decision) and is idempotent (AlreadyExists = resolve the existing
 	// one).
-	profile, err := u.ensureAgentProfile(ctx, accountID)
+	// No city on the invited path: nothing in that flow ever asks for one
+	// (it is the self-serve form's field), so the profile keeps the
+	// payment service's default.
+	profile, err := u.ensureAgentProfile(ctx, accountID, nil)
 	if err != nil {
 		u.logger.Error(ctx, "Enrollment.Accept: failed to ensure agent profile", "err", err)
 		return enrollment.Enrollment{}, fmt.Errorf("creating agent profile: %w", err)
@@ -219,6 +415,26 @@ func (u UseCase) Approve(ctx context.Context, decidedBy, id uuid.UUID) (enrollme
 		return enrollment.Enrollment{}, err
 	}
 
+	approved, err := u.promote(ctx, id, decidedBy)
+	if err != nil {
+		if !errors.Is(err, enrollment.ErrEnrollmentNotFound) && !errors.Is(err, enrollment.ErrNotEligible) {
+			u.logger.Error(ctx, "Enrollment.Approve: failed", "err", err)
+		}
+		return enrollment.Enrollment{}, err
+	}
+
+	u.notify(ctx, approved.AccountID, "enrollment.approved",
+		"You are now a MOKA PAY agent",
+		"Your enrollment has been approved. Welcome aboard!")
+
+	return approved, nil
+}
+
+// promote is the single place an enrollment becomes an agent: the status
+// flip and the account's role change commit together, and a moderation
+// strike landing mid-flow rolls the whole thing back. Both entry points go
+// through it, so "approved" can never mean one without the other.
+func (u UseCase) promote(ctx context.Context, id, decidedBy uuid.UUID) (enrollment.Enrollment, error) {
 	var approved enrollment.Enrollment
 	if err := u.db.BeginPgx(ctx, func(tx pgx.Tx) error {
 		var err error
@@ -237,27 +453,22 @@ func (u UseCase) Approve(ctx context.Context, decidedBy, id uuid.UUID) (enrollme
 
 		return u.setRole(ctx, tx, approved.AccountID, auth.AccountRoleAgent)
 	}); err != nil {
-		if !errors.Is(err, enrollment.ErrEnrollmentNotFound) && !errors.Is(err, enrollment.ErrNotEligible) {
-			u.logger.Error(ctx, "Enrollment.Approve: failed", "err", err)
-		}
 		return enrollment.Enrollment{}, err
 	}
-
-	u.notify(ctx, approved.AccountID, "enrollment.approved",
-		"You are now a MOKA PAY agent",
-		"Your enrollment has been approved. Welcome aboard!")
 
 	return approved, nil
 }
 
 // ensureAgentProfile creates the candidate's money account, or resolves
-// the existing one — Accept needs the profile either way (its guarantee
-// floor sizes the funding request).
-func (u UseCase) ensureAgentProfile(ctx context.Context, accountID uuid.UUID) (*paymentv1.AgentProfile, error) {
+// the existing one — both entry points need the profile either way (its
+// guarantee floor sizes the funding request). City is a creation-time
+// seed: an already-existing profile is returned untouched.
+func (u UseCase) ensureAgentProfile(ctx context.Context, accountID uuid.UUID, city *string) (*paymentv1.AgentProfile, error) {
 	sysCtx := passport.AddToContext(ctx, passport.SystemPassport())
 
 	created, err := u.moka.Payment.Admin.CreateAgentProfile(sysCtx, &paymentv1.CreateAgentProfileRequest{
 		AccountId: accountID.String(),
+		City:      city,
 	})
 	if err == nil {
 		return created, nil

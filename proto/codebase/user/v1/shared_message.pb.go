@@ -480,14 +480,22 @@ func (x *Account) GetPreferredOtpMethod() OtpMethod {
 	return OtpMethod_OTP_METHOD_UNSPECIFIED
 }
 
-// One agent-enrollment request: the invite → TOS acceptance → approval
-// workflow promoting a user to agent. Shared by AdminService (invite,
-// approve, cancel, list) and UserService (view, accept, decline).
+// One agent-enrollment request. Two entry points share this shape:
+//   - invited: an ops/admin invite → TOS acceptance → admin approval;
+//     invited_by names the inviter.
+//   - self-serve: the candidate signs themselves up (AG-03/AG-04),
+//     stamping the terms at creation and landing straight in ACCEPTED;
+//     invited_by is ABSENT, which is what tells the two apart. Its route
+//     to APPROVED is the guarantee deposit being validated by ops, not a
+//     separate decision on the enrollment.
+//
+// Shared by AdminService (invite, approve, cancel, list) and UserService
+// (view, self-enroll, accept, decline).
 type Enrollment struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	AccountId     string                 `protobuf:"bytes,2,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"` // the candidate
-	InvitedBy     string                 `protobuf:"bytes,3,opt,name=invited_by,json=invitedBy,proto3" json:"invited_by,omitempty"` // the ops/admin who invited
+	AccountId     string                 `protobuf:"bytes,2,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`       // the candidate
+	InvitedBy     *string                `protobuf:"bytes,3,opt,name=invited_by,json=invitedBy,proto3,oneof" json:"invited_by,omitempty"` // the ops/admin who invited; absent = self-serve
 	Status        EnrollmentStatus       `protobuf:"varint,4,opt,name=status,proto3,enum=user.v1.EnrollmentStatus" json:"status,omitempty"`
 	TosVersion    *string                `protobuf:"bytes,5,opt,name=tos_version,json=tosVersion,proto3,oneof" json:"tos_version,omitempty"` // set once accepted
 	TosAcceptedAt *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=tos_accepted_at,json=tosAcceptedAt,proto3,oneof" json:"tos_accepted_at,omitempty"`
@@ -544,8 +552,8 @@ func (x *Enrollment) GetAccountId() string {
 }
 
 func (x *Enrollment) GetInvitedBy() string {
-	if x != nil {
-		return x.InvitedBy
+	if x != nil && x.InvitedBy != nil {
+		return *x.InvitedBy
 	}
 	return ""
 }
@@ -622,27 +630,28 @@ const file_user_v1_shared_message_proto_rawDesc = "" +
 	"updated_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12D\n" +
 	"\x14preferred_otp_method\x18\f \x01(\x0e2\x12.user.v1.OtpMethodR\x12preferredOtpMethodB\b\n" +
 	"\x06_emailB\x10\n" +
-	"\x0e_last_login_at\"\x98\x04\n" +
+	"\x0e_last_login_at\"\xac\x04\n" +
 	"\n" +
 	"Enrollment\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
-	"account_id\x18\x02 \x01(\tR\taccountId\x12\x1d\n" +
+	"account_id\x18\x02 \x01(\tR\taccountId\x12\"\n" +
 	"\n" +
-	"invited_by\x18\x03 \x01(\tR\tinvitedBy\x121\n" +
+	"invited_by\x18\x03 \x01(\tH\x00R\tinvitedBy\x88\x01\x01\x121\n" +
 	"\x06status\x18\x04 \x01(\x0e2\x19.user.v1.EnrollmentStatusR\x06status\x12$\n" +
-	"\vtos_version\x18\x05 \x01(\tH\x00R\n" +
+	"\vtos_version\x18\x05 \x01(\tH\x01R\n" +
 	"tosVersion\x88\x01\x01\x12G\n" +
-	"\x0ftos_accepted_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampH\x01R\rtosAcceptedAt\x88\x01\x01\x12\"\n" +
+	"\x0ftos_accepted_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampH\x02R\rtosAcceptedAt\x88\x01\x01\x12\"\n" +
 	"\n" +
-	"decided_by\x18\a \x01(\tH\x02R\tdecidedBy\x88\x01\x01\x12>\n" +
+	"decided_by\x18\a \x01(\tH\x03R\tdecidedBy\x88\x01\x01\x12>\n" +
 	"\n" +
-	"decided_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampH\x03R\tdecidedAt\x88\x01\x01\x129\n" +
+	"decided_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampH\x04R\tdecidedAt\x88\x01\x01\x129\n" +
 	"\n" +
 	"created_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x0e\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\r\n" +
+	"\v_invited_byB\x0e\n" +
 	"\f_tos_versionB\x12\n" +
 	"\x10_tos_accepted_atB\r\n" +
 	"\v_decided_byB\r\n" +

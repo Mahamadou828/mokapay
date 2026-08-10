@@ -211,18 +211,18 @@ func (h *Handler) AddWallet(ctx context.Context, req *paymentv1.AddWalletRequest
 	}
 
 	op := transfermapper.OperatorFromProto(req.Operator)
-	if op == "" || req.Msisdn == "" {
-		return nil, status.Error(codes.InvalidArgument, "operator and msisdn are required")
+	if op == "" || req.AccountNumber == "" {
+		return nil, status.Error(codes.InvalidArgument, "operator and account_number are required")
 	}
 	if !req.AcceptsUsd && !req.AcceptsCdf {
 		return nil, status.Error(codes.InvalidArgument, "the wallet must accept at least one currency")
 	}
 
 	w, err := h.wallets.Add(ctx, accountID, agentwallet.NewWallet{
-		Operator:   op,
-		Msisdn:     req.Msisdn,
-		AcceptsUSD: req.AcceptsUsd,
-		AcceptsCDF: req.AcceptsCdf,
+		Operator:      op,
+		AccountNumber: req.AccountNumber,
+		AcceptsUSD:    req.AcceptsUsd,
+		AcceptsCDF:    req.AcceptsCdf,
 	})
 	if err != nil {
 		return nil, grpcerr.Map(err)
@@ -261,7 +261,7 @@ func (h *Handler) ListDepositChannels(ctx context.Context, _ *paymentv1.ListDepo
 	for _, c := range h.depositChannels {
 		out = append(out, &paymentv1.DepositChannel{
 			Name:          c.Name,
-			Kind:          c.Kind,
+			Kind:          string(c.Kind),
 			AccountName:   c.AccountName,
 			AccountNumber: c.AccountNumber,
 			Instructions:  c.Instructions,

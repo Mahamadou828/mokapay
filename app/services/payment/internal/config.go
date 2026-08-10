@@ -3,8 +3,11 @@ package internal
 import (
 	"context"
 	"os"
+	"strings"
 	"time"
 
+	"mokapay.app/app/services/payment/internal/business/transfer"
+	"mokapay.app/app/services/payment/internal/integration/fxrate"
 	"mokapay.app/core/config"
 	"mokapay.app/core/db"
 	"mokapay.app/core/logger"
@@ -32,9 +35,9 @@ type Config struct {
 		Port string
 	}
 	FX struct {
-		ProviderURL string        // empty = static rate only (local dev)
-		StaticRate  int64         // CDF per USD in micros — the fallback
-		CacheTTL    time.Duration // the display-vs-locked drift bound
+		ProviderURL string                      // endpoint prefix; empty = static rates only (local dev)
+		StaticRates map[transfer.Currency]int64 // CDF per source unit in micros — the fallback
+		CacheTTL    time.Duration               // the display-vs-locked drift bound
 		HTTPTimeout time.Duration
 	}
 	Transfer struct {
@@ -98,10 +101,16 @@ func newConfig() Config {
 	cfg.Redis.Host = config.GetEnv("REDIS_HOST", "localhost")
 	cfg.Redis.Port = config.GetEnv("REDIS_PORT", "6379")
 
-	// Empty URL = static rate only; the static rate always exists as the
-	// provider fallback (2830 CDF/USD unless overridden).
+	// Empty URL = static rates only; the static table always exists as the
+	// provider fallback, one entry per source currency. The URL is a
+	// PREFIX — the base currency is appended per request
+	// (https://open.er-api.com/v6/latest + /EUR).
 	cfg.FX.ProviderURL = config.GetEnv("FX_PROVIDER_URL", "")
-	cfg.FX.StaticRate = int64(config.GetEnvAsInt("FX_STATIC_RATE_MICROS", 2_830_000_000))
+	cfg.FX.StaticRates = fxrate.DefaultStaticRates()
+	for _, ccy := range transfer.SourceCurrencies {
+		key := "FX_STATIC_RATE_" + strings.ToUpper(string(ccy)) + "_MICROS"
+		cfg.FX.StaticRates[ccy] = int64(config.GetEnvAsInt(key, int(cfg.FX.StaticRates[ccy])))
+	}
 	cfg.FX.CacheTTL = config.GetEnvAsTimeDuration("FX_CACHE_TTL", 5*time.Minute)
 	cfg.FX.HTTPTimeout = config.GetEnvAsTimeDuration("FX_HTTP_TIMEOUT", 5*time.Second)
 
@@ -130,11 +139,18 @@ func newConfig() Config {
 	// that uses it, rather than a silent fallback to UTC.
 	cfg.Compliance.Timezone = config.GetEnv("COMPLIANCE_TIMEZONE", "Africa/Kinshasa")
 
-	// Default: the one account that exists today (design G2). Add entries
-	// as real receiving accounts open — the client renders whatever the
-	// list returns.
+	// Default: the launch catalogue — four mobile-money operators and the
+	// two banks (design G2, slice 6). The account numbers are placeholders
+	// until ops hands over the real ones; override the whole array through
+	// DEPOSIT_CHANNELS rather than editing here, since the client renders
+	// whatever the list returns.
 	cfg.Deposit.ChannelsJSON = config.GetEnv("DEPOSIT_CHANNELS",
-		`[{"name":"M-Pesa","kind":"mobile_money","account_name":"MOKA PAY SARL","account_number":"+243815000000"}]`)
+		`[{"name":"M-Pesa","kind":"mobile_money","account_name":"MOKA PAY SARL","account_number":"+243815000000"},`+
+			`{"name":"Orange Money","kind":"mobile_money","account_name":"MOKA PAY SARL","account_number":"+243840000002"},`+
+			`{"name":"Airtel Money","kind":"mobile_money","account_name":"MOKA PAY SARL","account_number":"+243970000003"},`+
+			`{"name":"Afrimoney","kind":"mobile_money","account_name":"MOKA PAY SARL","account_number":"+243900000004"},`+
+			`{"name":"Rawbank","kind":"bank","account_name":"MOKA PAY SARL","account_number":"00010000000001","instructions":"Virement bancaire — indiquez votre référence de dépôt en motif."},`+
+			`{"name":"Equity BCDC","kind":"bank","account_name":"MOKA PAY SARL","account_number":"00020000000002","instructions":"Virement bancaire — indiquez votre référence de dépôt en motif."}]`)
 
 	return cfg
 }

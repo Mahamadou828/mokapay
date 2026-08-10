@@ -75,6 +75,14 @@ func getenv(key, fallback string) string {
 func fundedAgent(ctx context.Context, t *testing.T, s stores, balance int64) agentprofile.AgentProfile {
 	t.Helper()
 
+	return fundedAgentWith(ctx, t, s, balance, true, true)
+}
+
+// fundedAgentWith is fundedAgent with explicit currency acceptance on the
+// single Orange Money wallet — the flags the candidate pre-filter gates on.
+func fundedAgentWith(ctx context.Context, t *testing.T, s stores, balance int64, acceptsUSD, acceptsCDF bool) agentprofile.AgentProfile {
+	t.Helper()
+
 	floor := int64(0)
 	p, err := s.profiles.Add(ctx, agentprofile.NewAgentProfile{
 		AccountID:      uuid.New(),
@@ -107,8 +115,8 @@ func fundedAgent(ctx context.Context, t *testing.T, s stores, balance int64) age
 	})
 
 	if _, err := s.wallets.Add(ctx, p2.ID, agentwallet.NewWallet{
-		Operator: transfer.OperatorOrangeMoney, Msisdn: "+243990000001",
-		AcceptsUSD: true, AcceptsCDF: true,
+		Operator: transfer.OperatorOrangeMoney, AccountNumber: "+243990000001",
+		AcceptsUSD: acceptsUSD, AcceptsCDF: acceptsCDF,
 	}); err != nil {
 		t.Fatalf("adding wallet: %v", err)
 	}
@@ -140,6 +148,36 @@ func usdToCdfTransfer(ctx context.Context, t *testing.T, s stores, client uuid.U
 	})
 	if err != nil {
 		t.Fatalf("creating transfer: %v", err)
+	}
+	return tr
+}
+
+// eurToCdfTransfer creates a eur->cdf transfer — one of the ladder's
+// non-USD rungs. The hold is USD minor units whatever the client funded
+// with, which is exactly why the from-side wallet gate reads accepts_usd.
+func eurToCdfTransfer(ctx context.Context, t *testing.T, s stores, client uuid.UUID, holdUSD int64) transfer.Transfer {
+	t.Helper()
+
+	rate := int64(3_060_000_000) // 3060.000000 CDF per EUR, micros
+	from := holdUSD * 100 / 102  // fee 2% => from + fee == holdUSD
+	fee := holdUSD - from
+	tr, err := s.transfers.Add(ctx, client, transfer.NewTransfer{
+		RecipientName:     "Recipient",
+		RecipientPhone:    "+243811111112",
+		RecipientOperator: transfer.OperatorOrangeMoney,
+		FromCurrency:      transfer.CurrencyEUR,
+		FromOperator:      transfer.OperatorOrangeMoney,
+		FromAmount:        from,
+		ToCurrency:        transfer.CurrencyCDF,
+		ToAmount:          from * 3060 / 100, // cents -> whole francs at 3060
+		FeePctBps:         200,
+		FeeAmount:         fee,
+		MarginAmount:      100,
+		HoldAmount:        holdUSD,
+		RateMicros:        new(rate),
+	})
+	if err != nil {
+		t.Fatalf("creating eur transfer: %v", err)
 	}
 	return tr
 }
@@ -554,32 +592,21 @@ func TestCorridorAndWalletGates(t *testing.T) {
 	}
 
 	// Wallet fit: an agent with only the USD side never matches usd->cdf.
-	floor := int64(0)
-	p, err := s.profiles.Add(ctx, agentprofile.NewAgentProfile{AccountID: uuid.New(), GuaranteeFloor: new(floor)})
-	if err != nil {
-		t.Fatalf("profile: %v", err)
-	}
-	req, err := s.requests.Add(ctx, ledger.StatusPendingAdminApproval, ledger.DirectionInflow, uuid.New(), ledger.NewRequest{
-		AgentProfileID: p.ID, Type: ledger.TypeFunding, Amount: 10_000,
-	})
-	if err != nil {
-		t.Fatalf("fund: %v", err)
-	}
-	if _, err := s.requests.Approve(ctx, req.ID.String(), uuid.NewString()); err != nil {
-		t.Fatalf("approve: %v", err)
-	}
-	if _, err := s.profiles.SetStatus(ctx, p.ID.String(), agentprofile.StatusActive); err != nil {
-		t.Fatalf("activate: %v", err)
-	}
-	// USD-only on Orange: the currency opt-out under test.
+	// fundedAgentWith(..., true, false) already builds exactly this
+	// USD-only-on-Orange wallet, and its t.Cleanup suspend applies here too
+	// — this shared test DB persists across runs, and an unsuspended
+	// active agent would pollute every later live candidate count taken
+	// against it (see the matching-gate fix report).
+	p := fundedAgentWith(ctx, t, s, 10_000, true, false)
+	// Duplicate operator rejected.
 	if _, err := s.wallets.Add(ctx, p.ID, agentwallet.NewWallet{
-		Operator: transfer.OperatorOrangeMoney, Msisdn: "+243990000009", AcceptsUSD: true,
-	}); err != nil {
-		t.Fatalf("wallet: %v", err)
+		Operator: transfer.OperatorOrangeMoney, AccountNumber: "+243990000010", AcceptsUSD: true, AcceptsCDF: true,
+	}); !errors.Is(err, agentwallet.ErrWalletExists) {
+		t.Fatalf("duplicate wallet = %v, want ErrWalletExists", err)
 	}
 	// Duplicate operator rejected.
 	if _, err := s.wallets.Add(ctx, p.ID, agentwallet.NewWallet{
-		Operator: transfer.OperatorOrangeMoney, Msisdn: "+243990000010", AcceptsUSD: true, AcceptsCDF: true,
+		Operator: transfer.OperatorOrangeMoney, AccountNumber: "+243990000010", AcceptsUSD: true, AcceptsCDF: true,
 	}); !errors.Is(err, agentwallet.ErrWalletExists) {
 		t.Fatalf("duplicate wallet = %v, want ErrWalletExists", err)
 	}
@@ -598,5 +625,82 @@ func TestCorridorAndWalletGates(t *testing.T) {
 		if c.AgentProfileID == p.ID {
 			t.Fatal("agent without the CDF wallet end matched a usd->cdf transfer")
 		}
+	}
+}
+
+// TestLadderSourceGatesOnSettlementCurrency: the ladder's non-USD rungs
+// (eur, zar, aoa, zmw, tzs) are collected in USD — the hold is USD minor
+// units and a DRC wallet only ever holds CDF or USD. So the from-side gate
+// must read accepts_usd for every non-cdf source, not match the source
+// label literally: a EUR transfer has to shortlist USD-accepting agents and
+// skip CDF-only ones, exactly like the usd->cdf corridor it settles as.
+func TestLadderSourceGatesOnSettlementCurrency(t *testing.T) {
+	s := newStores(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// Mega-funded + mega-hold, same reason as TestDeclinedAgentExcluded:
+	// leftovers from earlier runs can't cover the hold, so the shortlist
+	// stays this test's.
+	usdAgent := fundedAgentWith(ctx, t, s, 10_000_000, true, true)
+	cdfOnly := fundedAgentWith(ctx, t, s, 10_000_000, false, true)
+
+	client := uuid.New()
+	tr := eurToCdfTransfer(ctx, t, s, client, 4_000_000)
+	if tr.FromCurrency != transfer.CurrencyEUR {
+		t.Fatalf("from currency = %s, want eur", tr.FromCurrency)
+	}
+
+	cands, err := s.offers.Candidates(ctx, matching.CandidateQuery{
+		TransferID: tr.ID, ClientID: client, HoldAmount: tr.HoldAmount,
+		FromOperator: tr.FromOperator, FromCurrency: tr.FromCurrency,
+		ToOperator: tr.RecipientOperator, ToCurrency: tr.ToCurrency, Limit: 50,
+	})
+	if err != nil {
+		t.Fatalf("candidates: %v", err)
+	}
+
+	var sawUSD, sawCDFOnly bool
+	for _, c := range cands {
+		sawUSD = sawUSD || c.AgentProfileID == usdAgent.ID
+		sawCDFOnly = sawCDFOnly || c.AgentProfileID == cdfOnly.ID
+	}
+	if !sawUSD {
+		t.Fatal("eur->cdf transfer shortlisted no USD-accepting agent — the from-side gate must read accepts_usd, not match the source label")
+	}
+	if sawCDFOnly {
+		t.Fatal("a CDF-only wallet matched a eur->cdf transfer — eur is collected in USD")
+	}
+
+	// The cdf->cdf rung is the one that still settles in francs: the same
+	// CDF-only agent must match there.
+	cdfTr, err := s.transfers.Add(ctx, client, transfer.NewTransfer{
+		RecipientName: "Recipient", RecipientPhone: "+243811111113",
+		RecipientOperator: transfer.OperatorOrangeMoney,
+		FromCurrency:      transfer.CurrencyCDF,
+		FromOperator:      transfer.OperatorOrangeMoney,
+		FromAmount:        11_000_000_000,
+		ToCurrency:        transfer.CurrencyCDF,
+		ToAmount:          11_000_000_000,
+		FeePctBps:         200, FeeAmount: 220_000_000,
+		HoldAmount: 4_000_000,
+	})
+	if err != nil {
+		t.Fatalf("creating cdf transfer: %v", err)
+	}
+	cdfCands, err := s.offers.Candidates(ctx, matching.CandidateQuery{
+		TransferID: cdfTr.ID, ClientID: client, HoldAmount: cdfTr.HoldAmount,
+		FromOperator: cdfTr.FromOperator, FromCurrency: cdfTr.FromCurrency,
+		ToOperator: cdfTr.RecipientOperator, ToCurrency: cdfTr.ToCurrency, Limit: 50,
+	})
+	if err != nil {
+		t.Fatalf("cdf candidates: %v", err)
+	}
+	found := false
+	for _, c := range cdfCands {
+		found = found || c.AgentProfileID == cdfOnly.ID
+	}
+	if !found {
+		t.Fatal("CDF-only wallet excluded from a cdf->cdf transfer — only that rung settles in francs")
 	}
 }

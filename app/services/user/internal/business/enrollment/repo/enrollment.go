@@ -42,14 +42,35 @@ func (s Store) Add(ctx context.Context, accountID, invitedBy string) (enrollment
 		InvitedBy: invitedBy,
 	})
 	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" && pgErr.ConstraintName == "enrollment_requests_live_uq" {
-			return enrollment.Enrollment{}, enrollment.ErrEnrollmentPending
-		}
-		return enrollment.Enrollment{}, fmt.Errorf("adding enrollment: %w", err)
+		return enrollment.Enrollment{}, liveOrErr("adding enrollment", err)
 	}
 
 	return toDomain(row)
+}
+
+// AddSelf registers the self-serve sign-up: no inviter, terms stamped
+// inline, born accepted. Same uniqueness guarantee as Add — the partial
+// index does not care which entry point wrote the row.
+func (s Store) AddSelf(ctx context.Context, accountID, tosVersion string) (enrollment.Enrollment, error) {
+	row, err := s.sqlc.AddSelfEnrollment(ctx, sqlc.AddSelfEnrollmentParams{
+		AccountID:  accountID,
+		TosVersion: tosVersion,
+	})
+	if err != nil {
+		return enrollment.Enrollment{}, liveOrErr("adding self-serve enrollment", err)
+	}
+
+	return toDomain(row)
+}
+
+// liveOrErr folds the shared insert-failure handling: a 23505 on the live
+// partial index is the domain's "already has one", anything else is wrapped.
+func liveOrErr(verb string, err error) error {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "23505" && pgErr.ConstraintName == "enrollment_requests_live_uq" {
+		return enrollment.ErrEnrollmentPending
+	}
+	return fmt.Errorf("%s: %w", verb, err)
 }
 
 // Get returns the request with the given id.
@@ -162,7 +183,7 @@ func viewToDomain(e sqlc.UsersExtEnrollmentRequest) (enrollment.Enrollment, erro
 }
 
 func build(
-	id, accountFk, invitedBy string, status sqlc.EnrollmentStatus,
+	id, accountFk string, invitedBy uuid.NullUUID, status sqlc.EnrollmentStatus,
 	tosVersion pgtype.Text, tosAcceptedAt pgtype.Timestamptz,
 	decidedBy uuid.NullUUID, decidedAt pgtype.Timestamptz,
 	createdAt, updatedAt time.Time,
@@ -175,18 +196,17 @@ func build(
 	if err != nil {
 		return enrollment.Enrollment{}, fmt.Errorf("parsing account id %q: %w", accountFk, err)
 	}
-	inviter, err := uuid.Parse(invitedBy)
-	if err != nil {
-		return enrollment.Enrollment{}, fmt.Errorf("parsing inviter id %q: %w", invitedBy, err)
-	}
 
 	out := enrollment.Enrollment{
 		ID:        eid,
 		AccountID: account,
-		InvitedBy: inviter,
 		Status:    enrollment.Status(status),
 		CreatedAt: createdAt,
 		UpdatedAt: updatedAt,
+	}
+	// No inviter is the self-serve marker, not missing data.
+	if invitedBy.Valid {
+		out.InvitedBy = new(invitedBy.UUID)
 	}
 	if tosVersion.Valid {
 		out.TOSVersion = new(tosVersion.String)

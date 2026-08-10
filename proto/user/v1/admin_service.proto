@@ -28,6 +28,15 @@ service AdminService {
   rpc ApproveEnrollment(ApproveEnrollmentRequest) returns (Enrollment);
   rpc CancelEnrollment(CancelEnrollmentRequest) returns (Enrollment);
   rpc ListEnrollments(ListEnrollmentsRequest) returns (ListEnrollmentsResponse);
+
+  // Service-internal, SYSTEM callers only — deliberately routeless on the
+  // gateway (same treatment as compliance's EvaluateTransfer). The payment
+  // service calls it when a self-serve enrollment's guarantee deposit is
+  // approved: that approval IS the promotion decision, so this is where a
+  // self-serve request reaches APPROVED and the account becomes an agent.
+  // A no-op on an invited enrollment — those still need their admin
+  // approve.
+  rpc SettleEnrollmentGuarantee(SettleEnrollmentGuaranteeRequest) returns (Enrollment);
 }
 
 message GetAccountRequest {
@@ -80,6 +89,11 @@ message ApproveEnrollmentRequest {
 
 message CancelEnrollmentRequest {
   string id = 1;  // enrollment id
+}
+
+message SettleEnrollmentGuaranteeRequest {
+  string id = 1;          // enrollment id the settled deposit referenced
+  string decided_by = 2;  // the ops/admin account that approved the deposit
 }
 
 message ListEnrollmentsRequest {

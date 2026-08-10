@@ -309,6 +309,58 @@ func (x *DeclineEnrollmentRequest) GetId() string {
 	return ""
 }
 
+type SelfEnrollRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TosVersion    string                 `protobuf:"bytes,1,opt,name=tos_version,json=tosVersion,proto3" json:"tos_version,omitempty"` // the terms version the client displayed
+	City          *string                `protobuf:"bytes,2,opt,name=city,proto3,oneof" json:"city,omitempty"`                         // nearest city, seeds the agent profile (geo matching)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SelfEnrollRequest) Reset() {
+	*x = SelfEnrollRequest{}
+	mi := &file_user_v1_user_service_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SelfEnrollRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SelfEnrollRequest) ProtoMessage() {}
+
+func (x *SelfEnrollRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_user_v1_user_service_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SelfEnrollRequest.ProtoReflect.Descriptor instead.
+func (*SelfEnrollRequest) Descriptor() ([]byte, []int) {
+	return file_user_v1_user_service_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *SelfEnrollRequest) GetTosVersion() string {
+	if x != nil {
+		return x.TosVersion
+	}
+	return ""
+}
+
+func (x *SelfEnrollRequest) GetCity() string {
+	if x != nil && x.City != nil {
+		return *x.City
+	}
+	return ""
+}
+
 var File_user_v1_user_service_proto protoreflect.FileDescriptor
 
 const file_user_v1_user_service_proto_rawDesc = "" +
@@ -336,14 +388,21 @@ const file_user_v1_user_service_proto_rawDesc = "" +
 	"\vtos_version\x18\x02 \x01(\tR\n" +
 	"tosVersion\"*\n" +
 	"\x18DeclineEnrollmentRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id2\xa2\x03\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"V\n" +
+	"\x11SelfEnrollRequest\x12\x1f\n" +
+	"\vtos_version\x18\x01 \x01(\tR\n" +
+	"tosVersion\x12\x17\n" +
+	"\x04city\x18\x02 \x01(\tH\x00R\x04city\x88\x01\x01B\a\n" +
+	"\x05_city2\xe1\x03\n" +
 	"\vUserService\x12*\n" +
 	"\x02Me\x12\x12.user.v1.MeRequest\x1a\x10.user.v1.Account\x12@\n" +
 	"\rUpdateAccount\x12\x1d.user.v1.UpdateAccountRequest\x1a\x10.user.v1.Account\x12D\n" +
 	"\x0fGetAccountBySub\x12\x1f.user.v1.GetAccountBySubRequest\x1a\x10.user.v1.Account\x12G\n" +
 	"\x0fGetMyEnrollment\x12\x1f.user.v1.GetMyEnrollmentRequest\x1a\x13.user.v1.Enrollment\x12I\n" +
 	"\x10AcceptEnrollment\x12 .user.v1.AcceptEnrollmentRequest\x1a\x13.user.v1.Enrollment\x12K\n" +
-	"\x11DeclineEnrollment\x12!.user.v1.DeclineEnrollmentRequest\x1a\x13.user.v1.EnrollmentB\x87\x01\n" +
+	"\x11DeclineEnrollment\x12!.user.v1.DeclineEnrollmentRequest\x1a\x13.user.v1.Enrollment\x12=\n" +
+	"\n" +
+	"SelfEnroll\x12\x1a.user.v1.SelfEnrollRequest\x1a\x13.user.v1.EnrollmentB\x87\x01\n" +
 	"\vcom.user.v1B\x10UserServiceProtoP\x01Z)mokapay.app/proto/codebase/user/v1;userv1\xa2\x02\x03UXX\xaa\x02\aUser.V1\xca\x02\aUser\\V1\xe2\x02\x13User\\V1\\GPBMetadata\xea\x02\bUser::V1b\x06proto3"
 
 var (
@@ -358,7 +417,7 @@ func file_user_v1_user_service_proto_rawDescGZIP() []byte {
 	return file_user_v1_user_service_proto_rawDescData
 }
 
-var file_user_v1_user_service_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_user_v1_user_service_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_user_v1_user_service_proto_goTypes = []any{
 	(*MeRequest)(nil),                // 0: user.v1.MeRequest
 	(*GetAccountBySubRequest)(nil),   // 1: user.v1.GetAccountBySubRequest
@@ -366,31 +425,34 @@ var file_user_v1_user_service_proto_goTypes = []any{
 	(*GetMyEnrollmentRequest)(nil),   // 3: user.v1.GetMyEnrollmentRequest
 	(*AcceptEnrollmentRequest)(nil),  // 4: user.v1.AcceptEnrollmentRequest
 	(*DeclineEnrollmentRequest)(nil), // 5: user.v1.DeclineEnrollmentRequest
-	(Language)(0),                    // 6: user.v1.Language
-	(OtpMethod)(0),                   // 7: user.v1.OtpMethod
-	(*Account)(nil),                  // 8: user.v1.Account
-	(*Enrollment)(nil),               // 9: user.v1.Enrollment
+	(*SelfEnrollRequest)(nil),        // 6: user.v1.SelfEnrollRequest
+	(Language)(0),                    // 7: user.v1.Language
+	(OtpMethod)(0),                   // 8: user.v1.OtpMethod
+	(*Account)(nil),                  // 9: user.v1.Account
+	(*Enrollment)(nil),               // 10: user.v1.Enrollment
 }
 var file_user_v1_user_service_proto_depIdxs = []int32{
-	6, // 0: user.v1.UpdateAccountRequest.preferred_language:type_name -> user.v1.Language
-	7, // 1: user.v1.UpdateAccountRequest.preferred_otp_method:type_name -> user.v1.OtpMethod
-	0, // 2: user.v1.UserService.Me:input_type -> user.v1.MeRequest
-	2, // 3: user.v1.UserService.UpdateAccount:input_type -> user.v1.UpdateAccountRequest
-	1, // 4: user.v1.UserService.GetAccountBySub:input_type -> user.v1.GetAccountBySubRequest
-	3, // 5: user.v1.UserService.GetMyEnrollment:input_type -> user.v1.GetMyEnrollmentRequest
-	4, // 6: user.v1.UserService.AcceptEnrollment:input_type -> user.v1.AcceptEnrollmentRequest
-	5, // 7: user.v1.UserService.DeclineEnrollment:input_type -> user.v1.DeclineEnrollmentRequest
-	8, // 8: user.v1.UserService.Me:output_type -> user.v1.Account
-	8, // 9: user.v1.UserService.UpdateAccount:output_type -> user.v1.Account
-	8, // 10: user.v1.UserService.GetAccountBySub:output_type -> user.v1.Account
-	9, // 11: user.v1.UserService.GetMyEnrollment:output_type -> user.v1.Enrollment
-	9, // 12: user.v1.UserService.AcceptEnrollment:output_type -> user.v1.Enrollment
-	9, // 13: user.v1.UserService.DeclineEnrollment:output_type -> user.v1.Enrollment
-	8, // [8:14] is the sub-list for method output_type
-	2, // [2:8] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	7,  // 0: user.v1.UpdateAccountRequest.preferred_language:type_name -> user.v1.Language
+	8,  // 1: user.v1.UpdateAccountRequest.preferred_otp_method:type_name -> user.v1.OtpMethod
+	0,  // 2: user.v1.UserService.Me:input_type -> user.v1.MeRequest
+	2,  // 3: user.v1.UserService.UpdateAccount:input_type -> user.v1.UpdateAccountRequest
+	1,  // 4: user.v1.UserService.GetAccountBySub:input_type -> user.v1.GetAccountBySubRequest
+	3,  // 5: user.v1.UserService.GetMyEnrollment:input_type -> user.v1.GetMyEnrollmentRequest
+	4,  // 6: user.v1.UserService.AcceptEnrollment:input_type -> user.v1.AcceptEnrollmentRequest
+	5,  // 7: user.v1.UserService.DeclineEnrollment:input_type -> user.v1.DeclineEnrollmentRequest
+	6,  // 8: user.v1.UserService.SelfEnroll:input_type -> user.v1.SelfEnrollRequest
+	9,  // 9: user.v1.UserService.Me:output_type -> user.v1.Account
+	9,  // 10: user.v1.UserService.UpdateAccount:output_type -> user.v1.Account
+	9,  // 11: user.v1.UserService.GetAccountBySub:output_type -> user.v1.Account
+	10, // 12: user.v1.UserService.GetMyEnrollment:output_type -> user.v1.Enrollment
+	10, // 13: user.v1.UserService.AcceptEnrollment:output_type -> user.v1.Enrollment
+	10, // 14: user.v1.UserService.DeclineEnrollment:output_type -> user.v1.Enrollment
+	10, // 15: user.v1.UserService.SelfEnroll:output_type -> user.v1.Enrollment
+	9,  // [9:16] is the sub-list for method output_type
+	2,  // [2:9] is the sub-list for method input_type
+	2,  // [2:2] is the sub-list for extension type_name
+	2,  // [2:2] is the sub-list for extension extendee
+	0,  // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_user_v1_user_service_proto_init() }
@@ -400,13 +462,14 @@ func file_user_v1_user_service_proto_init() {
 	}
 	file_user_v1_shared_message_proto_init()
 	file_user_v1_user_service_proto_msgTypes[2].OneofWrappers = []any{}
+	file_user_v1_user_service_proto_msgTypes[6].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_user_v1_user_service_proto_rawDesc), len(file_user_v1_user_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

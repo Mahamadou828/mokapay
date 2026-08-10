@@ -62,6 +62,27 @@ func (h UserHandler) AcceptEnrollment(ctx context.Context, req *userv1.AcceptEnr
 	return mapper.EnrollmentToProto(e), nil
 }
 
+// SelfEnroll is the AG-04 submission: the TOS checkbox and the nearest
+// city arrive together, and the terms version is required because the
+// acceptance IS this call (there is no later accept step to stamp it).
+func (h UserHandler) SelfEnroll(ctx context.Context, req *userv1.SelfEnrollRequest) (*userv1.Enrollment, error) {
+	accountID, err := callerAccountID(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if req.TosVersion == "" {
+		return nil, status.Error(codes.InvalidArgument, "tos_version is required")
+	}
+
+	e, err := h.enroll.SelfEnroll(ctx, accountID, mapper.SelfEnrollToDomain(req))
+	if err != nil {
+		return nil, grpcerr.Map(err)
+	}
+
+	return mapper.EnrollmentToProto(e), nil
+}
+
 func (h UserHandler) DeclineEnrollment(ctx context.Context, req *userv1.DeclineEnrollmentRequest) (*userv1.Enrollment, error) {
 	accountID, err := callerAccountID(ctx)
 	if err != nil {

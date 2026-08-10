@@ -18,12 +18,22 @@ import (
 // --- enums -----------------------------------------------------------------
 
 var currencyFromProto = map[paymentv1.Currency]transfer.Currency{
+	paymentv1.Currency_CURRENCY_EUR: transfer.CurrencyEUR,
 	paymentv1.Currency_CURRENCY_USD: transfer.CurrencyUSD,
+	paymentv1.Currency_CURRENCY_ZAR: transfer.CurrencyZAR,
+	paymentv1.Currency_CURRENCY_AOA: transfer.CurrencyAOA,
+	paymentv1.Currency_CURRENCY_ZMW: transfer.CurrencyZMW,
+	paymentv1.Currency_CURRENCY_TZS: transfer.CurrencyTZS,
 	paymentv1.Currency_CURRENCY_CDF: transfer.CurrencyCDF,
 }
 
 var currencyToProto = map[transfer.Currency]paymentv1.Currency{
+	transfer.CurrencyEUR: paymentv1.Currency_CURRENCY_EUR,
 	transfer.CurrencyUSD: paymentv1.Currency_CURRENCY_USD,
+	transfer.CurrencyZAR: paymentv1.Currency_CURRENCY_ZAR,
+	transfer.CurrencyAOA: paymentv1.Currency_CURRENCY_AOA,
+	transfer.CurrencyZMW: paymentv1.Currency_CURRENCY_ZMW,
+	transfer.CurrencyTZS: paymentv1.Currency_CURRENCY_TZS,
 	transfer.CurrencyCDF: paymentv1.Currency_CURRENCY_CDF,
 }
 
@@ -39,12 +49,18 @@ var operatorFromProto = map[paymentv1.Operator]transfer.Operator{
 	paymentv1.Operator_OPERATOR_ORANGE_MONEY: transfer.OperatorOrangeMoney,
 	paymentv1.Operator_OPERATOR_M_PESA:       transfer.OperatorMPesa,
 	paymentv1.Operator_OPERATOR_AIRTEL_MONEY: transfer.OperatorAirtelMoney,
+	paymentv1.Operator_OPERATOR_AFRIMONEY:    transfer.OperatorAfrimoney,
+	paymentv1.Operator_OPERATOR_RAWBANK:      transfer.OperatorRawbank,
+	paymentv1.Operator_OPERATOR_EQUITY_BCDC:  transfer.OperatorEquityBCDC,
 }
 
 var operatorToProto = map[transfer.Operator]paymentv1.Operator{
 	transfer.OperatorOrangeMoney: paymentv1.Operator_OPERATOR_ORANGE_MONEY,
 	transfer.OperatorMPesa:       paymentv1.Operator_OPERATOR_M_PESA,
 	transfer.OperatorAirtelMoney: paymentv1.Operator_OPERATOR_AIRTEL_MONEY,
+	transfer.OperatorAfrimoney:   paymentv1.Operator_OPERATOR_AFRIMONEY,
+	transfer.OperatorRawbank:     paymentv1.Operator_OPERATOR_RAWBANK,
+	transfer.OperatorEquityBCDC:  paymentv1.Operator_OPERATOR_EQUITY_BCDC,
 }
 
 func OperatorFromProto(o paymentv1.Operator) transfer.Operator {
@@ -158,8 +174,9 @@ func TransferToProto(v usecase.TransferView) *paymentv1.Transfer {
 	}
 	if v.PaymentDetails != nil {
 		out.AgentPaymentDetails = &paymentv1.AgentPaymentDetails{
-			Operator: OperatorToProto(v.PaymentDetails.Operator),
-			Msisdn:   v.PaymentDetails.Msisdn,
+			Operator:      OperatorToProto(v.PaymentDetails.Operator),
+			AccountNumber: v.PaymentDetails.AccountNumber,
+			Kind:          string(v.PaymentDetails.Kind),
 		}
 	}
 
@@ -218,7 +235,8 @@ func WalletToProto(w agentwallet.Wallet) *paymentv1.AgentWallet {
 		Id:             w.ID.String(),
 		AgentProfileId: w.AgentProfileID.String(),
 		Operator:       OperatorToProto(w.Operator),
-		Msisdn:         w.Msisdn,
+		Kind:           string(w.Kind),
+		AccountNumber:  w.AccountNumber,
 		AcceptsUsd:     w.AcceptsUSD,
 		AcceptsCdf:     w.AcceptsCDF,
 		CreatedAt:      timestamppb.New(w.CreatedAt),

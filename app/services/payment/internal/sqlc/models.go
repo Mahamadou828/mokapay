@@ -148,6 +148,11 @@ type Currency string
 const (
 	CurrencyUsd Currency = "usd"
 	CurrencyCdf Currency = "cdf"
+	CurrencyEur Currency = "eur"
+	CurrencyZar Currency = "zar"
+	CurrencyAoa Currency = "aoa"
+	CurrencyZmw Currency = "zmw"
+	CurrencyTzs Currency = "tzs"
 )
 
 func (e *Currency) Scan(src interface{}) error {
@@ -626,6 +631,9 @@ const (
 	PaymentOperatorOrangeMoney PaymentOperator = "orange_money"
 	PaymentOperatorMPesa       PaymentOperator = "m_pesa"
 	PaymentOperatorAirtelMoney PaymentOperator = "airtel_money"
+	PaymentOperatorAfrimoney   PaymentOperator = "afrimoney"
+	PaymentOperatorRawbank     PaymentOperator = "rawbank"
+	PaymentOperatorEquityBcdc  PaymentOperator = "equity_bcdc"
 )
 
 func (e *PaymentOperator) Scan(src interface{}) error {
@@ -732,7 +740,7 @@ type AgentWallet struct {
 	ID             string
 	AgentProfileFk string
 	Operator       PaymentOperator
-	Msisdn         string
+	AccountNumber  string
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 	DeletedAt      pgtype.Timestamptz
@@ -894,7 +902,7 @@ type PaymentsExtAgentWallet struct {
 	ID             string
 	AgentProfileFk string
 	Operator       PaymentOperator
-	Msisdn         string
+	AccountNumber  string
 	AcceptsUsd     bool
 	AcceptsCdf     bool
 	CreatedAt      time.Time

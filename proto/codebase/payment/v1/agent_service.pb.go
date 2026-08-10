@@ -473,7 +473,7 @@ func (x *ListMyWalletsResponse) GetWallets() []*AgentWallet {
 type AddWalletRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Operator      Operator               `protobuf:"varint,1,opt,name=operator,proto3,enum=payment.v1.Operator" json:"operator,omitempty"`
-	Msisdn        string                 `protobuf:"bytes,3,opt,name=msisdn,proto3" json:"msisdn,omitempty"`
+	AccountNumber string                 `protobuf:"bytes,3,opt,name=account_number,json=accountNumber,proto3" json:"account_number,omitempty"` // was msisdn — MSISDN or bank account number
 	AcceptsUsd    bool                   `protobuf:"varint,4,opt,name=accepts_usd,json=acceptsUsd,proto3" json:"accepts_usd,omitempty"`
 	AcceptsCdf    bool                   `protobuf:"varint,5,opt,name=accepts_cdf,json=acceptsCdf,proto3" json:"accepts_cdf,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -517,9 +517,9 @@ func (x *AddWalletRequest) GetOperator() Operator {
 	return Operator_OPERATOR_UNSPECIFIED
 }
 
-func (x *AddWalletRequest) GetMsisdn() string {
+func (x *AddWalletRequest) GetAccountNumber() string {
 	if x != nil {
-		return x.Msisdn
+		return x.AccountNumber
 	}
 	return ""
 }
@@ -770,10 +770,10 @@ const file_payment_v1_agent_service_proto_rawDesc = "" +
 	"\vcommissions\x18\x01 \x03(\v2\x16.payment.v1.CommissionR\vcommissions\"\x16\n" +
 	"\x14ListMyWalletsRequest\"J\n" +
 	"\x15ListMyWalletsResponse\x121\n" +
-	"\awallets\x18\x01 \x03(\v2\x17.payment.v1.AgentWalletR\awallets\"\xa4\x01\n" +
+	"\awallets\x18\x01 \x03(\v2\x17.payment.v1.AgentWalletR\awallets\"\xb3\x01\n" +
 	"\x10AddWalletRequest\x120\n" +
-	"\boperator\x18\x01 \x01(\x0e2\x14.payment.v1.OperatorR\boperator\x12\x16\n" +
-	"\x06msisdn\x18\x03 \x01(\tR\x06msisdn\x12\x1f\n" +
+	"\boperator\x18\x01 \x01(\x0e2\x14.payment.v1.OperatorR\boperator\x12%\n" +
+	"\x0eaccount_number\x18\x03 \x01(\tR\raccountNumber\x12\x1f\n" +
 	"\vaccepts_usd\x18\x04 \x01(\bR\n" +
 	"acceptsUsd\x12\x1f\n" +
 	"\vaccepts_cdf\x18\x05 \x01(\bR\n" +

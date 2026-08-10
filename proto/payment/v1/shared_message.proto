@@ -112,17 +112,31 @@ message LedgerLine {
 // Transfers (values mirror the currency, payment_operator, transfer_status
 // and offer_status DB enums — conversion is a plain cast).
 
+// The send ladder is one-way: every value but CDF is a source a client can
+// fund with, and CDF is what the recipient is always paid in.
 enum Currency {
   CURRENCY_UNSPECIFIED = 0;
   CURRENCY_USD = 1;
   CURRENCY_CDF = 2;
+  CURRENCY_EUR = 3;
+  CURRENCY_ZAR = 4;
+  CURRENCY_AOA = 5;
+  CURRENCY_ZMW = 6;
+  CURRENCY_TZS = 7;
 }
 
+// The account catalogue an agent can hold a wallet on. Not all of them are
+// mobile money any more: the last two are banks, so the account number
+// behind an operator is an MSISDN or an RIB depending on the value (see
+// AgentWallet.kind).
 enum Operator {
   OPERATOR_UNSPECIFIED = 0;
   OPERATOR_ORANGE_MONEY = 1;
   OPERATOR_M_PESA = 2;
   OPERATOR_AIRTEL_MONEY = 3;
+  OPERATOR_AFRIMONEY = 4;
+  OPERATOR_RAWBANK = 5;
+  OPERATOR_EQUITY_BCDC = 6;
 }
 
 enum TransferStatus {
@@ -154,7 +168,8 @@ enum OfferStatus {
 // wallet on the transfer's {from_operator, from_currency} pair.
 message AgentPaymentDetails {
   Operator operator = 1;
-  string msisdn = 2;
+  string account_number = 2;  // was msisdn — an MSISDN or a bank account
+  string kind = 3;            // "mobile_money" | "bank", derived from operator
 }
 
 // The transfer. Every money field was stamped at create (rate locked
@@ -241,18 +256,22 @@ message Beneficiary {
   google.protobuf.Timestamp updated_at = 8;
 }
 
-// An agent's declared {operator, currency} channel; msisdn is what the
-// client pays to.
+// An agent's declared operator channel; account_number is what the client
+// pays to — an MSISDN on a mobile-money operator, a bank account number on
+// a bank one.
 message AgentWallet {
   string id = 1;
   string agent_profile_id = 2;
   Operator operator = 3;
   reserved 4;  // was currency — one wallet per operator now, flags below
-  string msisdn = 5;
+  string account_number = 5;  // was msisdn
   google.protobuf.Timestamp created_at = 6;
   google.protobuf.Timestamp updated_at = 7;
   bool accepts_usd = 8;
   bool accepts_cdf = 9;
+  // "mobile_money" | "bank" — derived from the operator, never stored;
+  // it tells the client whether to render a phone or an account number.
+  string kind = 10;
 }
 
 // ---------------------------------------------------------------------------

@@ -351,12 +351,19 @@ func (LedgerReferenceType) EnumDescriptor() ([]byte, []int) {
 	return file_payment_v1_shared_message_proto_rawDescGZIP(), []int{5}
 }
 
+// The send ladder is one-way: every value but CDF is a source a client can
+// fund with, and CDF is what the recipient is always paid in.
 type Currency int32
 
 const (
 	Currency_CURRENCY_UNSPECIFIED Currency = 0
 	Currency_CURRENCY_USD         Currency = 1
 	Currency_CURRENCY_CDF         Currency = 2
+	Currency_CURRENCY_EUR         Currency = 3
+	Currency_CURRENCY_ZAR         Currency = 4
+	Currency_CURRENCY_AOA         Currency = 5
+	Currency_CURRENCY_ZMW         Currency = 6
+	Currency_CURRENCY_TZS         Currency = 7
 )
 
 // Enum value maps for Currency.
@@ -365,11 +372,21 @@ var (
 		0: "CURRENCY_UNSPECIFIED",
 		1: "CURRENCY_USD",
 		2: "CURRENCY_CDF",
+		3: "CURRENCY_EUR",
+		4: "CURRENCY_ZAR",
+		5: "CURRENCY_AOA",
+		6: "CURRENCY_ZMW",
+		7: "CURRENCY_TZS",
 	}
 	Currency_value = map[string]int32{
 		"CURRENCY_UNSPECIFIED": 0,
 		"CURRENCY_USD":         1,
 		"CURRENCY_CDF":         2,
+		"CURRENCY_EUR":         3,
+		"CURRENCY_ZAR":         4,
+		"CURRENCY_AOA":         5,
+		"CURRENCY_ZMW":         6,
+		"CURRENCY_TZS":         7,
 	}
 )
 
@@ -400,6 +417,10 @@ func (Currency) EnumDescriptor() ([]byte, []int) {
 	return file_payment_v1_shared_message_proto_rawDescGZIP(), []int{6}
 }
 
+// The account catalogue an agent can hold a wallet on. Not all of them are
+// mobile money any more: the last two are banks, so the account number
+// behind an operator is an MSISDN or an RIB depending on the value (see
+// AgentWallet.kind).
 type Operator int32
 
 const (
@@ -407,6 +428,9 @@ const (
 	Operator_OPERATOR_ORANGE_MONEY Operator = 1
 	Operator_OPERATOR_M_PESA       Operator = 2
 	Operator_OPERATOR_AIRTEL_MONEY Operator = 3
+	Operator_OPERATOR_AFRIMONEY    Operator = 4
+	Operator_OPERATOR_RAWBANK      Operator = 5
+	Operator_OPERATOR_EQUITY_BCDC  Operator = 6
 )
 
 // Enum value maps for Operator.
@@ -416,12 +440,18 @@ var (
 		1: "OPERATOR_ORANGE_MONEY",
 		2: "OPERATOR_M_PESA",
 		3: "OPERATOR_AIRTEL_MONEY",
+		4: "OPERATOR_AFRIMONEY",
+		5: "OPERATOR_RAWBANK",
+		6: "OPERATOR_EQUITY_BCDC",
 	}
 	Operator_value = map[string]int32{
 		"OPERATOR_UNSPECIFIED":  0,
 		"OPERATOR_ORANGE_MONEY": 1,
 		"OPERATOR_M_PESA":       2,
 		"OPERATOR_AIRTEL_MONEY": 3,
+		"OPERATOR_AFRIMONEY":    4,
+		"OPERATOR_RAWBANK":      5,
+		"OPERATOR_EQUITY_BCDC":  6,
 	}
 )
 
@@ -1286,7 +1316,8 @@ func (x *LedgerLine) GetCreatedAt() *timestamppb.Timestamp {
 type AgentPaymentDetails struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Operator      Operator               `protobuf:"varint,1,opt,name=operator,proto3,enum=payment.v1.Operator" json:"operator,omitempty"`
-	Msisdn        string                 `protobuf:"bytes,2,opt,name=msisdn,proto3" json:"msisdn,omitempty"`
+	AccountNumber string                 `protobuf:"bytes,2,opt,name=account_number,json=accountNumber,proto3" json:"account_number,omitempty"` // was msisdn — an MSISDN or a bank account
+	Kind          string                 `protobuf:"bytes,3,opt,name=kind,proto3" json:"kind,omitempty"`                                        // "mobile_money" | "bank", derived from operator
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1328,9 +1359,16 @@ func (x *AgentPaymentDetails) GetOperator() Operator {
 	return Operator_OPERATOR_UNSPECIFIED
 }
 
-func (x *AgentPaymentDetails) GetMsisdn() string {
+func (x *AgentPaymentDetails) GetAccountNumber() string {
 	if x != nil {
-		return x.Msisdn
+		return x.AccountNumber
+	}
+	return ""
+}
+
+func (x *AgentPaymentDetails) GetKind() string {
+	if x != nil {
+		return x.Kind
 	}
 	return ""
 }
@@ -1992,20 +2030,24 @@ func (x *Beneficiary) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
-// An agent's declared {operator, currency} channel; msisdn is what the
-// client pays to.
+// An agent's declared operator channel; account_number is what the client
+// pays to — an MSISDN on a mobile-money operator, a bank account number on
+// a bank one.
 type AgentWallet struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	AgentProfileId string                 `protobuf:"bytes,2,opt,name=agent_profile_id,json=agentProfileId,proto3" json:"agent_profile_id,omitempty"`
 	Operator       Operator               `protobuf:"varint,3,opt,name=operator,proto3,enum=payment.v1.Operator" json:"operator,omitempty"`
-	Msisdn         string                 `protobuf:"bytes,5,opt,name=msisdn,proto3" json:"msisdn,omitempty"`
+	AccountNumber  string                 `protobuf:"bytes,5,opt,name=account_number,json=accountNumber,proto3" json:"account_number,omitempty"` // was msisdn
 	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt      *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	AcceptsUsd     bool                   `protobuf:"varint,8,opt,name=accepts_usd,json=acceptsUsd,proto3" json:"accepts_usd,omitempty"`
 	AcceptsCdf     bool                   `protobuf:"varint,9,opt,name=accepts_cdf,json=acceptsCdf,proto3" json:"accepts_cdf,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// "mobile_money" | "bank" — derived from the operator, never stored;
+	// it tells the client whether to render a phone or an account number.
+	Kind          string `protobuf:"bytes,10,opt,name=kind,proto3" json:"kind,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *AgentWallet) Reset() {
@@ -2059,9 +2101,9 @@ func (x *AgentWallet) GetOperator() Operator {
 	return Operator_OPERATOR_UNSPECIFIED
 }
 
-func (x *AgentWallet) GetMsisdn() string {
+func (x *AgentWallet) GetAccountNumber() string {
 	if x != nil {
-		return x.Msisdn
+		return x.AccountNumber
 	}
 	return ""
 }
@@ -2092,6 +2134,13 @@ func (x *AgentWallet) GetAcceptsCdf() bool {
 		return x.AcceptsCdf
 	}
 	return false
+}
+
+func (x *AgentWallet) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
 }
 
 // One transfer's accrual: the 60/30/10 split of the fee (flat for every
@@ -2778,10 +2827,11 @@ const file_payment_v1_shared_message_proto_rawDesc = "" +
 	"\x06amount\x18\x04 \x01(\x03R\x06amount\x12#\n" +
 	"\rbalance_after\x18\x05 \x01(\x03R\fbalanceAfter\x129\n" +
 	"\n" +
-	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"_\n" +
+	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\x82\x01\n" +
 	"\x13AgentPaymentDetails\x120\n" +
-	"\boperator\x18\x01 \x01(\x0e2\x14.payment.v1.OperatorR\boperator\x12\x16\n" +
-	"\x06msisdn\x18\x02 \x01(\tR\x06msisdn\"\xd6\n" +
+	"\boperator\x18\x01 \x01(\x0e2\x14.payment.v1.OperatorR\boperator\x12%\n" +
+	"\x0eaccount_number\x18\x02 \x01(\tR\raccountNumber\x12\x12\n" +
+	"\x04kind\x18\x03 \x01(\tR\x04kind\"\xd6\n" +
 	"\n" +
 	"\bTransfer\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1c\n" +
@@ -2886,12 +2936,12 @@ const file_payment_v1_shared_message_proto_rawDesc = "" +
 	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\a\n" +
-	"\x05_city\"\xcf\x02\n" +
+	"\x05_city\"\xf2\x02\n" +
 	"\vAgentWallet\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12(\n" +
 	"\x10agent_profile_id\x18\x02 \x01(\tR\x0eagentProfileId\x120\n" +
-	"\boperator\x18\x03 \x01(\x0e2\x14.payment.v1.OperatorR\boperator\x12\x16\n" +
-	"\x06msisdn\x18\x05 \x01(\tR\x06msisdn\x129\n" +
+	"\boperator\x18\x03 \x01(\x0e2\x14.payment.v1.OperatorR\boperator\x12%\n" +
+	"\x0eaccount_number\x18\x05 \x01(\tR\raccountNumber\x129\n" +
 	"\n" +
 	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
@@ -2899,7 +2949,9 @@ const file_payment_v1_shared_message_proto_rawDesc = "" +
 	"\vaccepts_usd\x18\b \x01(\bR\n" +
 	"acceptsUsd\x12\x1f\n" +
 	"\vaccepts_cdf\x18\t \x01(\bR\n" +
-	"acceptsCdfJ\x04\b\x04\x10\x05\"\xfb\x05\n" +
+	"acceptsCdf\x12\x12\n" +
+	"\x04kind\x18\n" +
+	" \x01(\tR\x04kindJ\x04\b\x04\x10\x05\"\xfb\x05\n" +
 	"\n" +
 	"Commission\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
@@ -3031,16 +3083,24 @@ const file_payment_v1_shared_message_proto_rawDesc = "" +
 	"\x13LedgerReferenceType\x12%\n" +
 	"!LEDGER_REFERENCE_TYPE_UNSPECIFIED\x10\x00\x12$\n" +
 	" LEDGER_REFERENCE_TYPE_ENROLLMENT\x10\x01\x12\"\n" +
-	"\x1eLEDGER_REFERENCE_TYPE_TRANSFER\x10\x02*H\n" +
+	"\x1eLEDGER_REFERENCE_TYPE_TRANSFER\x10\x02*\xa2\x01\n" +
 	"\bCurrency\x12\x18\n" +
 	"\x14CURRENCY_UNSPECIFIED\x10\x00\x12\x10\n" +
 	"\fCURRENCY_USD\x10\x01\x12\x10\n" +
-	"\fCURRENCY_CDF\x10\x02*o\n" +
+	"\fCURRENCY_CDF\x10\x02\x12\x10\n" +
+	"\fCURRENCY_EUR\x10\x03\x12\x10\n" +
+	"\fCURRENCY_ZAR\x10\x04\x12\x10\n" +
+	"\fCURRENCY_AOA\x10\x05\x12\x10\n" +
+	"\fCURRENCY_ZMW\x10\x06\x12\x10\n" +
+	"\fCURRENCY_TZS\x10\a*\xb7\x01\n" +
 	"\bOperator\x12\x18\n" +
 	"\x14OPERATOR_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15OPERATOR_ORANGE_MONEY\x10\x01\x12\x13\n" +
 	"\x0fOPERATOR_M_PESA\x10\x02\x12\x19\n" +
-	"\x15OPERATOR_AIRTEL_MONEY\x10\x03*\x9c\x03\n" +
+	"\x15OPERATOR_AIRTEL_MONEY\x10\x03\x12\x16\n" +
+	"\x12OPERATOR_AFRIMONEY\x10\x04\x12\x14\n" +
+	"\x10OPERATOR_RAWBANK\x10\x05\x12\x18\n" +
+	"\x14OPERATOR_EQUITY_BCDC\x10\x06*\x9c\x03\n" +
 	"\x0eTransferStatus\x12\x1f\n" +
 	"\x1bTRANSFER_STATUS_UNSPECIFIED\x10\x00\x12!\n" +
 	"\x1dTRANSFER_STATUS_PENDING_MATCH\x10\x01\x12*\n" +

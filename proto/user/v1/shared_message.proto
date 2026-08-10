@@ -72,13 +72,20 @@ enum EnrollmentStatus {
   ENROLLMENT_STATUS_CANCELLED = 5;
 }
 
-// One agent-enrollment request: the invite → TOS acceptance → approval
-// workflow promoting a user to agent. Shared by AdminService (invite,
-// approve, cancel, list) and UserService (view, accept, decline).
+// One agent-enrollment request. Two entry points share this shape:
+//   - invited: an ops/admin invite → TOS acceptance → admin approval;
+//     invited_by names the inviter.
+//   - self-serve: the candidate signs themselves up (AG-03/AG-04),
+//     stamping the terms at creation and landing straight in ACCEPTED;
+//     invited_by is ABSENT, which is what tells the two apart. Its route
+//     to APPROVED is the guarantee deposit being validated by ops, not a
+//     separate decision on the enrollment.
+// Shared by AdminService (invite, approve, cancel, list) and UserService
+// (view, self-enroll, accept, decline).
 message Enrollment {
   string id = 1;
-  string account_id = 2;  // the candidate
-  string invited_by = 3;  // the ops/admin who invited
+  string account_id = 2;           // the candidate
+  optional string invited_by = 3;  // the ops/admin who invited; absent = self-serve
   EnrollmentStatus status = 4;
   optional string tos_version = 5;                       // set once accepted
   optional google.protobuf.Timestamp tos_accepted_at = 6;

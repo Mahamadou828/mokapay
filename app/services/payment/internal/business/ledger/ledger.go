@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"mokapay.app/app/services/payment/internal/business/transfer"
 )
 
 // ErrRequestNotFound covers an unknown id and a transition from the wrong
@@ -131,9 +132,14 @@ type Filter struct {
 // agent sends a funding deposit off-platform (the G2/G12 catalogue). Ops
 // configuration served verbatim to the client — never persisted, never
 // hardcoded app-side, so an account number changes without a release.
+//
+// Kind reuses the payment domain's account vocabulary rather than a
+// private copy of the same two strings: the client branches on it to
+// decide whether the sender field is a phone number or an account number,
+// exactly as it does for an agent's own wallets.
 type DepositChannel struct {
 	Name          string // display label: "M-Pesa", "Rawbank"
-	Kind          string // "mobile_money" | "bank"
+	Kind          transfer.AccountKind
 	AccountName   string // e.g. "MOKA PAY SARL"
 	AccountNumber string // MSISDN or bank account number
 	Instructions  *string
@@ -142,7 +148,9 @@ type DepositChannel struct {
 // ParseDepositChannels decodes the DEPOSIT_CHANNELS JSON array. Every
 // entry needs name, kind, account_name and account_number — these strings
 // are where agents send real money, so a partial entry fails startup
-// instead of rendering blank.
+// instead of rendering blank. Kind is checked against the vocabulary too:
+// the client branches on it, so a typo would silently ask for a phone
+// number where a bank account belongs.
 func ParseDepositChannels(raw string) ([]DepositChannel, error) {
 	var rows []struct {
 		Name          string  `json:"name"`
@@ -160,9 +168,14 @@ func ParseDepositChannels(raw string) ([]DepositChannel, error) {
 		if r.Name == "" || r.Kind == "" || r.AccountName == "" || r.AccountNumber == "" {
 			return nil, fmt.Errorf("deposit channel %d: name, kind, account_name and account_number are required", i)
 		}
+		kind := transfer.AccountKind(r.Kind)
+		if kind != transfer.AccountKindMobileMoney && kind != transfer.AccountKindBank {
+			return nil, fmt.Errorf("deposit channel %d: kind %q must be %q or %q",
+				i, r.Kind, transfer.AccountKindMobileMoney, transfer.AccountKindBank)
+		}
 		out = append(out, DepositChannel{
 			Name:          r.Name,
-			Kind:          r.Kind,
+			Kind:          kind,
 			AccountName:   r.AccountName,
 			AccountNumber: r.AccountNumber,
 			Instructions:  r.Instructions,
