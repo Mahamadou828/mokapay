@@ -84,6 +84,41 @@ func (h Handler) CancelEnrollment(ctx context.Context, req *userv1.CancelEnrollm
 	return mapper.EnrollmentToProto(e), nil
 }
 
+// SettleEnrollmentGuarantee is service-internal: the payment service calls
+// it under a system passport when a guarantee deposit referencing an
+// enrollment is approved. It has no gateway route, and the system gate
+// below is the belt to that braces — nothing carrying a human passport has
+// any business promoting an account without a decision of its own.
+//
+// decided_by comes from the request rather than the passport precisely
+// because the caller is the system: the accountable human is the ops user
+// who approved the deposit, and payment forwards their id.
+func (h Handler) SettleEnrollmentGuarantee(ctx context.Context, req *userv1.SettleEnrollmentGuaranteeRequest) (*userv1.Enrollment, error) {
+	pass, err := passport.FromContext(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "no passport in context")
+	}
+	if !pass.IsSystem() {
+		return nil, status.Error(codes.PermissionDenied, "system caller required")
+	}
+
+	id, err := uuid.Parse(req.Id)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid enrollment id")
+	}
+	decidedBy, err := uuid.Parse(req.DecidedBy)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid decided_by account id")
+	}
+
+	e, err := h.enroll.SettleGuarantee(ctx, id, decidedBy)
+	if err != nil {
+		return nil, grpcerr.Map(err)
+	}
+
+	return mapper.EnrollmentToProto(e), nil
+}
+
 func (h Handler) ListEnrollments(ctx context.Context, req *userv1.ListEnrollmentsRequest) (*userv1.ListEnrollmentsResponse, error) {
 	var filter enrollment.Filter
 	if req.Status != nil {

@@ -25,6 +25,14 @@ type Notifier interface {
 	Notify(ctx context.Context, tx pgx.Tx, to, eventType, title, message string) error
 }
 
+// EnrollmentSettler hands a settled guarantee deposit back to the user
+// service, which owns enrollments and account roles. Payment deliberately
+// knows nothing beyond "this deposit referenced that enrollment and it is
+// now paid" — whether that promotes anyone is the user service's rule.
+type EnrollmentSettler interface {
+	SettleEnrollment(ctx context.Context, tx pgx.Tx, enrollmentID, decidedBy uuid.UUID) error
+}
+
 // mapStatusTransition - contains all the valid transitions between OPEN
 // states (UpdateStatus territory). Closing is never here: done only via
 // Approve (settlement), rejected only via Reject (release).
@@ -51,20 +59,22 @@ var mapTypeToDirection = map[ledger.Type]ledger.Direction{
 }
 
 type UseCase struct {
-	logger   *logger.Logger
-	repo     repo.Store
-	profiles profilerepo.Store
-	notifier Notifier
-	db       *coredb.Postgres
+	logger      *logger.Logger
+	repo        repo.Store
+	profiles    profilerepo.Store
+	notifier    Notifier
+	enrollments EnrollmentSettler
+	db          *coredb.Postgres
 }
 
-func New(l *logger.Logger, db *coredb.Postgres, n Notifier) UseCase {
+func New(l *logger.Logger, db *coredb.Postgres, n Notifier, e EnrollmentSettler) UseCase {
 	return UseCase{
-		logger:   l,
-		repo:     repo.New(db),
-		profiles: profilerepo.New(db),
-		notifier: n,
-		db:       db,
+		logger:      l,
+		repo:        repo.New(db),
+		profiles:    profilerepo.New(db),
+		notifier:    n,
+		enrollments: e,
+		db:          db,
 	}
 }
 
@@ -238,8 +248,27 @@ func (u UseCase) UpdateLedgerRequestStatus(ctx context.Context, pass *passport.P
 // ApproveLedgerRequest settles: request → done, balance moved, one
 // immutable line — one statement in the store. Idempotent for retrying
 // callers: approving an already-done request returns it unchanged.
+//
+// A funding request that references an enrollment also hands that
+// enrollment back to the user service, on the same transaction. For a
+// self-serve candidate this approval IS their promotion decision, so the
+// hand-off has to be as durable as the settlement that earns it; for an
+// invited one it is a confirmation of a decision already taken, and the
+// user service treats it as a no-op.
 func (u UseCase) ApproveLedgerRequest(ctx context.Context, decidedBy, id uuid.UUID) (ledger.LedgerRequest, error) {
-	approved, err := u.repo.Approve(ctx, id.String(), decidedBy.String())
+	var approved ledger.LedgerRequest
+	err := u.db.BeginPgx(ctx, func(tx pgx.Tx) error {
+		var err error
+		approved, err = u.repo.WithTx(tx).Approve(ctx, id.String(), decidedBy.String())
+		if err != nil {
+			return err
+		}
+		if approved.Type != ledger.TypeFunding || approved.Reference == nil ||
+			approved.Reference.Type != ledger.ReferenceEnrollment {
+			return nil
+		}
+		return u.enrollments.SettleEnrollment(ctx, tx, approved.Reference.ID, decidedBy)
+	})
 	if err == nil {
 		return approved, nil
 	}

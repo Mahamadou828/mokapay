@@ -1,6 +1,19 @@
-// Package enrollment holds the agent-enrollment domain types: the
-// admin-initiated invite → TOS acceptance → approval workflow that
-// promotes a user to agent.
+// Package enrollment holds the agent-enrollment domain types. Two entry
+// points share one table and one state machine:
+//
+//   - invited (ops-initiated): invite → TOS acceptance → admin approval.
+//     InvitedBy names the inviter, and reaching agent needs an explicit
+//     admin decision on the enrollment itself.
+//   - self-serve (AG-03/AG-04): the candidate signs themselves up. There
+//     is no inviter (InvitedBy is nil, which is what tells the two apart),
+//     the terms are stamped by the very call that creates the request —
+//     so it is born StatusAccepted — and there is no separate decision on
+//     the enrollment at all: ops approving the guarantee DEPOSIT is the
+//     decision, and it is what carries the request to StatusApproved.
+//
+// Both therefore sit in StatusAccepted while their guarantee funding is
+// outstanding, which is why the state machine needed no new value: that
+// state already meant "terms stamped, guarantee open, waiting on money".
 package enrollment
 
 import (
@@ -48,14 +61,27 @@ const (
 type Enrollment struct {
 	ID            uuid.UUID
 	AccountID     uuid.UUID
-	InvitedBy     uuid.UUID
+	InvitedBy     *uuid.UUID // nil = self-serve (nobody invited them)
 	Status        Status
-	TOSVersion    *string    // set once accepted
-	TOSAcceptedAt *time.Time // set once accepted
+	TOSVersion    *string    // set on accept, or inline at self-serve creation
+	TOSAcceptedAt *time.Time // same
 	DecidedBy     *uuid.UUID // admin who approved/cancelled, candidate on decline
 	DecidedAt     *time.Time // terminal-transition stamp
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
+}
+
+// SelfServe reports whether the candidate signed themselves up. It is the
+// single discriminator between the two entry points: only a self-serve
+// request is promoted by its guarantee deposit rather than by an admin.
+func (e Enrollment) SelfServe() bool { return e.InvitedBy == nil }
+
+// SelfEnrollment is the self-serve creation payload (AG-04). TOSVersion is
+// required — the acceptance happens here, not in a later step — and City
+// seeds the agent profile the same call provisions.
+type SelfEnrollment struct {
+	TOSVersion string
+	City       *string
 }
 
 // Filter narrows enrollment listings; nil means "not filtering".

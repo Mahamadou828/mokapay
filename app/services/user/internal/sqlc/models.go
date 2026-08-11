@@ -334,9 +334,10 @@ type Account struct {
 }
 
 type EnrollmentRequest struct {
-	ID            string
-	AccountFk     string
-	InvitedBy     string
+	ID        string
+	AccountFk string
+	// ops/admin who invited the candidate; NULL = self-serve enrollment
+	InvitedBy     uuid.NullUUID
 	Status        EnrollmentStatus
 	TosVersion    pgtype.Text
 	TosAcceptedAt pgtype.Timestamptz
@@ -393,7 +394,7 @@ type UsersExtAccount struct {
 type UsersExtEnrollmentRequest struct {
 	ID            string
 	AccountFk     string
-	InvitedBy     string
+	InvitedBy     uuid.NullUUID
 	Status        EnrollmentStatus
 	TosVersion    pgtype.Text
 	TosAcceptedAt pgtype.Timestamptz

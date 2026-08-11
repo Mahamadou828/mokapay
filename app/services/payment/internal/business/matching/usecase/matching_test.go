@@ -171,7 +171,7 @@ func newHarness(t *testing.T) harness {
 	jobs := &fakeJobs{}
 	live := &fakeLive{}
 	log := logger.New(os.Stderr, logger.LevelInfo, "test", nil)
-	fx := fxrate.Static{Micros: 2_830_000_000}
+	fx := fxrate.Static{Micros: map[transfer.Currency]int64{transfer.CurrencyUSD: 2_830_000_000}}
 
 	return harness{
 		transfers: transferuc.New(log, db, fx, jobs, live, transferuc.Config{
@@ -234,7 +234,7 @@ func (h harness) agent(ctx context.Context, t *testing.T, balance int64) agentpr
 		t.Fatalf("activating: %v", err)
 	}
 	if _, err := h.wallets.Add(ctx, p2.ID, agentwallet.NewWallet{
-		Operator: transfer.OperatorOrangeMoney, Msisdn: "+243991000001",
+		Operator: transfer.OperatorOrangeMoney, AccountNumber: "+243991000001",
 		AcceptsUSD: true, AcceptsCDF: true,
 	}); err != nil {
 		t.Fatalf("adding wallet: %v", err)
@@ -343,7 +343,7 @@ func TestFullTransferFlow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Get: %v", err)
 	}
-	if view.PaymentDetails == nil || view.PaymentDetails.Msisdn != "+243991000001" {
+	if view.PaymentDetails == nil || view.PaymentDetails.AccountNumber != "+243991000001" {
 		t.Fatalf("payment details = %+v", view.PaymentDetails)
 	}
 	// A stranger sees nothing.
@@ -459,7 +459,7 @@ func TestMatchLifecycleEdges(t *testing.T) {
 	// An agent appears; the round goes out; a decline requeues immediately.
 	agent := h.agent(ctx, t, 1_000_000_000)
 	if _, err := h.wallets.Add(ctx, agent.ID, agentwallet.NewWallet{
-		Operator: transfer.OperatorMPesa, Msisdn: "+243991000003",
+		Operator: transfer.OperatorMPesa, AccountNumber: "+243991000003",
 		AcceptsUSD: true, AcceptsCDF: true,
 	}); err != nil {
 		t.Fatalf("adding wallet: %v", err)
@@ -489,7 +489,7 @@ func TestMatchLifecycleEdges(t *testing.T) {
 	// second eligible agent.
 	agent2 := h.agent(ctx, t, 1_000_000_000)
 	if _, err := h.wallets.Add(ctx, agent2.ID, agentwallet.NewWallet{
-		Operator: transfer.OperatorMPesa, Msisdn: "+243991000005",
+		Operator: transfer.OperatorMPesa, AccountNumber: "+243991000005",
 		AcceptsUSD: true, AcceptsCDF: true,
 	}); err != nil {
 		t.Fatalf("adding wallet: %v", err)
@@ -587,10 +587,10 @@ func TestOfferBroadcastPushesEveryShortlistedAgent(t *testing.T) {
 	}
 
 	shortlist := make([]agentprofile.AgentProfile, 0, 2)
-	for i, msisdn := range []string{"+243991000007", "+243991000008"} {
+	for i, number := range []string{"+243991000007", "+243991000008"} {
 		a := h.agent(ctx, t, 900_000_000)
 		if _, err := h.wallets.Add(ctx, a.ID, agentwallet.NewWallet{
-			Operator: transfer.OperatorAirtelMoney, Msisdn: msisdn,
+			Operator: transfer.OperatorAirtelMoney, AccountNumber: number,
 			AcceptsUSD: true, AcceptsCDF: true,
 		}); err != nil {
 			t.Fatalf("adding wallet %d: %v", i, err)

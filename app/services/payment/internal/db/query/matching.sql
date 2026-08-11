@@ -21,7 +21,14 @@ WHERE ap.status = 'active'
   AND EXISTS (SELECT 1 FROM agent_wallets w
               WHERE w.agent_profile_fk = ap.id AND w.deleted_at IS NULL
                 AND w.operator = sqlc.arg(from_operator)::payment_operator
-                AND ((sqlc.arg(from_currency)::currency = 'usd' AND w.accepts_usd)
+                -- Gate on the SETTLEMENT currency, not the source label the
+                -- client picked. The hold is USD minor units, so every
+                -- non-cdf source (eur, zar, aoa, zmw, tzs and usd itself)
+                -- is collected in USD; only a literal cdf source settles in
+                -- francs. Real-world: DRC wallets hold CDF or USD, never
+                -- EUR/ZAR/AOA/ZMW/TZS, so a literal currency match would
+                -- match zero agents on the ladder's new rungs.
+                AND ((sqlc.arg(from_currency)::currency != 'cdf' AND w.accepts_usd)
                   OR (sqlc.arg(from_currency)::currency = 'cdf' AND w.accepts_cdf)))
   AND EXISTS (SELECT 1 FROM agent_wallets w
               WHERE w.agent_profile_fk = ap.id AND w.deleted_at IS NULL

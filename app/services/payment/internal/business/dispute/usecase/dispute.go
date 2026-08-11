@@ -339,8 +339,8 @@ func (u UseCase) notifyAgent(ctx context.Context, tx pgx.Tx, t transfer.Transfer
 // leaves it to ops; the `platform_reserve` bucket is named, not built.
 func (u UseCase) warnRefundShortfall(ctx context.Context, d dispute.Dispute, effect dispute.Effect) {
 	// Only a capture funds a refund, and only a same-denomination
-	// comparison is meaningful: a CDF total was converted INTO the hold, so
-	// the hold covers it by construction.
+	// comparison is meaningful: any other source currency was converted
+	// INTO the hold, so the hold covers it by construction.
 	if !effect.RefundClient || d.RefundCurrency != transfer.CurrencyUSD {
 		return
 	}

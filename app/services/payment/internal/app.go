@@ -117,6 +117,10 @@ func Run() error {
 		Moka:   moka,
 		Logger: log,
 	})
+	river.AddWorker(workers, &events.SettleEnrollmentWorker{
+		Moka:   moka,
+		Logger: log,
+	})
 	matchWorker := &transferevents.MatchWorker{Logger: log}
 	offersExpireWorker := &transferevents.OffersExpireWorker{Logger: log}
 	paymentTimeoutWorker := &transferevents.PaymentTimeoutWorker{Logger: log}
@@ -198,7 +202,7 @@ func Run() error {
 
 	fx := fxrate.New(fxrate.Config{
 		ProviderURL: cfg.FX.ProviderURL,
-		StaticRate:  cfg.FX.StaticRate,
+		StaticRates: cfg.FX.StaticRates,
 		CacheTTL:    cfg.FX.CacheTTL,
 		HTTPTimeout: cfg.FX.HTTPTimeout,
 	}, redis, log)
@@ -208,7 +212,10 @@ func Run() error {
 	// -------------------------------------------------------------------------
 	// Init usecases
 	profileUC := profileuc.New(log, pg)
-	ledgerUC := ledgeruc.New(log, pg, notification)
+	// The same publisher serves both roles: it announces the transition to
+	// the candidate, and it hands a settled guarantee back to the user
+	// service (which is what promotes a self-serve candidate to agent).
+	ledgerUC := ledgeruc.New(log, pg, notification, notification)
 	transferUC := transferuc.New(log, pg, fx, transferJobs, live, transferuc.Config{
 		FeeSameBps:       cfg.Transfer.FeeSameBps,
 		FeeFXBps:         cfg.Transfer.FeeFXBps,

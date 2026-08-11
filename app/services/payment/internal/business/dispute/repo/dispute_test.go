@@ -110,7 +110,7 @@ func fundedAgent(ctx context.Context, t *testing.T, s stores, balance int64) age
 	})
 
 	if _, err := s.wallets.Add(ctx, active.ID, agentwallet.NewWallet{
-		Operator: transfer.OperatorOrangeMoney, Msisdn: "+243990000002",
+		Operator: transfer.OperatorOrangeMoney, AccountNumber: "+243990000002",
 		AcceptsUSD: true, AcceptsCDF: true,
 	}); err != nil {
 		t.Fatalf("adding wallet: %v", err)

@@ -21,6 +21,12 @@ service UserService {
   rpc GetMyEnrollment(GetMyEnrollmentRequest) returns (Enrollment);
   rpc AcceptEnrollment(AcceptEnrollmentRequest) returns (Enrollment);
   rpc DeclineEnrollment(DeclineEnrollmentRequest) returns (Enrollment);
+  // Self-serve enrollment (AG-04): no invite, no inviter. The terms are
+  // stamped inline — this single call is both the creation and the
+  // acceptance — and the request lands in ACCEPTED with its guarantee
+  // funding already open. Retrying resumes the live self-serve request
+  // instead of failing.
+  rpc SelfEnroll(SelfEnrollRequest) returns (Enrollment);
 }
 
 message MeRequest {}
@@ -46,4 +52,9 @@ message AcceptEnrollmentRequest {
 
 message DeclineEnrollmentRequest {
   string id = 1;  // enrollment id
+}
+
+message SelfEnrollRequest {
+  string tos_version = 1;   // the terms version the client displayed
+  optional string city = 2; // nearest city, seeds the agent profile (geo matching)
 }

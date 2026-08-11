@@ -35,6 +35,22 @@ func (h Handler) acceptEnrollment(ctx context.Context, r *http.Request) core.Enc
 	return protocodec.Proto{Message: res}
 }
 
+// selfEnroll is AG-04's submission — the one call that creates the
+// enrollment, stamps the terms and opens the guarantee funding.
+func (h Handler) selfEnroll(ctx context.Context, r *http.Request) core.Encoder {
+	req := &userv1.SelfEnrollRequest{}
+	if err := core.Decode(r, protocodec.Proto{Message: req}); err != nil {
+		return coreerrs.New(errs.InvalidArgument, err)
+	}
+
+	res, err := h.moka.User.User.SelfEnroll(ctx, req)
+	if err != nil {
+		return rpcErr(err)
+	}
+
+	return protocodec.Proto{Message: res}
+}
+
 func (h Handler) declineEnrollment(ctx context.Context, r *http.Request) core.Encoder {
 	req := &userv1.DeclineEnrollmentRequest{}
 	if err := core.Decode(r, protocodec.Proto{Message: req}); err != nil {

@@ -6,6 +6,14 @@ SELECT * FROM users_ext.add_enrollment(
     sqlc.arg(invited_by)::uuid
 );
 
+-- name: AddSelfEnrollment :one
+-- The self-serve sign-up: no inviter, terms stamped inline, born
+-- 'accepted'. Same 23505 on enrollment_requests_live_uq as AddEnrollment.
+SELECT * FROM users_ext.add_self_enrollment(
+    sqlc.arg(account_id)::uuid,
+    sqlc.arg(tos_version)
+);
+
 -- name: GetEnrollment :one
 SELECT id, account_fk, invited_by, status, tos_version, tos_accepted_at, decided_by, decided_at, created_at, updated_at
 FROM users_ext.enrollment_requests

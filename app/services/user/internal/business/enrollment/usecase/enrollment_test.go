@@ -73,6 +73,24 @@ func newTestUseCase(t *testing.T) (usecase.UseCase, *fakeNotifier, authrepo.Stor
 	return usecase.New(log, db, notifier, moka, tosVersion), notifier, authrepo.New(db), moka
 }
 
+// candidateCtx fabricates the passport the gateway forwards for a plain
+// client hitting SelfEnroll: role `user`, because the promotion to
+// pending_agent is what that very call is about to do.
+func candidateCtx(ctx context.Context, accountID uuid.UUID) context.Context {
+	return passport.AddToContext(ctx, &passport.Passport{
+		User: passport.User{ID: accountID.String(), Role: "user"},
+		Type: passport.TypeUser,
+	})
+}
+
+// pendingAgentCtx is the passport an already-invited candidate carries.
+func pendingAgentCtx(ctx context.Context, accountID uuid.UUID) context.Context {
+	return passport.AddToContext(ctx, &passport.Passport{
+		User: passport.User{ID: accountID.String(), Role: "pending_agent"},
+		Type: passport.TypeUser,
+	})
+}
+
 // opsCtx fabricates the ops passport an approving admin carries — the
 // payment service trusts forwarded passports (internal network).
 func opsCtx(ctx context.Context, adminID uuid.UUID) context.Context {
@@ -277,5 +295,143 @@ func TestEnrollmentUseCaseDeclineAndCancel(t *testing.T) {
 	}
 	if _, err := uc.Invite(ctx, ops, admin); !errors.Is(err, enrollment.ErrNotEligible) {
 		t.Errorf("invite-ops error = %v, want ErrNotEligible", err)
+	}
+}
+
+// The self-serve path, end to end on the user side. The one hop this test
+// cannot make is the River job that carries a settled deposit back here —
+// that runs inside the payment service's own process — so it calls
+// SettleGuarantee directly, exactly as the worker does.
+func TestSelfServeEnrollmentUseCase(t *testing.T) {
+	uc, notifier, accounts, moka := newTestUseCase(t)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	candidate := testAccount(ctx, t, accounts, "SelfServe")
+	ops := testAccount(ctx, t, accounts, "Ops")
+
+	// Stale terms are refused before anything is written.
+	cctx := candidateCtx(ctx, candidate)
+	if _, err := uc.SelfEnroll(cctx, candidate, enrollment.SelfEnrollment{TOSVersion: "0.9"}); !errors.Is(err, enrollment.ErrTOSVersionMismatch) {
+		t.Fatalf("stale TOS error = %v, want ErrTOSVersionMismatch", err)
+	}
+	if got := role(ctx, t, accounts, candidate); got != auth.AccountRoleUser {
+		t.Fatalf("role after refused self-enroll = %q, want user", got)
+	}
+
+	city := "Kinshasa"
+	created, err := uc.SelfEnroll(cctx, candidate, enrollment.SelfEnrollment{
+		TOSVersion: tosVersion,
+		City:       new(city),
+	})
+	if err != nil {
+		t.Fatalf("SelfEnroll: %v", err)
+	}
+	// Born accepted with the terms stamped: the acceptance IS the creation,
+	// there is no second step that could stamp them.
+	if !created.SelfServe() || created.Status != enrollment.StatusAccepted ||
+		created.TOSVersion == nil || *created.TOSVersion != tosVersion ||
+		created.TOSAcceptedAt == nil {
+		t.Fatalf("self-enrolled = %+v", created)
+	}
+	if got := role(ctx, t, accounts, candidate); got != auth.AccountRolePendingAgent {
+		t.Fatalf("role after self-enroll = %q, want pending_agent", got)
+	}
+
+	// The city reached the money side — matching reads it off the profile.
+	profile, err := moka.Payment.Admin.GetAgentProfile(opsCtx(ctx, ops), &paymentv1.GetAgentProfileRequest{
+		Selector: &paymentv1.GetAgentProfileRequest_AccountId{AccountId: candidate.String()},
+	})
+	if err != nil {
+		t.Fatalf("resolving agent profile: %v", err)
+	}
+	if profile.City == nil || *profile.City != city {
+		t.Errorf("profile city = %v, want %q", profile.City, city)
+	}
+
+	// The guarantee funding is already open — nothing waits on ops to
+	// create it, unlike the invited path's original design.
+	guarantee, err := moka.Payment.Ledger.GetLedgerRequestByReference(opsCtx(ctx, ops), &paymentv1.GetLedgerRequestByReferenceRequest{
+		ReferenceEntityType: paymentv1.LedgerReferenceType_LEDGER_REFERENCE_TYPE_ENROLLMENT,
+		ReferenceEntityId:   created.ID.String(),
+	})
+	if err != nil {
+		t.Fatalf("guarantee funding request was not opened: %v", err)
+	}
+	if guarantee.Amount != profile.GuaranteeFloor {
+		t.Errorf("guarantee amount = %d, want the profile floor %d", guarantee.Amount, profile.GuaranteeFloor)
+	}
+
+	// Retrying resumes rather than failing: the money-side calls above can
+	// fail on their own, and the candidate must be able to press again.
+	resumed, err := uc.SelfEnroll(cctx, candidate, enrollment.SelfEnrollment{TOSVersion: tosVersion})
+	if err != nil {
+		t.Fatalf("SelfEnroll (retry): %v", err)
+	}
+	if resumed.ID != created.ID {
+		t.Errorf("retry created a second enrollment %s, want %s resumed", resumed.ID, created.ID)
+	}
+	if len(notifier.events) != 1 {
+		t.Errorf("events after retry = %v, want the creation one only", notifier.events)
+	}
+
+	// The deposit settles: the promotion follows, role included. Payment's
+	// River worker calls this under a system passport, so the test carries
+	// the same one.
+	sctx := passport.AddToContext(ctx, passport.SystemPassport())
+	settled, err := uc.SettleGuarantee(sctx, created.ID, ops)
+	if err != nil {
+		t.Fatalf("SettleGuarantee: %v", err)
+	}
+	if settled.Status != enrollment.StatusApproved ||
+		settled.DecidedBy == nil || *settled.DecidedBy != ops {
+		t.Fatalf("settled = %+v", settled)
+	}
+	if got := role(ctx, t, accounts, candidate); got != auth.AccountRoleAgent {
+		t.Fatalf("role after settlement = %q, want agent", got)
+	}
+	if len(notifier.events) != 2 || notifier.events[1] != "enrollment.approved" {
+		t.Errorf("events after settlement = %v", notifier.events)
+	}
+
+	// Replaying the job is harmless.
+	again, err := uc.SettleGuarantee(sctx, created.ID, ops)
+	if err != nil || again.Status != enrollment.StatusApproved {
+		t.Errorf("replayed settlement = %+v, %v", again, err)
+	}
+}
+
+// An invited enrollment keeps its admin gate: the same settlement job runs
+// for it (payment cannot tell the two apart), and it must change nothing.
+func TestSettleGuaranteeLeavesInvitedEnrollmentsAlone(t *testing.T) {
+	uc, _, accounts, _ := newTestUseCase(t)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	candidate := testAccount(ctx, t, accounts, "Invited")
+	admin := testAccount(ctx, t, accounts, "Admin")
+
+	invited, err := uc.Invite(ctx, candidate, admin)
+	if err != nil {
+		t.Fatalf("Invite: %v", err)
+	}
+	// An invited candidate is already pending_agent by the time they accept
+	// — the invite flipped them in an earlier request — so that is the
+	// passport the gateway forwards here.
+	if _, err := uc.Accept(pendingAgentCtx(ctx, candidate), candidate, invited.ID, tosVersion); err != nil {
+		t.Fatalf("Accept: %v", err)
+	}
+
+	settled, err := uc.SettleGuarantee(passport.AddToContext(ctx, passport.SystemPassport()), invited.ID, admin)
+	if err != nil {
+		t.Fatalf("SettleGuarantee on an invited enrollment: %v", err)
+	}
+	if settled.Status != enrollment.StatusAccepted {
+		t.Errorf("invited enrollment status = %q, want it untouched at accepted", settled.Status)
+	}
+	if got := role(ctx, t, accounts, candidate); got != auth.AccountRolePendingAgent {
+		t.Fatalf("role = %q, want pending_agent — only an admin approve promotes an invited candidate", got)
 	}
 }

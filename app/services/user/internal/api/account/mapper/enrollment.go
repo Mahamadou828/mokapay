@@ -10,11 +10,15 @@ func EnrollmentToProto(in enrollment.Enrollment) *userv1.Enrollment {
 	out := &userv1.Enrollment{
 		Id:         in.ID.String(),
 		AccountId:  in.AccountID.String(),
-		InvitedBy:  in.InvitedBy.String(),
 		Status:     EnrollmentStatusToProto(in.Status),
 		TosVersion: in.TOSVersion,
 		CreatedAt:  timestamppb.New(in.CreatedAt),
 		UpdatedAt:  timestamppb.New(in.UpdatedAt),
+	}
+	// Absent on a self-serve request — the client reads that absence to
+	// tell the two flows apart.
+	if in.InvitedBy != nil {
+		out.InvitedBy = new(in.InvitedBy.String())
 	}
 	if in.TOSAcceptedAt != nil {
 		out.TosAcceptedAt = timestamppb.New(*in.TOSAcceptedAt)
@@ -26,6 +30,17 @@ func EnrollmentToProto(in enrollment.Enrollment) *userv1.Enrollment {
 		out.DecidedAt = timestamppb.New(*in.DecidedAt)
 	}
 
+	return out
+}
+
+// SelfEnrollToDomain maps the AG-04 submission. City stays a pointer all
+// the way down: "not provided" and "empty" are the same absence, and the
+// payment service treats a missing city as "no geo hint".
+func SelfEnrollToDomain(in *userv1.SelfEnrollRequest) enrollment.SelfEnrollment {
+	out := enrollment.SelfEnrollment{TOSVersion: in.TosVersion}
+	if in.City != nil && *in.City != "" {
+		out.City = new(*in.City)
+	}
 	return out
 }
 

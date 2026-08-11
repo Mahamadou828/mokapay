@@ -10,7 +10,7 @@ import (
 )
 
 const addAgentWallet = `-- name: AddAgentWallet :one
-SELECT id, agent_profile_fk, operator, msisdn, created_at, updated_at, deleted_at, accepts_usd, accepts_cdf FROM payments_ext.add_agent_wallet(
+SELECT id, agent_profile_fk, operator, account_number, created_at, updated_at, deleted_at, accepts_usd, accepts_cdf FROM payments_ext.add_agent_wallet(
     $1::uuid,
     $2::payment_operator,
     $3,
@@ -22,7 +22,7 @@ SELECT id, agent_profile_fk, operator, msisdn, created_at, updated_at, deleted_a
 type AddAgentWalletParams struct {
 	AgentProfileID string
 	Operator       PaymentOperator
-	Msisdn         string
+	AccountNumber  string
 	AcceptsUsd     bool
 	AcceptsCdf     bool
 }
@@ -32,7 +32,7 @@ func (q *Queries) AddAgentWallet(ctx context.Context, arg AddAgentWalletParams) 
 	row := q.db.QueryRow(ctx, addAgentWallet,
 		arg.AgentProfileID,
 		arg.Operator,
-		arg.Msisdn,
+		arg.AccountNumber,
 		arg.AcceptsUsd,
 		arg.AcceptsCdf,
 	)
@@ -41,7 +41,7 @@ func (q *Queries) AddAgentWallet(ctx context.Context, arg AddAgentWalletParams) 
 		&i.ID,
 		&i.AgentProfileFk,
 		&i.Operator,
-		&i.Msisdn,
+		&i.AccountNumber,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -69,7 +69,7 @@ func (q *Queries) DeleteAgentWallet(ctx context.Context, arg DeleteAgentWalletPa
 }
 
 const getAgentWalletByPair = `-- name: GetAgentWalletByPair :one
-SELECT id, agent_profile_fk, operator, msisdn, accepts_usd, accepts_cdf, created_at, updated_at
+SELECT id, agent_profile_fk, operator, account_number, accepts_usd, accepts_cdf, created_at, updated_at
 FROM payments_ext.agent_wallets
 WHERE agent_profile_fk = $1::uuid
   AND operator = $2::payment_operator
@@ -92,7 +92,7 @@ func (q *Queries) GetAgentWalletByPair(ctx context.Context, arg GetAgentWalletBy
 		&i.ID,
 		&i.AgentProfileFk,
 		&i.Operator,
-		&i.Msisdn,
+		&i.AccountNumber,
 		&i.AcceptsUsd,
 		&i.AcceptsCdf,
 		&i.CreatedAt,
@@ -102,7 +102,7 @@ func (q *Queries) GetAgentWalletByPair(ctx context.Context, arg GetAgentWalletBy
 }
 
 const listAgentWallets = `-- name: ListAgentWallets :many
-SELECT id, agent_profile_fk, operator, msisdn, accepts_usd, accepts_cdf, created_at, updated_at
+SELECT id, agent_profile_fk, operator, account_number, accepts_usd, accepts_cdf, created_at, updated_at
 FROM payments_ext.agent_wallets
 WHERE agent_profile_fk = $1::uuid
 ORDER BY created_at
@@ -121,7 +121,7 @@ func (q *Queries) ListAgentWallets(ctx context.Context, agentProfileID string) (
 			&i.ID,
 			&i.AgentProfileFk,
 			&i.Operator,
-			&i.Msisdn,
+			&i.AccountNumber,
 			&i.AcceptsUsd,
 			&i.AcceptsCdf,
 			&i.CreatedAt,

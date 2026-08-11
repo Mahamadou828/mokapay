@@ -79,7 +79,8 @@ func TestEnrollmentHappyPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Add: %v", err)
 	}
-	if invited.Status != enrollment.StatusInvited || invited.InvitedBy != admin {
+	if invited.Status != enrollment.StatusInvited ||
+		invited.InvitedBy == nil || *invited.InvitedBy != admin || invited.SelfServe() {
 		t.Fatalf("invite = %+v", invited)
 	}
 
@@ -205,5 +206,56 @@ func TestEnrollmentDeclineAndCancelPaths(t *testing.T) {
 	}
 	if found != 2 {
 		t.Errorf("cancelled rows for candidate = %d, want 2", found)
+	}
+}
+
+// The self-serve entry point shares the table, the state machine and the
+// uniqueness index with the invited one. What it must NOT share is an
+// inviter — that absence is the only discriminator the rest of the system
+// has, so it is worth asserting rather than assuming.
+func TestSelfServeEnrollment(t *testing.T) {
+	store, accounts := newTestStores(t)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	candidate := testAccount(ctx, t, accounts, "SelfServe")
+	admin := testAccount(ctx, t, accounts, "Admin")
+
+	// Born accepted, terms stamped inline, no inviter.
+	self, err := store.AddSelf(ctx, candidate.String(), "2026-07-25")
+	if err != nil {
+		t.Fatalf("AddSelf: %v", err)
+	}
+	if !self.SelfServe() || self.InvitedBy != nil {
+		t.Fatalf("self-serve row carries an inviter: %+v", self)
+	}
+	if self.Status != enrollment.StatusAccepted ||
+		self.TOSVersion == nil || *self.TOSVersion != "2026-07-25" ||
+		self.TOSAcceptedAt == nil {
+		t.Fatalf("self-serve row = %+v, want accepted with the terms stamped", self)
+	}
+
+	// The one live-enrollment index covers both entry points: neither a
+	// second self-serve request nor an invite gets through.
+	if _, err := store.AddSelf(ctx, candidate.String(), "2026-07-25"); !errors.Is(err, enrollment.ErrEnrollmentPending) {
+		t.Errorf("double self-enroll error = %v, want ErrEnrollmentPending", err)
+	}
+	if _, err := store.Add(ctx, candidate.String(), admin.String()); !errors.Is(err, enrollment.ErrEnrollmentPending) {
+		t.Errorf("invite over a live self-serve error = %v, want ErrEnrollmentPending", err)
+	}
+
+	// Approve reaches it untouched — a self-serve row is already in the
+	// state approve_enrollment requires, which is why that procedure
+	// needed no change.
+	approved, err := store.Approve(ctx, self.ID.String(), admin.String())
+	if err != nil {
+		t.Fatalf("Approve: %v", err)
+	}
+	if approved.Status != enrollment.StatusApproved || !approved.SelfServe() {
+		t.Fatalf("approved = %+v", approved)
+	}
+	if approved.DecidedBy == nil || *approved.DecidedBy != admin {
+		t.Fatalf("approved decided_by = %+v, want the settling admin", approved.DecidedBy)
 	}
 }

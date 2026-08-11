@@ -28,6 +28,7 @@ func (h Handler) Routes(public, authed, ops *core.Group) {
 	authed.RegisterHandler(http.MethodPost, "/push/subscriptions", h.subscribePush)
 	authed.RegisterHandler(http.MethodDelete, "/push/subscriptions", h.unsubscribePush)
 	authed.RegisterHandler(http.MethodGet, "/enrollment", h.getMyEnrollment)
+	authed.RegisterHandler(http.MethodPost, "/enrollment/self", h.selfEnroll)
 	authed.RegisterHandler(http.MethodPost, "/enrollment/accept", h.acceptEnrollment)
 	authed.RegisterHandler(http.MethodPost, "/enrollment/decline", h.declineEnrollment)
 

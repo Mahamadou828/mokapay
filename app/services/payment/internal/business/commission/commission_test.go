@@ -80,8 +80,23 @@ func TestPayableAmountRejectsUnconvertible(t *testing.T) {
 	if _, err := commission.PayableAmount(100, transfer.CurrencyCDF, 0, 10_000); err == nil {
 		t.Fatal("PayableAmount with no total: want ErrNotPayable, got nil")
 	}
-	if _, err := commission.PayableAmount(100, "eur", 1_000, 1_000); err == nil {
-		t.Fatal("PayableAmount with unknown currency: want ErrNotPayable, got nil")
+	// Nor does a missing hold: the pair is the rate, so half of it is no
+	// rate at all.
+	if _, err := commission.PayableAmount(100, transfer.CurrencyEUR, 1_000, 0); err == nil {
+		t.Fatal("PayableAmount with no hold: want ErrNotPayable, got nil")
+	}
+}
+
+func TestPayableAmountEURConvertsAtTheTransfersOwnRate(t *testing.T) {
+	// Any non-USD source rides the same stamped ratio: 102 EUR paid,
+	// 111,74 USD reserved for it, so the agent's 122-cent share becomes
+	// 122 × 11_174 / 10_200 = 133.6… → half-up 134 cents.
+	got, err := commission.PayableAmount(122, transfer.CurrencyEUR, 10_200, 11_174)
+	if err != nil {
+		t.Fatalf("PayableAmount: %v", err)
+	}
+	if got != 134 {
+		t.Fatalf("payable = %d, want 134 cents", got)
 	}
 }
 

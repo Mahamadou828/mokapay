@@ -12,11 +12,11 @@ import (
 )
 
 // White-box unit tests: the quote math is pure integer arithmetic over
-// the injected rate — no DB, no network.
-func quoter(rateMicros int64) UseCase {
+// the injected rates — no DB, no network.
+func quoterRates(rates map[transfer.Currency]int64) UseCase {
 	return UseCase{
 		logger: logger.New(io.Discard, logger.LevelInfo, "test", nil),
-		fx:     fxrate.Static{Micros: rateMicros},
+		fx:     fxrate.Static{Micros: rates},
 		cfg: Config{
 			FeeSameBps: 150,
 			FeeFXBps:   200,
@@ -24,6 +24,13 @@ func quoter(rateMicros int64) UseCase {
 			MaxAmount:  1_000_000_000,
 		},
 	}
+}
+
+// quoter is the single-rate form: the USD:CDF rate alone, which is both
+// the usd→cdf corridor's own rate and the denominator every corridor's
+// hold converts through.
+func quoter(rateMicros int64) UseCase {
+	return quoterRates(map[transfer.Currency]int64{transfer.CurrencyUSD: rateMicros})
 }
 
 func TestQuoteUSDToUSD(t *testing.T) {
@@ -57,6 +64,45 @@ func TestQuoteUSDToCDF(t *testing.T) {
 	}
 }
 
+func TestQuoteEURToCDF(t *testing.T) {
+	// The ladder's other rungs price exactly like USD does, off their OWN
+	// rate: 100 EUR at 2885 → gross = 10000 × 2_885_000_000 / 1e8 = 288500
+	// francs; margin 0.5% half-up = 1443; to = 287057. Fee 2% = 200 cents.
+	//
+	// The hold is the part USD never exercises: it is USD minor units
+	// whatever the client paid in, so the 10200-cent EUR total converts
+	// through francs at 2885/2830.5 → 10396.4… → ceil 10397 cents.
+	u := quoterRates(map[transfer.Currency]int64{
+		transfer.CurrencyUSD: 2_830_500_000,
+		transfer.CurrencyEUR: 2_885_000_000,
+	})
+
+	q, err := u.quote(context.Background(), transfer.CurrencyEUR, 10_000, transfer.CurrencyCDF)
+	if err != nil {
+		t.Fatalf("quote: %v", err)
+	}
+	if q.FeeAmount != 200 || q.TotalAmount != 10_200 {
+		t.Fatalf("eur->cdf fee/total = %+v", q)
+	}
+	if q.MarginAmount != 1_443 || q.ToAmount != 287_057 {
+		t.Fatalf("eur->cdf margin/to = %+v", q)
+	}
+	if q.RateMicros == nil || *q.RateMicros != 2_885_000_000 {
+		t.Fatalf("eur->cdf rate = %+v, want the EUR rate, not the USD one", q.RateMicros)
+	}
+	if q.HoldAmount != 10_397 {
+		t.Fatalf("eur->cdf hold = %d, want 10397 USD cents (ceil)", q.HoldAmount)
+	}
+
+	// A missing USD rate fails the quote rather than holding EUR cents as
+	// if they were dollars.
+	if _, err := quoterRates(map[transfer.Currency]int64{
+		transfer.CurrencyEUR: 2_885_000_000,
+	}).quote(context.Background(), transfer.CurrencyEUR, 10_000, transfer.CurrencyCDF); err == nil {
+		t.Error("eur->cdf with no usd rate must fail")
+	}
+}
+
 func TestQuoteCDFToCDF(t *testing.T) {
 	// 283000 francs, fee 1.5% = 4245, total 287245. Hold converts at
 	// 2830.5: 287245 × 1e8 / 2_830_500_000 = 10148.2… → ceil 10149 cents.
@@ -83,8 +129,15 @@ func TestQuoteGuards(t *testing.T) {
 	if _, err := u.quote(ctx, transfer.CurrencyCDF, 1000, transfer.CurrencyUSD); !errors.Is(err, transfer.ErrCorridorNotAllowed) {
 		t.Errorf("cdf->usd = %v, want ErrCorridorNotAllowed", err)
 	}
-	if _, err := u.quote(ctx, "eur", 1000, transfer.CurrencyCDF); !errors.Is(err, transfer.ErrCorridorNotAllowed) {
-		t.Errorf("eur source = %v, want ErrCorridorNotAllowed", err)
+	if _, err := u.quote(ctx, "gbp", 1000, transfer.CurrencyCDF); !errors.Is(err, transfer.ErrCorridorNotAllowed) {
+		t.Errorf("off-ladder source = %v, want ErrCorridorNotAllowed", err)
+	}
+	// On the ladder, but only ever INTO francs.
+	if _, err := u.quote(ctx, transfer.CurrencyEUR, 1000, transfer.CurrencyEUR); !errors.Is(err, transfer.ErrCorridorNotAllowed) {
+		t.Errorf("eur->eur = %v, want ErrCorridorNotAllowed", err)
+	}
+	if _, err := u.quote(ctx, transfer.CurrencyEUR, 1000, transfer.CurrencyUSD); !errors.Is(err, transfer.ErrCorridorNotAllowed) {
+		t.Errorf("eur->usd = %v, want ErrCorridorNotAllowed", err)
 	}
 	if _, err := u.quote(ctx, transfer.CurrencyUSD, 0, transfer.CurrencyUSD); !errors.Is(err, transfer.ErrInvalidAmount) {
 		t.Errorf("zero amount = %v, want ErrInvalidAmount", err)

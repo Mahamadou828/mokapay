@@ -20,15 +20,16 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AdminService_GetAccount_FullMethodName         = "/user.v1.AdminService/GetAccount"
-	AdminService_ListAccounts_FullMethodName       = "/user.v1.AdminService/ListAccounts"
-	AdminService_CreateAccount_FullMethodName      = "/user.v1.AdminService/CreateAccount"
-	AdminService_UpdateAccount_FullMethodName      = "/user.v1.AdminService/UpdateAccount"
-	AdminService_DeleteAccount_FullMethodName      = "/user.v1.AdminService/DeleteAccount"
-	AdminService_PromoteUserToAgent_FullMethodName = "/user.v1.AdminService/PromoteUserToAgent"
-	AdminService_ApproveEnrollment_FullMethodName  = "/user.v1.AdminService/ApproveEnrollment"
-	AdminService_CancelEnrollment_FullMethodName   = "/user.v1.AdminService/CancelEnrollment"
-	AdminService_ListEnrollments_FullMethodName    = "/user.v1.AdminService/ListEnrollments"
+	AdminService_GetAccount_FullMethodName                = "/user.v1.AdminService/GetAccount"
+	AdminService_ListAccounts_FullMethodName              = "/user.v1.AdminService/ListAccounts"
+	AdminService_CreateAccount_FullMethodName             = "/user.v1.AdminService/CreateAccount"
+	AdminService_UpdateAccount_FullMethodName             = "/user.v1.AdminService/UpdateAccount"
+	AdminService_DeleteAccount_FullMethodName             = "/user.v1.AdminService/DeleteAccount"
+	AdminService_PromoteUserToAgent_FullMethodName        = "/user.v1.AdminService/PromoteUserToAgent"
+	AdminService_ApproveEnrollment_FullMethodName         = "/user.v1.AdminService/ApproveEnrollment"
+	AdminService_CancelEnrollment_FullMethodName          = "/user.v1.AdminService/CancelEnrollment"
+	AdminService_ListEnrollments_FullMethodName           = "/user.v1.AdminService/ListEnrollments"
+	AdminService_SettleEnrollmentGuarantee_FullMethodName = "/user.v1.AdminService/SettleEnrollmentGuarantee"
 )
 
 // AdminServiceClient is the client API for AdminService service.
@@ -57,6 +58,14 @@ type AdminServiceClient interface {
 	ApproveEnrollment(ctx context.Context, in *ApproveEnrollmentRequest, opts ...grpc.CallOption) (*Enrollment, error)
 	CancelEnrollment(ctx context.Context, in *CancelEnrollmentRequest, opts ...grpc.CallOption) (*Enrollment, error)
 	ListEnrollments(ctx context.Context, in *ListEnrollmentsRequest, opts ...grpc.CallOption) (*ListEnrollmentsResponse, error)
+	// Service-internal, SYSTEM callers only — deliberately routeless on the
+	// gateway (same treatment as compliance's EvaluateTransfer). The payment
+	// service calls it when a self-serve enrollment's guarantee deposit is
+	// approved: that approval IS the promotion decision, so this is where a
+	// self-serve request reaches APPROVED and the account becomes an agent.
+	// A no-op on an invited enrollment — those still need their admin
+	// approve.
+	SettleEnrollmentGuarantee(ctx context.Context, in *SettleEnrollmentGuaranteeRequest, opts ...grpc.CallOption) (*Enrollment, error)
 }
 
 type adminServiceClient struct {
@@ -157,6 +166,16 @@ func (c *adminServiceClient) ListEnrollments(ctx context.Context, in *ListEnroll
 	return out, nil
 }
 
+func (c *adminServiceClient) SettleEnrollmentGuarantee(ctx context.Context, in *SettleEnrollmentGuaranteeRequest, opts ...grpc.CallOption) (*Enrollment, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Enrollment)
+	err := c.cc.Invoke(ctx, AdminService_SettleEnrollmentGuarantee_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AdminServiceServer is the server API for AdminService service.
 // All implementations must embed UnimplementedAdminServiceServer
 // for forward compatibility.
@@ -183,6 +202,14 @@ type AdminServiceServer interface {
 	ApproveEnrollment(context.Context, *ApproveEnrollmentRequest) (*Enrollment, error)
 	CancelEnrollment(context.Context, *CancelEnrollmentRequest) (*Enrollment, error)
 	ListEnrollments(context.Context, *ListEnrollmentsRequest) (*ListEnrollmentsResponse, error)
+	// Service-internal, SYSTEM callers only — deliberately routeless on the
+	// gateway (same treatment as compliance's EvaluateTransfer). The payment
+	// service calls it when a self-serve enrollment's guarantee deposit is
+	// approved: that approval IS the promotion decision, so this is where a
+	// self-serve request reaches APPROVED and the account becomes an agent.
+	// A no-op on an invited enrollment — those still need their admin
+	// approve.
+	SettleEnrollmentGuarantee(context.Context, *SettleEnrollmentGuaranteeRequest) (*Enrollment, error)
 	mustEmbedUnimplementedAdminServiceServer()
 }
 
@@ -219,6 +246,9 @@ func (UnimplementedAdminServiceServer) CancelEnrollment(context.Context, *Cancel
 }
 func (UnimplementedAdminServiceServer) ListEnrollments(context.Context, *ListEnrollmentsRequest) (*ListEnrollmentsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListEnrollments not implemented")
+}
+func (UnimplementedAdminServiceServer) SettleEnrollmentGuarantee(context.Context, *SettleEnrollmentGuaranteeRequest) (*Enrollment, error) {
+	return nil, status.Error(codes.Unimplemented, "method SettleEnrollmentGuarantee not implemented")
 }
 func (UnimplementedAdminServiceServer) mustEmbedUnimplementedAdminServiceServer() {}
 func (UnimplementedAdminServiceServer) testEmbeddedByValue()                      {}
@@ -403,6 +433,24 @@ func _AdminService_ListEnrollments_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AdminService_SettleEnrollmentGuarantee_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SettleEnrollmentGuaranteeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).SettleEnrollmentGuarantee(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_SettleEnrollmentGuarantee_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).SettleEnrollmentGuarantee(ctx, req.(*SettleEnrollmentGuaranteeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AdminService_ServiceDesc is the grpc.ServiceDesc for AdminService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -445,6 +493,10 @@ var AdminService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListEnrollments",
 			Handler:    _AdminService_ListEnrollments_Handler,
+		},
+		{
+			MethodName: "SettleEnrollmentGuarantee",
+			Handler:    _AdminService_SettleEnrollmentGuarantee_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
