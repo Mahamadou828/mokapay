@@ -15,14 +15,12 @@ import (
 	adminapi "mokapay.app/app/services/user/internal/api/admin"
 	authapi "mokapay.app/app/services/user/internal/api/auth"
 	notificationapi "mokapay.app/app/services/user/internal/api/notification"
-	"mokapay.app/app/services/user/internal/business/auth"
 	accountUC "mokapay.app/app/services/user/internal/business/auth/usecase/account"
 	adminUC "mokapay.app/app/services/user/internal/business/auth/usecase/admin"
 	authUC "mokapay.app/app/services/user/internal/business/auth/usecase/auth"
 	enrollmentuc "mokapay.app/app/services/user/internal/business/enrollment/usecase"
 	notificationuc "mokapay.app/app/services/user/internal/business/notification/usecase"
 	"mokapay.app/app/services/user/internal/integration/email"
-	"mokapay.app/app/services/user/internal/integration/sms"
 	"mokapay.app/app/services/user/internal/integration/webpush"
 	"mokapay.app/core/aws"
 	"mokapay.app/core/cache"
@@ -74,30 +72,20 @@ func Run() error {
 	defer pg.Close()
 
 	// -------------------------------------------------------------------------
-	// Init integrations: Cognito owns credentials & sessions, Africa's
-	// Talking delivers the OTP SMS.
+	// Init integrations: Cognito owns credentials & sessions, the configured
+	// SMS provider delivers the OTP.
 	cognito, err := aws.NewCognito(ctx, cfg.Cognito.ClientID, cfg.Cognito.ClientSecret, cfg.Cognito.PoolID, cfg.Cognito.Region)
 	if err != nil {
 		log.Error(ctx, "startup", "failed to init cognito client", "error", err)
 		return err
 	}
 
-	// SMS sender: real Africa's Talking delivery once credentials are
-	// configured, logging stand-in without them (local dev needs none). With
-	// a provider wired, the seeded test phones are still routed to the
-	// logging sender — their code is the fixed auth.TestOtpCode, so a real
-	// send would only burn credit.
-	logSMS := sms.NewLog(log)
-	var sender authUC.OTPSender = logSMS
-	if cfg.SMS.ATUsername != "" && cfg.SMS.ATAPIKey != "" {
-		sender = sms.NewRouter(
-			sms.NewAfricasTalking(log, cfg.SMS.ATUsername, cfg.SMS.ATAPIKey, cfg.SMS.ATSenderID),
-			logSMS,
-			auth.IsTestPhone,
-		)
-		log.Info(ctx, "startup", "status", "africa's talking sms sender enabled", "sender_id", cfg.SMS.ATSenderID)
-	} else {
-		log.Info(ctx, "startup", "status", "no sms credentials, otp codes are logged only")
+	// SMS sender: the provider SMS_PROVIDER selects, or the logging stand-in
+	// when its credentials are absent. See newSMSSender.
+	sender, err := newSMSSender(ctx, log, cfg)
+	if err != nil {
+		log.Error(ctx, "startup", "failed to init sms sender", "error", err)
+		return err
 	}
 
 	// Email sender: the OTP channel for accounts that picked it. Real SMTP
