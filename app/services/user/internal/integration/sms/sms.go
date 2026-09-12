@@ -1,7 +1,8 @@
-// Package sms is the SMS delivery seam. AfricasTalking is the live provider,
-// Log the dev stand-in, and Router picks between them per destination so the
-// seeded test phones never trigger a real send. The auth usecase depends only
-// on Sender.
+// Package sms is the SMS delivery seam. AfricasTalking and Twilio are the
+// live providers — configuration picks one — Log is the dev stand-in, and
+// Router picks between the live one and Log per destination so the seeded
+// test phones never trigger a real send. The auth usecase depends only on
+// Sender.
 package sms
 
 import (
@@ -14,6 +15,16 @@ import (
 type Sender interface {
 	Send(ctx context.Context, phoneNumber string, message string) error
 }
+
+// Provider names the live sender the service wires up. Configuration carries
+// it as a plain string; the composition layer switches on this type so an
+// unknown value is caught at startup instead of silently falling back.
+type Provider string
+
+const (
+	ProviderAfricasTalking Provider = "africastalking"
+	ProviderTwilio         Provider = "twilio"
+)
 
 // Log only logs the message — OTP codes included. It serves two roles: the
 // whole service's sender when no provider credentials are configured (local

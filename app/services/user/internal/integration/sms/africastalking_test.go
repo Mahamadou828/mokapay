@@ -92,11 +92,11 @@ func TestAfricasTalkingSendRequestShape(t *testing.T) {
 	}
 
 	for field, want := range map[string]string{
-		"username":    "mokapay",
-		"to":          "+243812345671",
-		"message":     "424242",
-		"bulkSMSMode": "1",
-		"from":        "MOKA",
+		"username":     "mokapay",
+		"phoneNumbers": "+243812345671",
+		"message":      "424242",
+		"bulkSMSMode":  "1",
+		"senderId":     "MOKA",
 	} {
 		if got := srv.form.Get(field); got != want {
 			t.Errorf("form %q = %q, want %q", field, got, want)
@@ -115,8 +115,8 @@ func TestAfricasTalkingSendOmitsEmptySenderID(t *testing.T) {
 		t.Fatalf("send: %v", err)
 	}
 
-	if _, ok := srv.form["from"]; ok {
-		t.Errorf("form carries from=%q, want the field omitted", srv.form.Get("from"))
+	if _, ok := srv.form["senderId"]; ok {
+		t.Errorf("form carries senderId=%q, want the field omitted", srv.form.Get("senderId"))
 	}
 }
 

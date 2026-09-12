@@ -53,6 +53,12 @@ type Config struct {
 		TTL             time.Duration // how long the push service holds an undelivered message
 	}
 	SMS struct {
+		// Provider picks the live OTP sender: "africastalking" (default) or
+		// "twilio". Whichever is picked, empty credentials keep every SMS on
+		// the logging sender (local dev needs none); an unknown value is a
+		// startup error.
+		Provider string
+
 		// Africa's Talking, the OTP delivery provider. Username "sandbox"
 		// targets their sandbox account. SenderID is optional — an
 		// alphanumeric sender has to be registered and approved with them
@@ -60,6 +66,15 @@ type Config struct {
 		ATUsername string
 		ATAPIKey   string
 		ATSenderID string
+
+		// Twilio, the alternative OTP delivery provider. AccountSID and
+		// AuthToken also accept an API Key SID / Secret pair. Exactly one of
+		// From (E.164 number or alphanumeric sender) and
+		// MessagingServiceSID (an "MG…" sender pool) must be set.
+		TwilioAccountSID          string
+		TwilioAuthToken           string
+		TwilioFrom                string
+		TwilioMessagingServiceSID string
 	}
 	SMTP struct {
 		// The business' mail server, used when an account asked for its OTP
@@ -112,10 +127,16 @@ func newConfig() Config {
 	cfg.Push.Subscriber = config.GetEnv("VAPID_SUBSCRIBER", "")
 	cfg.Push.TTL = config.GetEnvAsTimeDuration("PUSH_TTL", 30*time.Second)
 
-	// Empty username or api key keeps every SMS on the logging sender.
+	// Empty credentials keep every SMS on the logging sender, whichever
+	// provider is selected.
+	cfg.SMS.Provider = config.GetEnv("SMS_PROVIDER", "africastalking")
 	cfg.SMS.ATUsername = config.GetEnv("AT_USERNAME", "")
 	cfg.SMS.ATAPIKey = config.GetEnv("AT_API_KEY", "")
 	cfg.SMS.ATSenderID = config.GetEnv("AT_SENDER_ID", "")
+	cfg.SMS.TwilioAccountSID = config.GetEnv("TWILIO_ACCOUNT_SID", "")
+	cfg.SMS.TwilioAuthToken = config.GetEnv("TWILIO_AUTH_TOKEN", "")
+	cfg.SMS.TwilioFrom = config.GetEnv("TWILIO_FROM", "")
+	cfg.SMS.TwilioMessagingServiceSID = config.GetEnv("TWILIO_MESSAGING_SERVICE_SID", "")
 
 	// Empty host keeps every email on the logging sender.
 	cfg.SMTP.Host = config.GetEnv("SMTP_HOST", "")
